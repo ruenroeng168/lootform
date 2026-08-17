@@ -1,16 +1,27 @@
 "use client";
 
 import Image from "next/image";
+
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
 
-import { supabase } from "@/lib/supabase";
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  supabase,
+} from "@/lib/supabase";
+
 import Navbar from "@/components/Navbar";
+
+// =====================================
+// TYPES
+// =====================================
 
 type Grade =
   | "COMMON"
@@ -18,31 +29,55 @@ type Grade =
   | "EPIC"
   | "LEGENDARY";
 
+type CraftPhase =
+  | "IDLE"
+  | "INITIALIZING"
+  | "ROLLING"
+  | "LOCKING"
+  | "REVEAL";
+
 type SeasonSettings = {
   id: number;
+
   season_code: string;
   season_name: string;
+
   product_name: string;
+
   craft_cost: number;
+
   common_rate: number;
   rare_rate: number;
   epic_rate: number;
   legendary_rate: number;
+
   is_active: boolean;
+
   updated_at: string;
 };
 
 type CraftedItem = {
   id: number;
+
   serial: string;
+
   product: string;
   season: string;
+
   grade: Grade;
+
   level: number;
+
   size: string | null;
+
   production_status: string;
+
   created_at: string;
 };
+
+// =====================================
+// CONFIG
+// =====================================
 
 const sizes = [
   "S",
@@ -65,21 +100,34 @@ const productImages: Record<
 > = {
   COMMON:
     "/products/common.png",
+
   RARE:
     "/products/rare.png",
+
   EPIC:
     "/products/epic.png",
+
   LEGENDARY:
     "/products/legendary.png",
 };
+
+// =====================================
+// GRADE STYLE
+// =====================================
 
 const gradeText: Record<
   Grade,
   string
 > = {
-  COMMON: "text-zinc-200",
-  RARE: "text-cyan-400",
-  EPIC: "text-purple-400",
+  COMMON:
+    "text-zinc-200",
+
+  RARE:
+    "text-cyan-400",
+
+  EPIC:
+    "text-purple-400",
+
   LEGENDARY:
     "text-orange-400",
 };
@@ -88,23 +136,74 @@ const gradeBorder: Record<
   Grade,
   string
 > = {
-  COMMON: "border-zinc-700",
+  COMMON:
+    "border-zinc-700",
+
   RARE:
     "border-cyan-400/50",
+
   EPIC:
     "border-purple-400/50",
+
   LEGENDARY:
     "border-orange-400/50",
 };
 
+const gradeGlow: Record<
+  Grade,
+  string
+> = {
+  COMMON:
+    "shadow-[0_0_70px_rgba(161,161,170,0.12)]",
+
+  RARE:
+    "shadow-[0_0_90px_rgba(34,211,238,0.22)]",
+
+  EPIC:
+    "shadow-[0_0_100px_rgba(192,132,252,0.26)]",
+
+  LEGENDARY:
+    "shadow-[0_0_120px_rgba(251,146,60,0.32)]",
+};
+
+const gradeBg: Record<
+  Grade,
+  string
+> = {
+  COMMON:
+    "from-zinc-500/10",
+
+  RARE:
+    "from-cyan-400/10",
+
+  EPIC:
+    "from-purple-400/10",
+
+  LEGENDARY:
+    "from-orange-400/15",
+};
+
+// =====================================
+// PAGE
+// =====================================
+
 export default function CraftPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const [loading, setLoading] =
-    useState(true);
+  // =====================================
+  // BASE STATE
+  // =====================================
 
-  const [crafting, setCrafting] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    crafting,
+    setCrafting,
+  ] = useState(false);
 
   const [
     walletBalance,
@@ -122,13 +221,24 @@ export default function CraftPage() {
   const [
     selectedSize,
     setSelectedSize,
-  ] = useState("S");
+  ] =
+    useState("S");
 
   const [
     previewGrade,
     setPreviewGrade,
   ] =
-    useState<Grade>("COMMON");
+    useState<Grade>(
+      "COMMON"
+    );
+
+  const [
+    rouletteGrade,
+    setRouletteGrade,
+  ] =
+    useState<Grade>(
+      "COMMON"
+    );
 
   const [
     craftResult,
@@ -141,17 +251,48 @@ export default function CraftPage() {
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState("");
+  ] =
+    useState("");
+
+  // =====================================
+  // ANIMATION STATE
+  // =====================================
+
+  const [
+    phase,
+    setPhase,
+  ] =
+    useState<CraftPhase>(
+      "IDLE"
+    );
 
   const [
     holdProgress,
     setHoldProgress,
-  ] = useState(0);
+  ] =
+    useState(0);
 
   const [
-    craftStage,
-    setCraftStage,
-  ] = useState("");
+    energyProgress,
+    setEnergyProgress,
+  ] =
+    useState(0);
+
+  const [
+    revealPulse,
+    setRevealPulse,
+  ] =
+    useState(false);
+
+  const [
+    screenFlash,
+    setScreenFlash,
+  ] =
+    useState(false);
+
+  // =====================================
+  // HOLD REFERENCES
+  // =====================================
 
   const holdIntervalRef =
     useRef<
@@ -161,70 +302,122 @@ export default function CraftPage() {
     >(null);
 
   const holdStartedAtRef =
-    useRef<number | null>(
-      null
-    );
+    useRef<
+      number | null
+    >(null);
 
   const holdTriggeredRef =
     useRef(false);
 
+  // =====================================
+  // LOAD PAGE
+  // =====================================
+
   async function loadPage() {
     setLoading(true);
+    setErrorMessage("");
 
     try {
       const {
-        data: { user },
+        data: {
+          user,
+        },
+        error:
+          userError,
       } =
         await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/login");
+      if (
+        userError ||
+        !user
+      ) {
+        router.push(
+          "/login"
+        );
+
         return;
       }
 
+      // =====================================
+      // WALLET
+      // =====================================
+
       const {
-        data: wallet,
-      } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq(
-          "user_id",
-          user.id
-        )
-        .maybeSingle();
+        data:
+          wallet,
+        error:
+          walletError,
+      } =
+        await supabase
+          .from(
+            "wallets"
+          )
+          .select(
+            "balance"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .maybeSingle();
+
+      if (
+        walletError
+      ) {
+        console.error(
+          "CRAFT WALLET LOAD ERROR:",
+          walletError
+        );
+      }
 
       setWalletBalance(
-        wallet?.balance ?? 0
+        Number(
+          wallet?.balance ??
+            0
+        )
       );
+
+      // =====================================
+      // PUBLIC SEASON
+      // =====================================
 
       const response =
         await fetch(
           "/api/season",
           {
-            cache: "no-store",
+            cache:
+              "no-store",
           }
         );
 
       const result =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
-          result.message
+          result.message ||
+            "Unable to load Season"
         );
       }
 
       setSeason(
         result.season
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       setErrorMessage(
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Unable to load Craft"
       );
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
@@ -232,22 +425,48 @@ export default function CraftPage() {
     loadPage();
   }, []);
 
-  const odds = useMemo(() => {
-    return {
-      COMMON:
-        season?.common_rate ?? 0,
+  // =====================================
+  // ODDS
+  // =====================================
 
-      RARE:
-        season?.rare_rate ?? 0,
+  const odds =
+    useMemo(() => {
+      return {
+        COMMON:
+          season?.common_rate ??
+          0,
 
-      EPIC:
-        season?.epic_rate ?? 0,
+        RARE:
+          season?.rare_rate ??
+          0,
 
-      LEGENDARY:
-        season?.legendary_rate ??
-        0,
-    };
-  }, [season]);
+        EPIC:
+          season?.epic_rate ??
+          0,
+
+        LEGENDARY:
+          season?.legendary_rate ??
+          0,
+      };
+    }, [season]);
+
+  // =====================================
+  // ACTIVE DISPLAY GRADE
+  // =====================================
+
+  const displayGrade =
+    phase ===
+      "ROLLING" ||
+    phase ===
+      "LOCKING"
+      ? rouletteGrade
+      : craftResult
+      ? craftResult.grade
+      : previewGrade;
+
+  // =====================================
+  // CAN CRAFT
+  // =====================================
 
   const canCraft =
     !!season &&
@@ -255,6 +474,180 @@ export default function CraftPage() {
     !crafting &&
     walletBalance >=
       season.craft_cost;
+
+  // =====================================
+  // WAIT
+  // =====================================
+
+  function wait(
+    milliseconds: number
+  ) {
+    return new Promise(
+      (resolve) =>
+        setTimeout(
+          resolve,
+          milliseconds
+        )
+    );
+  }
+
+  // =====================================
+  // ROULETTE ANIMATION
+  //
+  // IMPORTANT:
+  // UI animation does NOT decide result.
+  // Final Grade comes from backend.
+  // =====================================
+
+  async function runRoulette(
+    finalGrade: Grade
+  ) {
+    setPhase(
+      "ROLLING"
+    );
+
+    setEnergyProgress(
+      10
+    );
+
+    let index = 0;
+
+    // FAST SPIN
+    for (
+      let i = 0;
+      i < 16;
+      i += 1
+    ) {
+      index =
+        (index + 1) %
+        grades.length;
+
+      setRouletteGrade(
+        grades[index]
+      );
+
+      setEnergyProgress(
+        Math.min(
+          62,
+          10 + i * 3
+        )
+      );
+
+      await wait(
+        80
+      );
+    }
+
+    // MEDIUM SPIN
+    for (
+      let i = 0;
+      i < 8;
+      i += 1
+    ) {
+      index =
+        (index + 1) %
+        grades.length;
+
+      setRouletteGrade(
+        grades[index]
+      );
+
+      setEnergyProgress(
+        Math.min(
+          82,
+          62 + i * 2
+        )
+      );
+
+      await wait(
+        130 +
+          i * 12
+      );
+    }
+
+    setPhase(
+      "LOCKING"
+    );
+
+    // SLOW DOWN
+    for (
+      let i = 0;
+      i < 6;
+      i += 1
+    ) {
+      index =
+        (index + 1) %
+        grades.length;
+
+      setRouletteGrade(
+        grades[index]
+      );
+
+      setEnergyProgress(
+        Math.min(
+          96,
+          82 + i * 2
+        )
+      );
+
+      await wait(
+        220 +
+          i * 80
+      );
+    }
+
+    // =====================================
+    // LOCK FINAL BACKEND RESULT
+    // =====================================
+
+    setRouletteGrade(
+      finalGrade
+    );
+
+    setEnergyProgress(
+      100
+    );
+
+    await wait(
+      500
+    );
+
+    // =====================================
+    // FLASH
+    // =====================================
+
+    setScreenFlash(
+      true
+    );
+
+    await wait(
+      120
+    );
+
+    setScreenFlash(
+      false
+    );
+
+    setRevealPulse(
+      true
+    );
+
+    setPhase(
+      "REVEAL"
+    );
+
+    await wait(
+      900
+    );
+
+    setRevealPulse(
+      false
+    );
+  }
+
+  // =====================================
+  // CRAFT
+  // =====================================
 
   async function craftItem() {
     if (
@@ -264,44 +657,60 @@ export default function CraftPage() {
       return;
     }
 
-    setCrafting(true);
-    setCraftResult(null);
-    setErrorMessage("");
-    setCraftStage(
-      "INITIALIZING..."
+    setCrafting(
+      true
     );
 
-    const startedAt =
-      Date.now();
+    setCraftResult(
+      null
+    );
+
+    setErrorMessage(
+      ""
+    );
+
+    setEnergyProgress(
+      0
+    );
+
+    setPhase(
+      "INITIALIZING"
+    );
 
     try {
       const {
-        data: { session },
+        data: {
+          session,
+        },
       } =
         await supabase.auth.getSession();
 
       if (!session) {
-        router.push("/login");
+        router.push(
+          "/login"
+        );
+
         return;
       }
 
-      setTimeout(() => {
-        setCraftStage(
-          "ROLLING RARITY..."
-        );
-      }, 700);
+      // =====================================
+      // INITIALIZING EFFECT
+      // =====================================
 
-      setTimeout(() => {
-        setCraftStage(
-          "FORGING LOOT..."
-        );
-      }, 1700);
+      await wait(
+        500
+      );
+
+      // =====================================
+      // CALL REAL BACKEND
+      // =====================================
 
       const response =
         await fetch(
           "/api/craft",
           {
-            method: "POST",
+            method:
+              "POST",
 
             headers: {
               "Content-Type":
@@ -322,54 +731,82 @@ export default function CraftPage() {
       const result =
         await response.json();
 
-      if (!response.ok) {
+      if (
+        !response.ok
+      ) {
         throw new Error(
           result.message ||
             "Craft failed"
         );
       }
 
-      const elapsed =
-        Date.now() -
-        startedAt;
+      const finalItem =
+        result.item as CraftedItem;
 
-      if (elapsed < 3500) {
-        await new Promise(
-          (resolve) =>
-            setTimeout(
-              resolve,
-              3500 -
-                elapsed
-            )
-        );
-      }
+      // =====================================
+      // VISUAL ROULETTE
+      // =====================================
+
+      await runRoulette(
+        finalItem.grade
+      );
+
+      // =====================================
+      // SET REAL RESULT
+      // =====================================
 
       setCraftResult(
-        result.item
+        finalItem
       );
 
       setPreviewGrade(
-        result.item.grade
+        finalItem.grade
       );
 
       setWalletBalance(
-        result.wallet.balance
+        Number(
+          result.wallet
+            ?.balance ??
+            walletBalance -
+              season.craft_cost
+        )
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "CRAFT ERROR:",
+        error
       );
 
-      setCraftStage(
-        "CRAFT COMPLETE"
-      );
-    } catch (error) {
       setErrorMessage(
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Craft failed"
       );
+
+      setPhase(
+        "IDLE"
+      );
+
+      setEnergyProgress(
+        0
+      );
     } finally {
-      setCrafting(false);
-      setHoldProgress(0);
+      setCrafting(
+        false
+      );
+
+      setHoldProgress(
+        0
+      );
     }
   }
+
+  // =====================================
+  // HOLD TO CRAFT
+  // =====================================
 
   function startHold() {
     if (!canCraft) {
@@ -382,42 +819,53 @@ export default function CraftPage() {
     holdStartedAtRef.current =
       Date.now();
 
+    setHoldProgress(
+      0
+    );
+
     holdIntervalRef.current =
-      setInterval(() => {
-        if (
-          holdStartedAtRef.current ===
-          null
-        ) {
-          return;
-        }
+      setInterval(
+        () => {
+          if (
+            holdStartedAtRef.current ===
+            null
+          ) {
+            return;
+          }
 
-        const elapsed =
-          Date.now() -
-          holdStartedAtRef.current;
+          const elapsed =
+            Date.now() -
+            holdStartedAtRef.current;
 
-        const progress =
-          Math.min(
-            100,
-            (elapsed / 1200) *
-              100
+          const progress =
+            Math.min(
+              100,
+              (elapsed /
+                1200) *
+                100
+            );
+
+          setHoldProgress(
+            progress
           );
 
-        setHoldProgress(
-          progress
-        );
+          if (
+            progress >=
+              100 &&
+            !holdTriggeredRef.current
+          ) {
+            holdTriggeredRef.current =
+              true;
 
-        if (
-          progress >= 100 &&
-          !holdTriggeredRef.current
-        ) {
-          holdTriggeredRef.current =
-            true;
+            stopHold(
+              false
+            );
 
-          stopHold(false);
-
-          craftItem();
-        }
-      }, 20);
+            craftItem();
+          }
+        },
+        20
+      );
   }
 
   function stopHold(
@@ -441,9 +889,37 @@ export default function CraftPage() {
       reset &&
       !holdTriggeredRef.current
     ) {
-      setHoldProgress(0);
+      setHoldProgress(
+        0
+      );
     }
   }
+
+  // =====================================
+  // RESET RESULT
+  // =====================================
+
+  function craftAgain() {
+    setCraftResult(
+      null
+    );
+
+    setPhase(
+      "IDLE"
+    );
+
+    setEnergyProgress(
+      0
+    );
+
+    setPreviewGrade(
+      "COMMON"
+    );
+  }
+
+  // =====================================
+  // LOADING
+  // =====================================
 
   if (loading) {
     return (
@@ -451,9 +927,11 @@ export default function CraftPage() {
 
         <Navbar />
 
-        <div className="min-h-[80vh] flex items-center justify-center">
+        <div className="min-h-[80vh] flex flex-col items-center justify-center">
 
-          <p className="text-lime-400 tracking-[0.35em] animate-pulse">
+          <div className="w-16 h-16 border-2 border-zinc-800 border-t-cyan-400 rounded-full animate-spin" />
+
+          <p className="text-cyan-400 tracking-[0.35em] mt-6 animate-pulse">
             LOADING CRAFT SYSTEM...
           </p>
 
@@ -463,12 +941,76 @@ export default function CraftPage() {
     );
   }
 
+  // =====================================
+  // PAGE
+  // =====================================
+
   return (
-    <main className="min-h-screen bg-black text-white relative overflow-hidden">
+    <main
+      className={`
+        min-h-screen
+        bg-black
+        text-white
+        relative
+        overflow-hidden
+
+        ${
+          phase ===
+            "REVEAL" &&
+          craftResult?.grade ===
+            "LEGENDARY"
+            ? "legendary-screen-shake"
+            : ""
+        }
+      `}
+    >
 
       <Navbar />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-10">
+      {/* =====================================
+          BACKGROUND FX
+      ===================================== */}
+
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+
+        <div className="absolute top-[-300px] left-1/2 -translate-x-1/2 w-[1000px] h-[800px] rounded-full bg-cyan-400/[0.06] blur-[180px]" />
+
+        <div className="absolute bottom-[-350px] left-[-250px] w-[700px] h-[700px] rounded-full bg-purple-500/[0.07] blur-[180px]" />
+
+        <div className="absolute bottom-[-350px] right-[-250px] w-[700px] h-[700px] rounded-full bg-orange-400/[0.05] blur-[180px]" />
+
+      </div>
+
+      {/* =====================================
+          FLASH
+      ===================================== */}
+
+      {screenFlash && (
+        <div className="fixed inset-0 z-[100] bg-white pointer-events-none animate-craft-flash" />
+      )}
+
+      {/* =====================================
+          LEGENDARY OVERLAY
+      ===================================== */}
+
+      {phase ===
+        "REVEAL" &&
+        craftResult?.grade ===
+          "LEGENDARY" && (
+        <div className="fixed inset-0 z-40 pointer-events-none">
+
+          <div className="absolute inset-0 bg-orange-400/[0.04]" />
+
+          <div className="absolute inset-0 legendary-rays opacity-50" />
+
+        </div>
+      )}
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+
+        {/* =====================================
+            TOP INFO
+        ===================================== */}
 
         {errorMessage && (
           <div className="border border-red-400/30 bg-red-400/[0.07] text-red-400 rounded-xl p-5 mb-6">
@@ -479,7 +1021,7 @@ export default function CraftPage() {
         {season && (
           <>
 
-            <section className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
 
               <Stat
                 label="ACTIVE SEASON"
@@ -504,121 +1046,419 @@ export default function CraftPage() {
               />
 
               <Stat
-                label="DROP STATUS"
-                value={
-                  season.is_active
-                    ? "ACTIVE"
-                    : "INACTIVE"
-                }
-                className={
-                  season.is_active
-                    ? "text-lime-400"
-                    : "text-red-400"
-                }
+                label="WALLET"
+                value={`${walletBalance.toLocaleString()} LT`}
+                className="text-lime-400"
               />
 
             </section>
 
-            <section className="grid xl:grid-cols-2 gap-6 mt-6">
+            {/* =====================================
+                MAIN CRAFT AREA
+            ===================================== */}
+
+            <section className="grid xl:grid-cols-[1.1fr_0.9fr] gap-6 mt-6">
+
+              {/* =====================================
+                  CRAFT CHAMBER
+              ===================================== */}
 
               <div
                 className={`
+                  relative
+                  overflow-hidden
                   border
-                  rounded-[28px]
-                  bg-zinc-950/75
+                  rounded-[30px]
+                  bg-zinc-950/80
+                  min-h-[690px]
                   p-6
-                  ${gradeBorder[previewGrade]}
+                  sm:p-8
+
+                  ${gradeBorder[displayGrade]}
+                  ${gradeGlow[displayGrade]}
                 `}
               >
 
-                <div className="flex justify-between">
+                {/* GRADE BACKGROUND */}
 
-                  <div>
+                <div
+                  className={`
+                    absolute
+                    inset-0
+                    bg-gradient-to-b
+                    ${gradeBg[displayGrade]}
+                    via-transparent
+                    to-black
+                    pointer-events-none
+                  `}
+                />
 
-                    <p className="text-zinc-600 text-[9px] tracking-[0.25em]">
-                      ACTIVE DROP
-                    </p>
+                {/* GRID */}
 
-                    <h1 className="text-3xl font-black mt-2">
-                      {
-                        season.product_name
-                      }
-                    </h1>
+                <div className="absolute inset-0 craft-grid opacity-[0.06] pointer-events-none" />
+
+                {/* SCANNER */}
+
+                {(phase ===
+                  "ROLLING" ||
+                  phase ===
+                    "LOCKING") && (
+                  <div className="absolute inset-x-0 top-0 h-[3px] bg-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.9)] craft-scanner pointer-events-none" />
+                )}
+
+                <div className="relative z-10">
+
+                  {/* HEADER */}
+
+                  <div className="flex items-start justify-between gap-5">
+
+                    <div>
+
+                      <p className="text-cyan-400 text-[9px] tracking-[0.3em]">
+                        CRAFT CHAMBER
+                      </p>
+
+                      <h1 className="text-3xl sm:text-4xl font-black mt-2">
+                        {
+                          season.product_name
+                        }
+                      </h1>
+
+                      <p className="text-zinc-600 text-[9px] tracking-[0.25em] mt-2">
+                        {
+                          season.season_name
+                        }
+                      </p>
+
+                    </div>
+
+                    <div className="text-right">
+
+                      <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
+                        TARGET
+                      </p>
+
+                      <p
+                        className={`
+                          text-sm
+                          font-black
+                          mt-2
+                          ${gradeText[displayGrade]}
+                        `}
+                      >
+                        {
+                          displayGrade
+                        }
+                      </p>
+
+                    </div>
 
                   </div>
 
-                  <p
-                    className={`
-                      text-xs
-                      font-black
-                      ${gradeText[previewGrade]}
-                    `}
-                  >
-                    {previewGrade}
-                  </p>
+                  {/* =====================================
+                      PRODUCT CHAMBER
+                  ===================================== */}
 
-                </div>
+                  <div className="relative h-[480px] flex items-center justify-center mt-3">
 
-                <div className="h-[470px] flex items-center justify-center mt-5">
+                    {/* OUTER RING */}
 
-                  <Image
-                    src={
-                      productImages[
-                        previewGrade
-                      ]
-                    }
-                    alt={
-                      previewGrade
-                    }
-                    width={800}
-                    height={900}
-                    className="w-full h-full object-contain"
-                  />
+                    <div
+                      className={`
+                        absolute
+                        w-[390px]
+                        h-[390px]
+                        rounded-full
+                        border
+                        border-dashed
+                        border-zinc-700/40
+
+                        ${
+                          crafting
+                            ? "animate-[spin_8s_linear_infinite]"
+                            : ""
+                        }
+                      `}
+                    />
+
+                    {/* MIDDLE RING */}
+
+                    <div
+                      className={`
+                        absolute
+                        w-[330px]
+                        h-[330px]
+                        rounded-full
+                        border
+                        border-cyan-400/15
+
+                        ${
+                          crafting
+                            ? "animate-[spin_4s_linear_infinite_reverse]"
+                            : ""
+                        }
+                      `}
+                    />
+
+                    {/* INNER GLOW */}
+
+                    <div
+                      className={`
+                        absolute
+                        w-[250px]
+                        h-[250px]
+                        rounded-full
+                        blur-[60px]
+
+                        ${
+                          displayGrade ===
+                          "COMMON"
+                            ? "bg-zinc-400/10"
+                            : displayGrade ===
+                              "RARE"
+                            ? "bg-cyan-400/15"
+                            : displayGrade ===
+                              "EPIC"
+                            ? "bg-purple-400/20"
+                            : "bg-orange-400/25"
+                        }
+                      `}
+                    />
+
+                    {/* PRODUCT */}
+
+                    <div
+                      className={`
+                        relative
+                        z-10
+                        w-full
+                        h-full
+                        flex
+                        items-center
+                        justify-center
+
+                        ${
+                          phase ===
+                            "ROLLING"
+                            ? "craft-item-pulse"
+                            : ""
+                        }
+
+                        ${
+                          revealPulse
+                            ? "craft-reveal"
+                            : ""
+                        }
+                      `}
+                    >
+
+                      <Image
+                        src={
+                          productImages[
+                            displayGrade
+                          ]
+                        }
+                        alt={
+                          displayGrade
+                        }
+                        width={900}
+                        height={1000}
+                        priority
+                        className="w-full h-full object-contain drop-shadow-[0_25px_45px_rgba(0,0,0,0.85)]"
+                      />
+
+                    </div>
+
+                    {/* =====================================
+                        PHASE TEXT
+                    ===================================== */}
+
+                    {crafting && (
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 whitespace-nowrap">
+
+                        <div className="border border-zinc-700 bg-black/80 backdrop-blur-xl rounded-full px-5 py-2">
+
+                          <p className="text-[9px] tracking-[0.3em] font-black animate-pulse">
+
+                            {phase ===
+                              "INITIALIZING" && (
+                              <span className="text-cyan-400">
+                                INITIALIZING CRAFT CORE
+                              </span>
+                            )}
+
+                            {phase ===
+                              "ROLLING" && (
+                              <span
+                                className={
+                                  gradeText[
+                                    rouletteGrade
+                                  ]
+                                }
+                              >
+                                ROLLING RARITY //{" "}
+                                {
+                                  rouletteGrade
+                                }
+                              </span>
+                            )}
+
+                            {phase ===
+                              "LOCKING" && (
+                              <span className="text-orange-400">
+                                LOCKING GRADE //{" "}
+                                {
+                                  rouletteGrade
+                                }
+                              </span>
+                            )}
+
+                          </p>
+
+                        </div>
+
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* =====================================
+                      ENERGY
+                  ===================================== */}
+
+                  <div className="mt-3">
+
+                    <div className="flex items-center justify-between">
+
+                      <p className="text-zinc-600 text-[8px] tracking-[0.25em]">
+                        CRAFT ENERGY
+                      </p>
+
+                      <p className="text-cyan-400 text-xs font-black">
+                        {Math.round(
+                          energyProgress
+                        )}
+                        %
+                      </p>
+
+                    </div>
+
+                    <div className="relative h-2 bg-zinc-900 rounded-full overflow-hidden mt-3">
+
+                      <div
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-400 via-purple-400 to-orange-400 transition-all duration-200"
+                        style={{
+                          width:
+                            `${energyProgress}%`,
+                        }}
+                      />
+
+                    </div>
+
+                  </div>
 
                 </div>
 
               </div>
 
+              {/* =====================================
+                  CONTROL PANEL
+              ===================================== */}
+
               <div className="space-y-5">
 
-                <section className="border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6">
+                {/* ODDS */}
 
-                  <p className="text-purple-400 text-[9px] tracking-[0.25em]">
-                    RANDOM ENGINE
-                  </p>
+                <section className="border border-zinc-800 bg-zinc-950/80 rounded-[28px] p-6">
 
-                  <h2 className="text-2xl font-black mt-2">
-                    RARITY ODDS
-                  </h2>
+                  <div className="flex items-end justify-between gap-4">
+
+                    <div>
+
+                      <p className="text-purple-400 text-[9px] tracking-[0.3em]">
+                        RANDOM ENGINE
+                      </p>
+
+                      <h2 className="text-2xl font-black mt-2">
+                        RARITY MATRIX
+                      </h2>
+
+                    </div>
+
+                    <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
+                      100%
+                    </p>
+
+                  </div>
 
                   <div className="grid grid-cols-2 gap-3 mt-5">
 
                     {grades.map(
-                      (grade) => (
+                      (
+                        grade
+                      ) => (
                         <button
-                          key={grade}
+                          key={
+                            grade
+                          }
+                          disabled={
+                            crafting
+                          }
                           onClick={() =>
                             setPreviewGrade(
                               grade
                             )
                           }
                           className={`
+                            relative
+                            overflow-hidden
                             border
-                            rounded-xl
+                            rounded-2xl
                             p-4
                             text-left
-                            ${gradeBorder[grade]}
+                            transition
+
+                            ${
+                              gradeBorder[
+                                grade
+                              ]
+                            }
+
+                            ${
+                              displayGrade ===
+                              grade
+                                ? "bg-white/[0.04]"
+                                : "bg-black/30"
+                            }
+
+                            ${
+                              crafting
+                                ? "cursor-default"
+                                : "hover:bg-white/[0.04]"
+                            }
                           `}
                         >
 
+                          {displayGrade ===
+                            grade && (
+                            <div className="absolute inset-x-0 bottom-0 h-[2px] bg-current opacity-70" />
+                          )}
+
                           <p
                             className={`
-                              text-xs
+                              text-[9px]
                               font-black
-                              ${gradeText[grade]}
+                              tracking-[0.18em]
+                              ${
+                                gradeText[
+                                  grade
+                                ]
+                              }
                             `}
                           >
-                            {grade}
+                            {
+                              grade
+                            }
                           </p>
 
                           <p
@@ -626,10 +1466,19 @@ export default function CraftPage() {
                               text-3xl
                               font-black
                               mt-2
-                              ${gradeText[grade]}
+                              ${
+                                gradeText[
+                                  grade
+                                ]
+                              }
                             `}
                           >
-                            {odds[grade]}%
+                            {
+                              odds[
+                                grade
+                              ]
+                            }
+                            %
                           </p>
 
                         </button>
@@ -640,18 +1489,31 @@ export default function CraftPage() {
 
                 </section>
 
-                <section className="border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6">
+                {/* SIZE */}
 
-                  <p className="text-cyan-400 text-[9px] tracking-[0.25em]">
-                    SELECT SIZE
+                <section className="border border-zinc-800 bg-zinc-950/80 rounded-[28px] p-6">
+
+                  <p className="text-cyan-400 text-[9px] tracking-[0.3em]">
+                    PHYSICAL CONFIG
                   </p>
 
-                  <div className="grid grid-cols-5 gap-2 mt-4">
+                  <h2 className="text-2xl font-black mt-2">
+                    SELECT SIZE
+                  </h2>
+
+                  <div className="grid grid-cols-5 gap-2 mt-5">
 
                     {sizes.map(
-                      (size) => (
+                      (
+                        size
+                      ) => (
                         <button
-                          key={size}
+                          key={
+                            size
+                          }
+                          disabled={
+                            crafting
+                          }
                           onClick={() =>
                             setSelectedSize(
                               size
@@ -661,17 +1523,21 @@ export default function CraftPage() {
                             border
                             rounded-xl
                             py-4
+                            text-sm
                             font-black
+                            transition
 
                             ${
                               selectedSize ===
                               size
-                                ? "border-cyan-400 bg-cyan-400/10 text-cyan-400"
-                                : "border-zinc-800 text-zinc-500"
+                                ? "border-cyan-400 bg-cyan-400/10 text-cyan-400 shadow-[0_0_25px_rgba(34,211,238,0.08)]"
+                                : "border-zinc-800 bg-black/30 text-zinc-500 hover:border-zinc-600"
                             }
                           `}
                         >
-                          {size}
+                          {
+                            size
+                          }
                         </button>
                       )
                     )}
@@ -680,30 +1546,60 @@ export default function CraftPage() {
 
                 </section>
 
-                <section className="border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6">
+                {/* TERMINAL */}
 
-                  <div className="flex justify-between">
+                <section className="border border-lime-400/15 bg-zinc-950/80 rounded-[28px] p-6">
+
+                  <div className="flex items-start justify-between gap-4">
 
                     <div>
 
-                      <p className="text-lime-400 text-[9px] tracking-[0.25em]">
+                      <p className="text-lime-400 text-[9px] tracking-[0.3em]">
                         CRAFT TERMINAL
                       </p>
 
                       <h2 className="text-2xl font-black mt-2">
-                        FORGE ITEM
+                        FORGE LOOT
                       </h2>
 
                     </div>
 
-                    <p className="text-lime-400 text-xl font-black">
-                      {
-                        season.craft_cost
-                      }{" "}
-                      LT
-                    </p>
+                    <div className="text-right">
+
+                      <p className="text-zinc-600 text-[8px]">
+                        COST
+                      </p>
+
+                      <p className="text-lime-400 text-xl font-black mt-1">
+                        {
+                          season.craft_cost
+                        }{" "}
+                        LT
+                      </p>
+
+                    </div>
 
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-5">
+
+                    <MiniInfo
+                      label="SIZE"
+                      value={
+                        selectedSize
+                      }
+                    />
+
+                    <MiniInfo
+                      label="BALANCE"
+                      value={`${walletBalance.toLocaleString()} LT`}
+                    />
+
+                  </div>
+
+                  {/* =====================================
+                      HOLD BUTTON
+                  ===================================== */}
 
                   <button
                     disabled={
@@ -728,23 +1624,26 @@ export default function CraftPage() {
                       relative
                       overflow-hidden
                       w-full
-                      min-h-[80px]
+                      min-h-[86px]
                       mt-5
                       rounded-xl
                       font-black
-                      text-lg
+                      tracking-[0.05em]
+                      select-none
+                      transition
 
                       ${
                         canCraft
-                          ? "bg-lime-400 text-black"
+                          ? "bg-lime-400 text-black hover:bg-lime-300 shadow-[0_0_35px_rgba(163,230,53,0.12)]"
                           : "bg-zinc-900 text-zinc-600"
                       }
                     `}
                   >
 
-                    {canCraft && (
+                    {canCraft &&
+                      !crafting && (
                       <div
-                        className="absolute inset-y-0 left-0 bg-white/30"
+                        className="absolute inset-y-0 left-0 bg-white/35"
                         style={{
                           width:
                             `${holdProgress}%`,
@@ -752,17 +1651,43 @@ export default function CraftPage() {
                       />
                     )}
 
+                    {canCraft &&
+                      !crafting && (
+                      <div
+                        className="absolute inset-y-0 w-[80px] bg-white/20 blur-xl craft-button-scan"
+                      />
+                    )}
+
                     <span className="relative z-10">
 
                       {crafting
-                        ? craftStage
-                        : season.is_active
-                        ? `HOLD TO CRAFT • ${season.craft_cost} LT`
-                        : "DROP CLOSED"}
+                        ? phase ===
+                          "INITIALIZING"
+                          ? "INITIALIZING..."
+                          : phase ===
+                            "ROLLING"
+                          ? "ROLLING RARITY..."
+                          : phase ===
+                            "LOCKING"
+                          ? "LOCKING GRADE..."
+                          : "REVEALING..."
+                        : !season.is_active
+                        ? "DROP CLOSED"
+                        : walletBalance <
+                          season.craft_cost
+                        ? "NOT ENOUGH LT"
+                        : `HOLD TO CRAFT • ${season.craft_cost} LT`}
 
                     </span>
 
                   </button>
+
+                  {!crafting &&
+                    canCraft && (
+                    <p className="text-center text-zinc-700 text-[8px] tracking-[0.22em] mt-3">
+                      HOLD 1.2 SEC TO INITIATE
+                    </p>
+                  )}
 
                 </section>
 
@@ -770,43 +1695,498 @@ export default function CraftPage() {
 
             </section>
 
-            {craftResult && (
-              <section className="mt-7 border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6">
+            {/* =====================================
+                RESULT
+            ===================================== */}
 
-                <p className="text-lime-400 text-[9px] tracking-[0.3em]">
-                  CRAFT COMPLETE
-                </p>
-
-                <h2
+            {craftResult &&
+              phase ===
+                "REVEAL" && (
+                <section
                   className={`
-                    text-5xl
-                    font-black
-                    mt-3
-                    ${gradeText[craftResult.grade]}
+                    relative
+                    overflow-hidden
+                    mt-7
+                    border
+                    rounded-[30px]
+                    bg-zinc-950/90
+                    p-6
+                    sm:p-10
+
+                    ${
+                      gradeBorder[
+                        craftResult
+                          .grade
+                      ]
+                    }
+
+                    ${
+                      gradeGlow[
+                        craftResult
+                          .grade
+                      ]
+                    }
                   `}
                 >
-                  {
-                    craftResult.grade
-                  }
-                </h2>
 
-                <p className="text-white text-xl font-black mt-3">
-                  {
-                    craftResult.serial
-                  }
-                </p>
+                  <div
+                    className={`
+                      absolute
+                      inset-0
+                      bg-gradient-to-r
+                      ${
+                        gradeBg[
+                          craftResult
+                            .grade
+                        ]
+                      }
+                      via-transparent
+                      to-transparent
+                      pointer-events-none
+                    `}
+                  />
 
-              </section>
-            )}
+                  <div className="relative z-10 grid lg:grid-cols-[320px_1fr] gap-8 items-center">
+
+                    {/* RESULT IMAGE */}
+
+                    <div className="h-[330px] relative">
+
+                      <div className="absolute inset-10 rounded-full bg-white/[0.02] blur-[50px]" />
+
+                      <Image
+                        src={
+                          productImages[
+                            craftResult
+                              .grade
+                          ]
+                        }
+                        alt={
+                          craftResult
+                            .grade
+                        }
+                        width={
+                          600
+                        }
+                        height={
+                          700
+                        }
+                        className="relative z-10 w-full h-full object-contain craft-result-enter"
+                      />
+
+                    </div>
+
+                    {/* RESULT INFO */}
+
+                    <div>
+
+                      <p
+                        className={`
+                          text-[10px]
+                          font-black
+                          tracking-[0.35em]
+
+                          ${
+                            gradeText[
+                              craftResult
+                                .grade
+                            ]
+                          }
+                        `}
+                      >
+                        CRAFT COMPLETE
+                      </p>
+
+                      <h2
+                        className={`
+                          text-5xl
+                          sm:text-7xl
+                          font-black
+                          mt-3
+
+                          ${
+                            gradeText[
+                              craftResult
+                                .grade
+                            ]
+                          }
+                        `}
+                      >
+                        {
+                          craftResult.grade
+                        }
+                      </h2>
+
+                      <p className="text-white text-2xl sm:text-3xl font-black mt-5">
+                        {
+                          craftResult.product
+                        }
+                      </p>
+
+                      <p className="text-cyan-400 font-mono text-lg mt-3">
+                        {
+                          craftResult.serial
+                        }
+                      </p>
+
+                      <div className="grid grid-cols-3 gap-3 mt-7">
+
+                        <ResultInfo
+                          label="SIZE"
+                          value={
+                            craftResult.size ??
+                            "-"
+                          }
+                        />
+
+                        <ResultInfo
+                          label="LEVEL"
+                          value={`LVL ${String(
+                            craftResult.level
+                          ).padStart(
+                            2,
+                            "0"
+                          )}`}
+                        />
+
+                        <ResultInfo
+                          label="SEASON"
+                          value={
+                            craftResult.season
+                          }
+                        />
+
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-3 mt-5">
+
+                        <button
+                          onClick={
+                            craftAgain
+                          }
+                          className="bg-lime-400 text-black py-4 px-6 rounded-xl text-sm font-black hover:bg-lime-300 transition"
+                        >
+                          CRAFT AGAIN
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            router.push(
+                              "/collection"
+                            )
+                          }
+                          className="border border-cyan-400/30 bg-cyan-400/[0.05] text-cyan-400 py-4 px-6 rounded-xl text-sm font-black hover:bg-cyan-400/10 transition"
+                        >
+                          VIEW COLLECTION
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </section>
+              )}
 
           </>
         )}
 
       </div>
 
+      {/* =====================================
+          CUSTOM ANIMATIONS
+      ===================================== */}
+
+      <style jsx global>{`
+
+        @keyframes craftScanner {
+          0% {
+            transform: translateY(0);
+            opacity: 0;
+          }
+
+          10% {
+            opacity: 1;
+          }
+
+          90% {
+            opacity: 1;
+          }
+
+          100% {
+            transform: translateY(690px);
+            opacity: 0;
+          }
+        }
+
+        .craft-scanner {
+          animation:
+            craftScanner
+            1.25s
+            linear
+            infinite;
+        }
+
+        @keyframes craftItemPulse {
+          0% {
+            transform:
+              scale(0.96);
+            filter:
+              brightness(0.8);
+          }
+
+          50% {
+            transform:
+              scale(1.035);
+            filter:
+              brightness(1.35);
+          }
+
+          100% {
+            transform:
+              scale(0.96);
+            filter:
+              brightness(0.8);
+          }
+        }
+
+        .craft-item-pulse {
+          animation:
+            craftItemPulse
+            0.32s
+            ease-in-out
+            infinite;
+        }
+
+        @keyframes craftReveal {
+          0% {
+            transform:
+              scale(0.65);
+            opacity: 0;
+            filter:
+              brightness(4)
+              blur(14px);
+          }
+
+          45% {
+            transform:
+              scale(1.12);
+            opacity: 1;
+            filter:
+              brightness(2)
+              blur(2px);
+          }
+
+          100% {
+            transform:
+              scale(1);
+            opacity: 1;
+            filter:
+              brightness(1)
+              blur(0);
+          }
+        }
+
+        .craft-reveal {
+          animation:
+            craftReveal
+            0.75s
+            cubic-bezier(
+              0.16,
+              1,
+              0.3,
+              1
+            );
+        }
+
+        @keyframes craftResultEnter {
+          0% {
+            opacity: 0;
+            transform:
+              translateY(35px)
+              scale(0.88);
+          }
+
+          100% {
+            opacity: 1;
+            transform:
+              translateY(0)
+              scale(1);
+          }
+        }
+
+        .craft-result-enter {
+          animation:
+            craftResultEnter
+            0.7s
+            cubic-bezier(
+              0.16,
+              1,
+              0.3,
+              1
+            );
+        }
+
+        @keyframes craftFlash {
+          0% {
+            opacity: 0;
+          }
+
+          20% {
+            opacity: 0.95;
+          }
+
+          100% {
+            opacity: 0;
+          }
+        }
+
+        .animate-craft-flash {
+          animation:
+            craftFlash
+            0.22s
+            ease-out
+            forwards;
+        }
+
+        @keyframes buttonScan {
+          0% {
+            left: -100px;
+          }
+
+          100% {
+            left: calc(
+              100% + 100px
+            );
+          }
+        }
+
+        .craft-button-scan {
+          animation:
+            buttonScan
+            2s
+            linear
+            infinite;
+        }
+
+        @keyframes legendaryShake {
+          0% {
+            transform:
+              translate(0);
+          }
+
+          20% {
+            transform:
+              translate(-4px, 2px);
+          }
+
+          40% {
+            transform:
+              translate(4px, -2px);
+          }
+
+          60% {
+            transform:
+              translate(-3px, 1px);
+          }
+
+          80% {
+            transform:
+              translate(3px, -1px);
+          }
+
+          100% {
+            transform:
+              translate(0);
+          }
+        }
+
+        .legendary-screen-shake {
+          animation:
+            legendaryShake
+            0.32s
+            linear
+            2;
+        }
+
+        .legendary-rays {
+          background:
+            repeating-conic-gradient(
+              from 0deg,
+              rgba(
+                251,
+                146,
+                60,
+                0.10
+              )
+              0deg,
+              transparent
+              8deg,
+              transparent
+              18deg
+            );
+
+          animation:
+            legendaryRotate
+            9s
+            linear
+            infinite;
+        }
+
+        @keyframes legendaryRotate {
+          from {
+            transform:
+              rotate(0deg)
+              scale(1.4);
+          }
+
+          to {
+            transform:
+              rotate(360deg)
+              scale(1.4);
+          }
+        }
+
+        .craft-grid {
+          background-image:
+            linear-gradient(
+              rgba(
+                255,
+                255,
+                255,
+                0.25
+              )
+              1px,
+              transparent
+              1px
+            ),
+            linear-gradient(
+              90deg,
+              rgba(
+                255,
+                255,
+                255,
+                0.25
+              )
+              1px,
+              transparent
+              1px
+            );
+
+          background-size:
+            36px 36px;
+        }
+
+      `}</style>
+
     </main>
   );
 }
+
+// =====================================
+// STAT
+// =====================================
 
 function Stat({
   label,
@@ -818,7 +2198,7 @@ function Stat({
   className: string;
 }) {
   return (
-    <div className="border border-zinc-800 bg-zinc-950/75 rounded-xl p-5">
+    <div className="border border-zinc-800 bg-zinc-950/80 rounded-xl p-5">
 
       <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
         {label}
@@ -832,6 +2212,58 @@ function Stat({
           ${className}
         `}
       >
+        {value}
+      </p>
+
+    </div>
+  );
+}
+
+// =====================================
+// MINI INFO
+// =====================================
+
+function MiniInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="border border-zinc-800 bg-black/40 rounded-xl p-3">
+
+      <p className="text-zinc-600 text-[7px] tracking-[0.16em]">
+        {label}
+      </p>
+
+      <p className="text-white text-sm font-black mt-1">
+        {value}
+      </p>
+
+    </div>
+  );
+}
+
+// =====================================
+// RESULT INFO
+// =====================================
+
+function ResultInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="border border-zinc-800 bg-black/50 rounded-xl p-4">
+
+      <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
+        {label}
+      </p>
+
+      <p className="text-white font-black mt-2">
         {value}
       </p>
 
