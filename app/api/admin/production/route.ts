@@ -272,20 +272,37 @@ export async function PATCH(
     const body =
       await request.json();
 
+    // รองรับทั้ง field แบบเดิมและแบบใหม่
+    const rawItemId =
+      body.id ??
+      body.itemId;
+
+    const rawProductionStatus =
+      body.production_status ??
+      body.productionStatus;
+
+    const rawTrackingNumber =
+      body.tracking_number ??
+      body.trackingNumber ??
+      "";
+
     const itemId =
-      Number(body.itemId);
+      Number(rawItemId);
 
     const productionStatus =
       String(
-        body.productionStatus ??
-          ""
+        rawProductionStatus ?? ""
       ) as ProductionStatus;
 
     const trackingNumber =
-      typeof body.trackingNumber ===
+      typeof rawTrackingNumber ===
       "string"
-        ? body.trackingNumber.trim()
+        ? rawTrackingNumber.trim()
         : "";
+
+    // =====================================
+    // VALIDATE ITEM ID
+    // =====================================
 
     if (
       !Number.isInteger(itemId) ||
@@ -302,6 +319,10 @@ export async function PATCH(
         }
       );
     }
+
+    // =====================================
+    // VALIDATE STATUS
+    // =====================================
 
     if (
       !PRODUCTION_STATUSES.includes(
@@ -320,6 +341,10 @@ export async function PATCH(
       );
     }
 
+    // =====================================
+    // REQUIRE TRACKING WHEN SHIPPED
+    // =====================================
+
     if (
       productionStatus ===
         "SHIPPED" &&
@@ -336,6 +361,10 @@ export async function PATCH(
         }
       );
     }
+
+    // =====================================
+    // BUILD UPDATE DATA
+    // =====================================
 
     const updateData: {
       production_status: ProductionStatus;
@@ -358,6 +387,10 @@ export async function PATCH(
       updateData.tracking_number =
         trackingNumber || null;
     }
+
+    // =====================================
+    // UPDATE ITEM
+    // =====================================
 
     const {
       data: updatedItem,
