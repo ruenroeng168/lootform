@@ -309,6 +309,11 @@ export default function CraftPage() {
   const holdTriggeredRef =
     useRef(false);
 
+  const resultRef =
+    useRef<HTMLElement | null>(
+      null
+    );
+
   // =====================================
   // LOAD PAGE
   // =====================================
@@ -637,7 +642,7 @@ export default function CraftPage() {
     );
 
     await wait(
-      900
+      1800
     );
 
     setRevealPulse(
@@ -744,6 +749,18 @@ export default function CraftPage() {
         result.item as CraftedItem;
 
       // =====================================
+      // PREPARE REAL RESULT
+      //
+      // Backend still decides the result.
+      // We store it before the REVEAL phase
+      // so the cinematic overlay can show it.
+      // =====================================
+
+      setCraftResult(
+        finalItem
+      );
+
+      // =====================================
       // VISUAL ROULETTE
       // =====================================
 
@@ -752,12 +769,8 @@ export default function CraftPage() {
       );
 
       // =====================================
-      // SET REAL RESULT
+      // FINAL UI
       // =====================================
-
-      setCraftResult(
-        finalItem
-      );
 
       setPreviewGrade(
         finalItem.grade
@@ -770,6 +783,18 @@ export default function CraftPage() {
             walletBalance -
               season.craft_cost
         )
+      );
+
+      window.setTimeout(
+        () => {
+          resultRef.current?.scrollIntoView({
+            behavior:
+              "smooth",
+            block:
+              "start",
+          });
+        },
+        80
       );
     } catch (
       error
@@ -987,6 +1012,138 @@ export default function CraftPage() {
 
       {screenFlash && (
         <div className="fixed inset-0 z-[100] bg-white pointer-events-none animate-craft-flash" />
+      )}
+
+      {/* =====================================
+          CINEMATIC CRAFT REVEAL
+      ===================================== */}
+
+      {revealPulse &&
+        craftResult && (
+        <div className="fixed inset-0 z-[90] pointer-events-none flex items-center justify-center overflow-hidden bg-black/88 backdrop-blur-sm craft-cinematic-overlay">
+
+          <div
+            className={`
+              absolute
+              w-[720px]
+              h-[720px]
+              rounded-full
+              blur-[130px]
+              craft-cinematic-glow
+
+              ${
+                craftResult.grade ===
+                "COMMON"
+                  ? "bg-zinc-400/20"
+                  : craftResult.grade ===
+                    "RARE"
+                  ? "bg-cyan-400/25"
+                  : craftResult.grade ===
+                    "EPIC"
+                  ? "bg-purple-400/30"
+                  : "bg-orange-400/35"
+              }
+            `}
+          />
+
+          <div className="absolute inset-0 craft-cinematic-rays opacity-60" />
+          <div className="absolute inset-0 craft-cinematic-grid opacity-[0.08]" />
+
+          <div className="absolute inset-0">
+            {Array.from({
+              length: 22,
+            }).map(
+              (_, index) => (
+                <span
+                  key={
+                    index
+                  }
+                  className="craft-particle"
+                  style={{
+                    left:
+                      `${8 + ((index * 37) % 84)}%`,
+                    top:
+                      `${12 + ((index * 53) % 74)}%`,
+                    animationDelay:
+                      `${(index % 7) * 0.08}s`,
+                  }}
+                />
+              )
+            )}
+          </div>
+
+          <div className="relative z-10 w-full max-w-[960px] px-6 text-center craft-cinematic-content">
+
+            <p
+              className={`
+                text-[10px]
+                sm:text-xs
+                font-black
+                tracking-[0.55em]
+
+                ${
+                  gradeText[
+                    craftResult.grade
+                  ]
+                }
+              `}
+            >
+              CRAFT COMPLETE
+            </p>
+
+            <h2
+              className={`
+                text-6xl
+                sm:text-8xl
+                lg:text-9xl
+                leading-none
+                font-black
+                mt-3
+                craft-grade-slam
+
+                ${
+                  gradeText[
+                    craftResult.grade
+                  ]
+                }
+              `}
+            >
+              {craftResult.grade}
+            </h2>
+
+            <div className="relative h-[360px] sm:h-[440px] mt-2 flex items-center justify-center">
+
+              <div className="absolute w-[330px] sm:w-[410px] h-[330px] sm:h-[410px] rounded-full border border-white/10 craft-ring-one" />
+              <div className="absolute w-[260px] sm:w-[330px] h-[260px] sm:h-[330px] rounded-full border border-dashed border-white/20 craft-ring-two" />
+
+              <Image
+                src={
+                  productImages[
+                    craftResult.grade
+                  ]
+                }
+                alt={
+                  craftResult.grade
+                }
+                width={760}
+                height={820}
+                priority
+                className="relative z-10 w-full h-full object-contain craft-cinematic-item"
+              />
+
+            </div>
+
+            <p className="text-white text-xl sm:text-3xl font-black">
+              {craftResult.product}
+            </p>
+
+            <p className="text-cyan-400 font-mono text-sm sm:text-lg font-black mt-2 tracking-[0.12em]">
+              {craftResult.serial}
+            </p>
+
+          </div>
+
+        </div>
       )}
 
       {/* =====================================
@@ -1367,6 +1524,236 @@ export default function CraftPage() {
 
               <div className="space-y-5">
 
+                {/* =====================================
+                    SIDE RESULT
+                ===================================== */}
+
+                {craftResult &&
+                  phase ===
+                    "REVEAL" && (
+                    <section
+                      ref={
+                        resultRef
+                      }
+                      className={`
+                        relative
+                        overflow-hidden
+                        border
+                        rounded-[28px]
+                        bg-zinc-950/95
+                        p-5
+                        sm:p-6
+                        craft-result-enter
+                        scroll-mt-24
+
+                        ${
+                          gradeBorder[
+                            craftResult
+                              .grade
+                          ]
+                        }
+
+                        ${
+                          gradeGlow[
+                            craftResult
+                              .grade
+                          ]
+                        }
+                      `}
+                    >
+
+                      <div
+                        className={`
+                          absolute
+                          inset-0
+                          bg-gradient-to-br
+                          ${
+                            gradeBg[
+                              craftResult
+                                .grade
+                            ]
+                          }
+                          via-transparent
+                          to-black
+                          pointer-events-none
+                        `}
+                      />
+
+                      <div className="absolute inset-0 pointer-events-none">
+                        <div className="absolute -top-24 -right-20 w-64 h-64 rounded-full bg-white/[0.035] blur-[70px] craft-result-aura" />
+                        <div className="absolute inset-0 craft-result-grid opacity-[0.05]" />
+                      </div>
+
+                      <div className="relative z-10">
+
+                        <div className="flex items-start justify-between gap-4">
+
+                          <div>
+
+                            <p
+                              className={`
+                                text-[9px]
+                                font-black
+                                tracking-[0.3em]
+                                ${
+                                  gradeText[
+                                    craftResult
+                                      .grade
+                                  ]
+                                }
+                              `}
+                            >
+                              CRAFT COMPLETE
+                            </p>
+
+                            <h2
+                              className={`
+                                text-5xl
+                                sm:text-6xl
+                                leading-none
+                                font-black
+                                mt-2
+                                ${
+                                  gradeText[
+                                    craftResult
+                                      .grade
+                                  ]
+                                }
+                              `}
+                            >
+                              {craftResult.grade}
+                            </h2>
+
+                          </div>
+
+                          <div className="text-right">
+
+                            <p className="text-zinc-600 text-[8px] tracking-[0.18em]">
+                              ITEM ID
+                            </p>
+
+                            <p className="text-cyan-400 font-mono text-xs font-black mt-2">
+                              {craftResult.serial}
+                            </p>
+
+                          </div>
+
+                        </div>
+
+                        <div className="relative h-[260px] mt-3 flex items-center justify-center">
+
+                          <div className="absolute w-[210px] h-[210px] rounded-full border border-dashed border-zinc-700/40" />
+
+                          <div className="absolute w-[160px] h-[160px] rounded-full border border-cyan-400/10" />
+
+                          <div
+                            className={`
+                              absolute
+                              w-[145px]
+                              h-[145px]
+                              rounded-full
+                              blur-[45px]
+
+                              ${
+                                craftResult.grade ===
+                                "COMMON"
+                                  ? "bg-zinc-400/10"
+                                  : craftResult.grade ===
+                                    "RARE"
+                                  ? "bg-cyan-400/15"
+                                  : craftResult.grade ===
+                                    "EPIC"
+                                  ? "bg-purple-400/20"
+                                  : "bg-orange-400/25"
+                              }
+                            `}
+                          />
+
+                          <Image
+                            src={
+                              productImages[
+                                craftResult
+                                  .grade
+                              ]
+                            }
+                            alt={
+                              craftResult
+                                .grade
+                            }
+                            width={500}
+                            height={580}
+                            className="relative z-10 w-full h-full object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.8)]"
+                          />
+
+                        </div>
+
+                        <div>
+
+                          <p className="text-white text-xl font-black">
+                            {craftResult.product}
+                          </p>
+
+                          <div className="grid grid-cols-3 gap-2 mt-4">
+
+                            <ResultInfo
+                              label="SIZE"
+                              value={
+                                craftResult.size ??
+                                "-"
+                              }
+                            />
+
+                            <ResultInfo
+                              label="LEVEL"
+                              value={`LVL ${String(
+                                craftResult.level
+                              ).padStart(
+                                2,
+                                "0"
+                              )}`}
+                            />
+
+                            <ResultInfo
+                              label="SEASON"
+                              value={
+                                craftResult.season
+                              }
+                            />
+
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 mt-4">
+
+                            <button
+                              onClick={
+                                craftAgain
+                              }
+                              className="bg-lime-400 text-black py-3.5 px-4 rounded-xl text-xs font-black hover:bg-lime-300 transition"
+                            >
+                              CRAFT AGAIN
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                router.push(
+                                  "/collection"
+                                )
+                              }
+                              className="border border-cyan-400/30 bg-cyan-400/[0.05] text-cyan-400 py-3.5 px-4 rounded-xl text-xs font-black hover:bg-cyan-400/10 transition"
+                            >
+                              VIEW COLLECTION
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </section>
+                  )}
+
+
                 {/* ODDS */}
 
                 <section className="border border-zinc-800 bg-zinc-950/80 rounded-[28px] p-6">
@@ -1691,203 +2078,10 @@ export default function CraftPage() {
 
                 </section>
 
+
               </div>
 
             </section>
-
-            {/* =====================================
-                RESULT
-            ===================================== */}
-
-            {craftResult &&
-              phase ===
-                "REVEAL" && (
-                <section
-                  className={`
-                    relative
-                    overflow-hidden
-                    mt-7
-                    border
-                    rounded-[30px]
-                    bg-zinc-950/90
-                    p-6
-                    sm:p-10
-
-                    ${
-                      gradeBorder[
-                        craftResult
-                          .grade
-                      ]
-                    }
-
-                    ${
-                      gradeGlow[
-                        craftResult
-                          .grade
-                      ]
-                    }
-                  `}
-                >
-
-                  <div
-                    className={`
-                      absolute
-                      inset-0
-                      bg-gradient-to-r
-                      ${
-                        gradeBg[
-                          craftResult
-                            .grade
-                        ]
-                      }
-                      via-transparent
-                      to-transparent
-                      pointer-events-none
-                    `}
-                  />
-
-                  <div className="relative z-10 grid lg:grid-cols-[320px_1fr] gap-8 items-center">
-
-                    {/* RESULT IMAGE */}
-
-                    <div className="h-[330px] relative">
-
-                      <div className="absolute inset-10 rounded-full bg-white/[0.02] blur-[50px]" />
-
-                      <Image
-                        src={
-                          productImages[
-                            craftResult
-                              .grade
-                          ]
-                        }
-                        alt={
-                          craftResult
-                            .grade
-                        }
-                        width={
-                          600
-                        }
-                        height={
-                          700
-                        }
-                        className="relative z-10 w-full h-full object-contain craft-result-enter"
-                      />
-
-                    </div>
-
-                    {/* RESULT INFO */}
-
-                    <div>
-
-                      <p
-                        className={`
-                          text-[10px]
-                          font-black
-                          tracking-[0.35em]
-
-                          ${
-                            gradeText[
-                              craftResult
-                                .grade
-                            ]
-                          }
-                        `}
-                      >
-                        CRAFT COMPLETE
-                      </p>
-
-                      <h2
-                        className={`
-                          text-5xl
-                          sm:text-7xl
-                          font-black
-                          mt-3
-
-                          ${
-                            gradeText[
-                              craftResult
-                                .grade
-                            ]
-                          }
-                        `}
-                      >
-                        {
-                          craftResult.grade
-                        }
-                      </h2>
-
-                      <p className="text-white text-2xl sm:text-3xl font-black mt-5">
-                        {
-                          craftResult.product
-                        }
-                      </p>
-
-                      <p className="text-cyan-400 font-mono text-lg mt-3">
-                        {
-                          craftResult.serial
-                        }
-                      </p>
-
-                      <div className="grid grid-cols-3 gap-3 mt-7">
-
-                        <ResultInfo
-                          label="SIZE"
-                          value={
-                            craftResult.size ??
-                            "-"
-                          }
-                        />
-
-                        <ResultInfo
-                          label="LEVEL"
-                          value={`LVL ${String(
-                            craftResult.level
-                          ).padStart(
-                            2,
-                            "0"
-                          )}`}
-                        />
-
-                        <ResultInfo
-                          label="SEASON"
-                          value={
-                            craftResult.season
-                          }
-                        />
-
-                      </div>
-
-                      <div className="grid sm:grid-cols-2 gap-3 mt-5">
-
-                        <button
-                          onClick={
-                            craftAgain
-                          }
-                          className="bg-lime-400 text-black py-4 px-6 rounded-xl text-sm font-black hover:bg-lime-300 transition"
-                        >
-                          CRAFT AGAIN
-                        </button>
-
-                        <button
-                          onClick={() =>
-                            router.push(
-                              "/collection"
-                            )
-                          }
-                          className="border border-cyan-400/30 bg-cyan-400/[0.05] text-cyan-400 py-4 px-6 rounded-xl text-sm font-black hover:bg-cyan-400/10 transition"
-                        >
-                          VIEW COLLECTION
-                        </button>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                </section>
-              )}
 
           </>
         )}
@@ -2146,6 +2340,388 @@ export default function CraftPage() {
               rotate(360deg)
               scale(1.4);
           }
+        }
+
+
+        @keyframes cinematicOverlayIn {
+          0% {
+            opacity: 0;
+          }
+
+          100% {
+            opacity: 1;
+          }
+        }
+
+        .craft-cinematic-overlay {
+          animation:
+            cinematicOverlayIn
+            0.18s
+            ease-out
+            forwards;
+        }
+
+        @keyframes cinematicGlow {
+          0% {
+            transform:
+              scale(0.45);
+            opacity: 0;
+          }
+
+          45% {
+            transform:
+              scale(1.1);
+            opacity: 1;
+          }
+
+          100% {
+            transform:
+              scale(1);
+            opacity: 0.72;
+          }
+        }
+
+        .craft-cinematic-glow {
+          animation:
+            cinematicGlow
+            1.6s
+            cubic-bezier(
+              0.16,
+              1,
+              0.3,
+              1
+            )
+            forwards;
+        }
+
+        @keyframes cinematicContent {
+          0% {
+            opacity: 0;
+            transform:
+              scale(0.7)
+              translateY(34px);
+            filter:
+              brightness(3)
+              blur(10px);
+          }
+
+          45% {
+            opacity: 1;
+            transform:
+              scale(1.04)
+              translateY(0);
+            filter:
+              brightness(1.7)
+              blur(0);
+          }
+
+          100% {
+            opacity: 1;
+            transform:
+              scale(1);
+            filter:
+              brightness(1)
+              blur(0);
+          }
+        }
+
+        .craft-cinematic-content {
+          animation:
+            cinematicContent
+            1s
+            cubic-bezier(
+              0.16,
+              1,
+              0.3,
+              1
+            )
+            forwards;
+        }
+
+        @keyframes gradeSlam {
+          0% {
+            transform:
+              scale(2.2);
+            opacity: 0;
+            letter-spacing:
+              0.2em;
+          }
+
+          55% {
+            transform:
+              scale(0.94);
+            opacity: 1;
+          }
+
+          100% {
+            transform:
+              scale(1);
+            opacity: 1;
+          }
+        }
+
+        .craft-grade-slam {
+          animation:
+            gradeSlam
+            0.72s
+            cubic-bezier(
+              0.16,
+              1,
+              0.3,
+              1
+            );
+        }
+
+        @keyframes cinematicItem {
+          0% {
+            opacity: 0;
+            transform:
+              translateY(55px)
+              scale(0.62)
+              rotate(-2deg);
+            filter:
+              brightness(4)
+              blur(13px);
+          }
+
+          55% {
+            opacity: 1;
+            transform:
+              translateY(-8px)
+              scale(1.07)
+              rotate(1deg);
+            filter:
+              brightness(1.65)
+              blur(0);
+          }
+
+          100% {
+            opacity: 1;
+            transform:
+              translateY(0)
+              scale(1)
+              rotate(0);
+            filter:
+              brightness(1);
+          }
+        }
+
+        .craft-cinematic-item {
+          animation:
+            cinematicItem
+            1.15s
+            cubic-bezier(
+              0.16,
+              1,
+              0.3,
+              1
+            )
+            forwards;
+
+          filter:
+            drop-shadow(
+              0 35px 55px
+              rgba(
+                0,
+                0,
+                0,
+                0.9
+              )
+            );
+        }
+
+        @keyframes ringOne {
+          from {
+            transform:
+              rotate(0deg)
+              scale(0.88);
+            opacity: 0.25;
+          }
+
+          to {
+            transform:
+              rotate(360deg)
+              scale(1.04);
+            opacity: 0.75;
+          }
+        }
+
+        .craft-ring-one {
+          animation:
+            ringOne
+            7s
+            linear
+            infinite;
+        }
+
+        @keyframes ringTwo {
+          from {
+            transform:
+              rotate(360deg)
+              scale(1.02);
+          }
+
+          to {
+            transform:
+              rotate(0deg)
+              scale(0.92);
+          }
+        }
+
+        .craft-ring-two {
+          animation:
+            ringTwo
+            4s
+            linear
+            infinite;
+        }
+
+        .craft-cinematic-rays {
+          background:
+            repeating-conic-gradient(
+              from 0deg,
+              rgba(
+                255,
+                255,
+                255,
+                0.12
+              )
+              0deg,
+              transparent
+              4deg,
+              transparent
+              15deg
+            );
+
+          animation:
+            legendaryRotate
+            12s
+            linear
+            infinite;
+        }
+
+        .craft-cinematic-grid,
+        .craft-result-grid {
+          background-image:
+            linear-gradient(
+              rgba(
+                255,
+                255,
+                255,
+                0.25
+              )
+              1px,
+              transparent
+              1px
+            ),
+            linear-gradient(
+              90deg,
+              rgba(
+                255,
+                255,
+                255,
+                0.25
+              )
+              1px,
+              transparent
+              1px
+            );
+
+          background-size:
+            42px 42px;
+        }
+
+        @keyframes particleBurst {
+          0% {
+            transform:
+              translateY(20px)
+              scale(0);
+            opacity: 0;
+          }
+
+          35% {
+            opacity: 1;
+          }
+
+          100% {
+            transform:
+              translateY(-70px)
+              scale(1.4);
+            opacity: 0;
+          }
+        }
+
+        .craft-particle {
+          position:
+            absolute;
+          width:
+            4px;
+          height:
+            4px;
+          border-radius:
+            999px;
+          background:
+            white;
+          box-shadow:
+            0 0 16px
+            rgba(
+              255,
+              255,
+              255,
+              0.95
+            );
+
+          animation:
+            particleBurst
+            1.25s
+            ease-out
+            infinite;
+        }
+
+        @keyframes resultItemFloat {
+          0%,
+          100% {
+            transform:
+              translateY(0)
+              scale(1);
+          }
+
+          50% {
+            transform:
+              translateY(-8px)
+              scale(1.015);
+          }
+        }
+
+        .craft-result-item-float {
+          animation:
+            resultItemFloat
+            3.4s
+            ease-in-out
+            infinite;
+        }
+
+        @keyframes resultAura {
+          0%,
+          100% {
+            transform:
+              scale(0.9);
+            opacity: 0.35;
+          }
+
+          50% {
+            transform:
+              scale(1.12);
+            opacity: 0.72;
+          }
+        }
+
+        .craft-result-aura {
+          animation:
+            resultAura
+            3s
+            ease-in-out
+            infinite;
         }
 
         .craft-grid {
