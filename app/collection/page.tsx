@@ -1,15 +1,21 @@
 "use client";
 
 import Image from "next/image";
+
 import {
   useEffect,
   useMemo,
   useState,
 } from "react";
+
 import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
+
+// =====================================
+// TYPES
+// =====================================
 
 type Grade =
   | "COMMON"
@@ -43,37 +49,91 @@ type Item = {
 
   production_updated_at:
     string;
+
+  shipping_address_id:
+    number | null;
 };
+
+type ShippingAddress = {
+  id: number;
+  user_id: string;
+  recipient_name: string;
+  phone: string;
+  address_line: string;
+  subdistrict: string | null;
+  district: string | null;
+  province: string;
+  postal_code: string;
+  note: string | null;
+  is_default: boolean;
+};
+
+// =====================================
+// PRODUCT IMAGE
+// =====================================
 
 const productImages: Record<
   Grade,
   string
 > = {
-  COMMON: "/products/common.png",
-  RARE: "/products/rare.png",
-  EPIC: "/products/epic.png",
-  LEGENDARY: "/products/legendary.png",
+  COMMON:
+    "/products/common.png",
+
+  RARE:
+    "/products/rare.png",
+
+  EPIC:
+    "/products/epic.png",
+
+  LEGENDARY:
+    "/products/legendary.png",
 };
+
+// =====================================
+// GRADE TEXT
+// =====================================
 
 const gradeText: Record<
   Grade,
   string
 > = {
-  COMMON: "text-zinc-200",
-  RARE: "text-cyan-400",
-  EPIC: "text-purple-400",
-  LEGENDARY: "text-orange-400",
+  COMMON:
+    "text-zinc-200",
+
+  RARE:
+    "text-cyan-400",
+
+  EPIC:
+    "text-purple-400",
+
+  LEGENDARY:
+    "text-orange-400",
 };
+
+// =====================================
+// GRADE BORDER
+// =====================================
 
 const gradeBorder: Record<
   Grade,
   string
 > = {
-  COMMON: "border-zinc-700",
-  RARE: "border-cyan-400/50",
-  EPIC: "border-purple-400/50",
-  LEGENDARY: "border-orange-400/50",
+  COMMON:
+    "border-zinc-700",
+
+  RARE:
+    "border-cyan-400/50",
+
+  EPIC:
+    "border-purple-400/50",
+
+  LEGENDARY:
+    "border-orange-400/50",
 };
+
+// =====================================
+// PRODUCTION STEPS
+// =====================================
 
 const productionSteps:
   ProductionStatus[] = [
@@ -85,120 +145,311 @@ const productionSteps:
     "DELIVERED",
   ];
 
-export default function CollectionPage() {
-  const router = useRouter();
+// =====================================
+// PAGE
+// =====================================
 
-  const [loading, setLoading] =
+export default function CollectionPage() {
+  const router =
+    useRouter();
+
+  const [
+    loading,
+    setLoading,
+  ] =
     useState(true);
 
-  const [items, setItems] =
+  const [
+    items,
+    setItems,
+  ] =
     useState<Item[]>([]);
+
+  const [
+    addresses,
+    setAddresses,
+  ] =
+    useState<
+      ShippingAddress[]
+    >([]);
 
   const [
     userEmail,
     setUserEmail,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     walletBalance,
     setWalletBalance,
-  ] = useState(0);
+  ] =
+    useState(0);
+
+  const [
+    selectingItem,
+    setSelectingItem,
+  ] =
+    useState<Item | null>(
+      null
+    );
+
+  const [
+    selectedAddressId,
+    setSelectedAddressId,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+  const [
+    savingShipping,
+    setSavingShipping,
+  ] =
+    useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] =
+    useState("");
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] =
+    useState("");
+
+  // =====================================
+  // LOAD COLLECTION
+  // =====================================
 
   useEffect(() => {
-    async function loadCollection() {
+    loadCollection();
+  }, []);
+
+  async function loadCollection() {
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
       const {
         data: { user },
+        error: userError,
       } =
         await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/login");
+      if (
+        userError ||
+        !user
+      ) {
+        router.push(
+          "/login"
+        );
+
         return;
       }
 
       setUserEmail(
-        user.email ?? "PLAYER"
+        user.email ??
+          "PLAYER"
       );
+
+      // =====================================
+      // WALLET
+      // =====================================
 
       const {
         data: wallet,
-      } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq(
-          "user_id",
-          user.id
-        )
-        .maybeSingle();
+      } =
+        await supabase
+          .from(
+            "wallets"
+          )
+          .select(
+            "balance"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .maybeSingle();
 
       setWalletBalance(
-        wallet?.balance ?? 0
+        wallet?.balance ??
+          0
       );
 
-      const {
-        data,
-        error,
-      } = await supabase
-        .from("items")
-        .select("*")
-        .eq(
-          "owner_id",
-          user.id
-        )
-        .order("id", {
-          ascending: false,
-        });
+      // =====================================
+      // ITEMS
+      // =====================================
 
-      if (error) {
-        console.error(
-          "COLLECTION ERROR:",
-          error
-        );
+      const {
+        data:
+          itemData,
+
+        error:
+          itemError,
+      } =
+        await supabase
+          .from(
+            "items"
+          )
+          .select(`
+            id,
+            serial,
+            product,
+            season,
+            grade,
+            level,
+            size,
+            created_at,
+            production_status,
+            tracking_number,
+            production_updated_at,
+            shipping_address_id
+          `)
+          .eq(
+            "owner_id",
+            user.id
+          )
+          .order(
+            "id",
+            {
+              ascending:
+                false,
+            }
+          );
+
+      if (itemError) {
+        throw itemError;
       }
 
       setItems(
-        (data ?? []) as Item[]
+        (itemData ??
+          []) as Item[]
       );
 
+      // =====================================
+      // SHIPPING ADDRESSES
+      // =====================================
+
+      const {
+        data:
+          addressData,
+
+        error:
+          addressError,
+      } =
+        await supabase
+          .from(
+            "shipping_addresses"
+          )
+          .select(`
+            id,
+            user_id,
+            recipient_name,
+            phone,
+            address_line,
+            subdistrict,
+            district,
+            province,
+            postal_code,
+            note,
+            is_default
+          `)
+          .eq(
+            "user_id",
+            user.id
+          )
+          .order(
+            "is_default",
+            {
+              ascending:
+                false,
+            }
+          )
+          .order(
+            "id",
+            {
+              ascending:
+                false,
+            }
+          );
+
+      if (
+        addressError
+      ) {
+        throw addressError;
+      }
+
+      setAddresses(
+        (addressData ??
+          []) as ShippingAddress[]
+      );
+    } catch (error) {
+      console.error(
+        "COLLECTION ERROR:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof
+        Error
+          ? error.message
+          : "Unable to load collection"
+      );
+    } finally {
       setLoading(false);
     }
+  }
 
-    loadCollection();
-  }, [router]);
+  // =====================================
+  // STATS
+  // =====================================
 
   const stats =
     useMemo(() => {
       return {
-        total: items.length,
+        total:
+          items.length,
 
-        COMMON: items.filter(
-          (item) =>
-            item.grade ===
-            "COMMON"
-        ).length,
+        COMMON:
+          items.filter(
+            (item) =>
+              item.grade ===
+              "COMMON"
+          ).length,
 
-        RARE: items.filter(
-          (item) =>
-            item.grade ===
-            "RARE"
-        ).length,
+        RARE:
+          items.filter(
+            (item) =>
+              item.grade ===
+              "RARE"
+          ).length,
 
-        EPIC: items.filter(
-          (item) =>
-            item.grade ===
-            "EPIC"
-        ).length,
+        EPIC:
+          items.filter(
+            (item) =>
+              item.grade ===
+              "EPIC"
+          ).length,
 
-        LEGENDARY: items.filter(
-          (item) =>
-            item.grade ===
-            "LEGENDARY"
-        ).length,
+        LEGENDARY:
+          items.filter(
+            (item) =>
+              item.grade ===
+              "LEGENDARY"
+          ).length,
       };
     }, [items]);
 
+  // =====================================
+  // PROGRESS
+  // =====================================
+
   function getProgress(
-    status: ProductionStatus
+    status:
+      ProductionStatus
   ) {
     const index =
       productionSteps.indexOf(
@@ -212,21 +463,231 @@ export default function CollectionPage() {
     );
   }
 
+  // =====================================
+  // ADDRESS HELPER
+  // =====================================
+
+  function getAddressById(
+    id:
+      number | null
+  ) {
+    if (!id) {
+      return null;
+    }
+
+    return (
+      addresses.find(
+        (address) =>
+          address.id ===
+          id
+      ) ?? null
+    );
+  }
+
+  // =====================================
+  // OPEN SHIPPING SELECTOR
+  // =====================================
+
+  function openShippingSelector(
+    item: Item
+  ) {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (
+      addresses.length ===
+      0
+    ) {
+      router.push(
+        "/shipping"
+      );
+
+      return;
+    }
+
+    setSelectingItem(
+      item
+    );
+
+    if (
+      item.shipping_address_id
+    ) {
+      setSelectedAddressId(
+        item.shipping_address_id
+      );
+    } else {
+      const defaultAddress =
+        addresses.find(
+          (address) =>
+            address.is_default
+        );
+
+      setSelectedAddressId(
+        defaultAddress?.id ??
+          addresses[0]?.id ??
+          null
+      );
+    }
+  }
+
+  // =====================================
+  // CLOSE SELECTOR
+  // =====================================
+
+  function closeShippingSelector() {
+    if (
+      savingShipping
+    ) {
+      return;
+    }
+
+    setSelectingItem(
+      null
+    );
+
+    setSelectedAddressId(
+      null
+    );
+  }
+
+  // =====================================
+  // SAVE ITEM SHIPPING
+  // =====================================
+
+  async function saveItemShipping() {
+    if (
+      savingShipping ||
+      !selectingItem ||
+      !selectedAddressId
+    ) {
+      return;
+    }
+
+    setSavingShipping(
+      true
+    );
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const {
+        data: {
+          session,
+        },
+      } =
+        await supabase.auth.getSession();
+
+      if (!session) {
+        router.push(
+          "/login"
+        );
+
+        return;
+      }
+
+      const response =
+        await fetch(
+          "/api/items/shipping",
+          {
+            method:
+              "PATCH",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+
+            body:
+              JSON.stringify(
+                {
+                  itemId:
+                    selectingItem.id,
+
+                  addressId:
+                    selectedAddressId,
+                }
+              ),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to save shipping address"
+        );
+      }
+
+      setItems(
+        (current) =>
+          current.map(
+            (item) =>
+              item.id ===
+              selectingItem.id
+                ? {
+                    ...item,
+
+                    shipping_address_id:
+                      selectedAddressId,
+                  }
+                : item
+          )
+      );
+
+      setSuccessMessage(
+        `${selectingItem.serial} บันทึกที่อยู่จัดส่งเรียบร้อยแล้ว`
+      );
+
+      closeShippingSelector();
+    } catch (error) {
+      console.error(
+        "SAVE ITEM SHIPPING ERROR:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof
+        Error
+          ? error.message
+          : "ไม่สามารถบันทึกที่อยู่จัดส่งได้"
+      );
+    } finally {
+      setSavingShipping(
+        false
+      );
+    }
+  }
+
+  // =====================================
+  // LOADING
+  // =====================================
+
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white">
-
         <Navbar />
 
         <div className="min-h-[80vh] flex items-center justify-center">
           <p className="text-cyan-400 tracking-[0.35em] animate-pulse">
-            LOADING COLLECTION...
+            LOADING
+            COLLECTION...
           </p>
         </div>
-
       </main>
     );
   }
+
+  // =====================================
+  // PAGE
+  // =====================================
 
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -234,6 +695,10 @@ export default function CollectionPage() {
       <Navbar />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+
+        {/* =====================================
+            PLAYER BAR
+        ===================================== */}
 
         <div className="flex items-center justify-between gap-5 flex-wrap">
 
@@ -257,7 +722,30 @@ export default function CollectionPage() {
 
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+
+            <button
+              onClick={() =>
+                router.push(
+                  "/shipping"
+                )
+              }
+              className="
+                border
+                border-cyan-400/20
+                bg-cyan-400/[0.03]
+                text-cyan-400
+                rounded-xl
+                px-5
+                py-3
+                text-xs
+                font-black
+                hover:border-cyan-400
+                transition
+              "
+            >
+              SHIPPING
+            </button>
 
             <button
               onClick={() =>
@@ -272,7 +760,10 @@ export default function CollectionPage() {
               </p>
 
               <p className="text-lime-400 font-black">
-                {walletBalance} LT
+                {
+                  walletBalance
+                }{" "}
+                LT
               </p>
             </button>
 
@@ -291,6 +782,49 @@ export default function CollectionPage() {
 
         </div>
 
+        {/* =====================================
+            MESSAGE
+        ===================================== */}
+
+        {errorMessage && (
+          <div
+            className="
+              mt-6
+              border
+              border-red-400/30
+              bg-red-400/[0.07]
+              text-red-400
+              rounded-xl
+              p-5
+            "
+          >
+            {errorMessage}
+          </div>
+        )}
+
+        {successMessage && (
+          <div
+            className="
+              mt-6
+              border
+              border-lime-400/30
+              bg-lime-400/[0.07]
+              text-lime-400
+              rounded-xl
+              p-5
+            "
+          >
+            ✓{" "}
+            {
+              successMessage
+            }
+          </div>
+        )}
+
+        {/* =====================================
+            TITLE
+        ===================================== */}
+
         <section className="text-center mt-12">
 
           <p className="text-purple-400 text-[9px] tracking-[0.35em]">
@@ -306,11 +840,17 @@ export default function CollectionPage() {
 
         </section>
 
+        {/* =====================================
+            STATS
+        ===================================== */}
+
         <section className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-10">
 
           <CollectionStat
             label="TOTAL"
-            value={stats.total}
+            value={
+              stats.total
+            }
             className="text-white"
           />
 
@@ -324,13 +864,17 @@ export default function CollectionPage() {
 
           <CollectionStat
             label="RARE"
-            value={stats.RARE}
+            value={
+              stats.RARE
+            }
             className="text-cyan-400"
           />
 
           <CollectionStat
             label="EPIC"
-            value={stats.EPIC}
+            value={
+              stats.EPIC
+            }
             className="text-purple-400"
           />
 
@@ -344,194 +888,755 @@ export default function CollectionPage() {
 
         </section>
 
+        {/* =====================================
+            EMPTY COLLECTION
+        ===================================== */}
+
+        {items.length ===
+          0 && (
+          <section
+            className="
+              mt-8
+              border
+              border-zinc-800
+              bg-zinc-950/70
+              rounded-[26px]
+              p-12
+              text-center
+            "
+          >
+            <p className="text-zinc-500">
+              ยังไม่มี Item ใน Collection
+            </p>
+
+            <button
+              onClick={() =>
+                router.push(
+                  "/craft"
+                )
+              }
+              className="
+                mt-5
+                bg-lime-400
+                text-black
+                px-6
+                py-3
+                rounded-xl
+                font-black
+              "
+            >
+              CRAFT FIRST ITEM
+            </button>
+          </section>
+        )}
+
+        {/* =====================================
+            ITEM GRID
+        ===================================== */}
+
         <section className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 mt-8">
 
-          {items.map((item) => {
-            const progress =
-              getProgress(
-                item.production_status ??
-                  "CRAFTED"
-              );
+          {items.map(
+            (item) => {
+              const progress =
+                getProgress(
+                  item.production_status ??
+                    "CRAFTED"
+                );
 
-            return (
-              <article
-                key={item.id}
-                className={`
-                  border
-                  rounded-[26px]
-                  bg-zinc-950/75
-                  p-5
-                  ${gradeBorder[item.grade]}
-                `}
-              >
+              const
+                shippingAddress =
+                  getAddressById(
+                    item.shipping_address_id
+                  );
 
-                <div className="flex items-start justify-between">
+              const
+                shippingLocked =
+                  item.production_status ===
+                    "SHIPPED" ||
+                  item.production_status ===
+                    "DELIVERED";
 
-                  <div>
-
-                    <p className="text-zinc-600 text-[8px]">
-                      RARITY
-                    </p>
-
-                    <p
-                      className={`
-                        text-xl
-                        font-black
-                        mt-1
-                        ${gradeText[item.grade]}
-                      `}
-                    >
-                      {item.grade}
-                    </p>
-
-                  </div>
-
-                  <div className="border border-lime-400/20 bg-lime-400/5 text-lime-400 rounded-full px-3 py-1.5 text-[8px] font-black">
-                    OWNED
-                  </div>
-
-                </div>
-
-                <div className="h-[280px] mt-2">
-
-                  <Image
-                    src={
-                      productImages[
+              return (
+                <article
+                  key={
+                    item.id
+                  }
+                  className={`
+                    border
+                    rounded-[26px]
+                    bg-zinc-950/75
+                    p-5
+                    ${
+                      gradeBorder[
                         item.grade
                       ]
                     }
-                    alt={
-                      item.product
-                    }
-                    width={600}
-                    height={700}
-                    className="w-full h-full object-contain"
-                  />
+                  `}
+                >
 
-                </div>
+                  {/* GRADE */}
 
-                <div className="text-center">
-
-                  <p className="text-white text-xl font-black">
-                    {item.product}
-                  </p>
-
-                  <p className="text-zinc-600 text-[9px] mt-2">
-                    SEASON {item.season}
-                  </p>
-
-                </div>
-
-                <div className="mt-5 border border-zinc-800 bg-black/50 rounded-xl p-4">
-
-                  <p className="text-zinc-600 text-[8px]">
-                    ITEM ID
-                  </p>
-
-                  <p className="text-cyan-400 font-mono font-bold mt-2">
-                    {item.serial}
-                  </p>
-
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mt-2">
-
-                  <MiniInfo
-                    label="SIZE"
-                    value={
-                      item.size ?? "-"
-                    }
-                  />
-
-                  <MiniInfo
-                    label="LEVEL"
-                    value={`LVL ${String(
-                      item.level
-                    ).padStart(
-                      2,
-                      "0"
-                    )}`}
-                  />
-
-                  <MiniInfo
-                    label="DROP"
-                    value={
-                      item.season
-                    }
-                  />
-
-                </div>
-
-                <div className="mt-4 border border-zinc-800 bg-black/50 rounded-xl p-4">
-
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between">
 
                     <div>
 
                       <p className="text-zinc-600 text-[8px]">
-                        PRODUCTION
+                        RARITY
                       </p>
 
-                      <p className="text-white text-sm font-black mt-1">
+                      <p
+                        className={`
+                          text-xl
+                          font-black
+                          mt-1
+                          ${
+                            gradeText[
+                              item.grade
+                            ]
+                          }
+                        `}
+                      >
                         {
-                          item.production_status
+                          item.grade
                         }
                       </p>
 
                     </div>
 
-                    <p className="text-cyan-400 text-xs font-black">
-                      {Math.round(
-                        progress
-                      )}
-                      %
-                    </p>
+                    <div className="border border-lime-400/20 bg-lime-400/5 text-lime-400 rounded-full px-3 py-1.5 text-[8px] font-black">
+                      OWNED
+                    </div>
 
                   </div>
 
-                  <div className="h-1.5 bg-zinc-900 rounded-full mt-4 overflow-hidden">
+                  {/* PRODUCT IMAGE */}
 
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-400 via-purple-400 to-lime-400"
-                      style={{
-                        width:
-                          `${progress}%`,
-                      }}
+                  <div className="h-[280px] mt-2">
+
+                    <Image
+                      src={
+                        productImages[
+                          item.grade
+                        ]
+                      }
+                      alt={
+                        item.product
+                      }
+                      width={
+                        600
+                      }
+                      height={
+                        700
+                      }
+                      className="w-full h-full object-contain"
                     />
 
                   </div>
 
-                  {(item.production_status ===
-                    "SHIPPED" ||
-                    item.production_status ===
-                      "DELIVERED") && (
-                    <div className="mt-4 border-t border-zinc-900 pt-4">
+                  {/* PRODUCT */}
 
-                      <p className="text-zinc-600 text-[8px]">
-                        TRACKING
-                      </p>
+                  <div className="text-center">
 
-                      <p className="text-lime-400 font-mono text-xs font-black mt-2">
-                        {item.tracking_number ??
-                          "WAITING"}
+                    <p className="text-white text-xl font-black">
+                      {
+                        item.product
+                      }
+                    </p>
+
+                    <p className="text-zinc-600 text-[9px] mt-2">
+                      SEASON{" "}
+                      {
+                        item.season
+                      }
+                    </p>
+
+                  </div>
+
+                  {/* ITEM ID */}
+
+                  <div className="mt-5 border border-zinc-800 bg-black/50 rounded-xl p-4">
+
+                    <p className="text-zinc-600 text-[8px]">
+                      ITEM ID
+                    </p>
+
+                    <p className="text-cyan-400 font-mono font-bold mt-2">
+                      {
+                        item.serial
+                      }
+                    </p>
+
+                  </div>
+
+                  {/* ITEM INFO */}
+
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+
+                    <MiniInfo
+                      label="SIZE"
+                      value={
+                        item.size ??
+                        "-"
+                      }
+                    />
+
+                    <MiniInfo
+                      label="LEVEL"
+                      value={`LVL ${String(
+                        item.level
+                      ).padStart(
+                        2,
+                        "0"
+                      )}`}
+                    />
+
+                    <MiniInfo
+                      label="DROP"
+                      value={
+                        item.season
+                      }
+                    />
+
+                  </div>
+
+                  {/* =====================================
+                      SHIPPING
+                  ===================================== */}
+
+                  <div
+                    className={`
+                      mt-4
+                      border
+                      rounded-xl
+                      p-4
+
+                      ${
+                        shippingAddress
+                          ? "border-lime-400/20 bg-lime-400/[0.03]"
+                          : "border-orange-400/20 bg-orange-400/[0.03]"
+                      }
+                    `}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+
+                      <div>
+                        <p
+                          className={`
+                            text-[8px]
+                            tracking-[0.18em]
+
+                            ${
+                              shippingAddress
+                                ? "text-lime-400"
+                                : "text-orange-400"
+                            }
+                          `}
+                        >
+                          SHIPPING
+                        </p>
+
+                        {shippingAddress ? (
+                          <>
+                            <p className="text-white text-sm font-black mt-2">
+                              {
+                                shippingAddress.recipient_name
+                              }
+                            </p>
+
+                            <p className="text-zinc-500 text-xs mt-1">
+                              {
+                                shippingAddress.province
+                              }{" "}
+                              {
+                                shippingAddress.postal_code
+                              }
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-orange-300 text-xs font-bold mt-2">
+                            ยังไม่ได้เลือกที่อยู่จัดส่ง
+                          </p>
+                        )}
+                      </div>
+
+                      {shippingAddress && (
+                        <span
+                          className="
+                            text-lime-400
+                            text-lg
+                            font-black
+                          "
+                        >
+                          ✓
+                        </span>
+                      )}
+
+                    </div>
+
+                    {shippingAddress && (
+                      <div
+                        className="
+                          mt-4
+                          border-t
+                          border-zinc-800
+                          pt-3
+                        "
+                      >
+                        <p className="text-zinc-500 text-xs leading-6">
+                          {
+                            shippingAddress.address_line
+                          }
+
+                          {shippingAddress.subdistrict
+                            ? ` ต.${shippingAddress.subdistrict}`
+                            : ""}
+
+                          {shippingAddress.district
+                            ? ` อ.${shippingAddress.district}`
+                            : ""}
+
+                          {` จ.${shippingAddress.province}`}
+
+                          {` ${shippingAddress.postal_code}`}
+                        </p>
+
+                        <p className="text-zinc-600 text-xs mt-2">
+                          TEL:{" "}
+                          {
+                            shippingAddress.phone
+                          }
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() =>
+                        openShippingSelector(
+                          item
+                        )
+                      }
+                      disabled={
+                        shippingLocked
+                      }
+                      className={`
+                        w-full
+                        mt-4
+                        py-3
+                        rounded-xl
+                        text-xs
+                        font-black
+                        transition
+
+                        ${
+                          shippingLocked
+                            ? `
+                              border
+                              border-zinc-800
+                              text-zinc-700
+                              cursor-not-allowed
+                            `
+                            : shippingAddress
+                            ? `
+                              border
+                              border-cyan-400/25
+                              text-cyan-400
+                              hover:border-cyan-400
+                            `
+                            : `
+                              bg-orange-400
+                              text-black
+                              hover:bg-orange-300
+                            `
+                        }
+                      `}
+                    >
+                      {shippingLocked
+                        ? "SHIPPING LOCKED"
+                        : shippingAddress
+                        ? "เปลี่ยนที่อยู่จัดส่ง"
+                        : "เลือกที่อยู่จัดส่ง"}
+                    </button>
+
+                  </div>
+
+                  {/* =====================================
+                      PRODUCTION
+                  ===================================== */}
+
+                  <div className="mt-4 border border-zinc-800 bg-black/50 rounded-xl p-4">
+
+                    <div className="flex justify-between">
+
+                      <div>
+
+                        <p className="text-zinc-600 text-[8px]">
+                          PRODUCTION
+                        </p>
+
+                        <p className="text-white text-sm font-black mt-1">
+                          {
+                            item.production_status
+                          }
+                        </p>
+
+                      </div>
+
+                      <p className="text-cyan-400 text-xs font-black">
+                        {
+                          Math.round(
+                            progress
+                          )
+                        }
+                        %
                       </p>
 
                     </div>
-                  )}
 
-                </div>
+                    <div className="h-1.5 bg-zinc-900 rounded-full mt-4 overflow-hidden">
 
-              </article>
-            );
-          })}
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-400 via-purple-400 to-lime-400"
+                        style={{
+                          width:
+                            `${progress}%`,
+                        }}
+                      />
+
+                    </div>
+
+                    {(item.production_status ===
+                      "SHIPPED" ||
+                      item.production_status ===
+                        "DELIVERED") && (
+                      <div className="mt-4 border-t border-zinc-900 pt-4">
+
+                        <p className="text-zinc-600 text-[8px]">
+                          TRACKING
+                        </p>
+
+                        <p className="text-lime-400 font-mono text-xs font-black mt-2">
+                          {item.tracking_number ??
+                            "WAITING"}
+                        </p>
+
+                      </div>
+                    )}
+
+                  </div>
+
+                </article>
+              );
+            }
+          )}
 
         </section>
 
       </div>
 
+      {/* =====================================
+          SHIPPING SELECTOR MODAL
+      ===================================== */}
+
+      {selectingItem && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-[100]
+            bg-black/80
+            backdrop-blur-sm
+            flex
+            items-center
+            justify-center
+            p-4
+          "
+        >
+          <div
+            className="
+              w-full
+              max-w-2xl
+              max-h-[90vh]
+              overflow-y-auto
+              border
+              border-cyan-400/30
+              bg-zinc-950
+              rounded-[28px]
+              shadow-[0_30px_100px_rgba(0,0,0,0.8)]
+            "
+          >
+
+            {/* MODAL HEADER */}
+
+            <div
+              className="
+                sticky
+                top-0
+                z-10
+                border-b
+                border-zinc-800
+                bg-zinc-950/95
+                backdrop-blur-xl
+                p-6
+              "
+            >
+              <div className="flex items-start justify-between gap-5">
+
+                <div>
+
+                  <p className="text-cyan-400 text-[8px] tracking-[0.25em]">
+                    SELECT SHIPPING
+                  </p>
+
+                  <h2 className="text-2xl font-black mt-2">
+                    เลือกที่อยู่จัดส่ง
+                  </h2>
+
+                  <p className="text-zinc-500 text-xs mt-2 font-mono">
+                    {
+                      selectingItem.serial
+                    }
+                  </p>
+
+                </div>
+
+                <button
+                  onClick={
+                    closeShippingSelector
+                  }
+                  disabled={
+                    savingShipping
+                  }
+                  className="
+                    w-10
+                    h-10
+                    border
+                    border-zinc-800
+                    text-zinc-500
+                    rounded-xl
+                    hover:text-white
+                    hover:border-zinc-600
+                    disabled:opacity-40
+                  "
+                >
+                  ×
+                </button>
+
+              </div>
+            </div>
+
+            {/* ADDRESS LIST */}
+
+            <div className="p-6 space-y-3">
+
+              {addresses.map(
+                (address) => {
+                  const selected =
+                    selectedAddressId ===
+                    address.id;
+
+                  return (
+                    <button
+                      key={
+                        address.id
+                      }
+                      onClick={() =>
+                        setSelectedAddressId(
+                          address.id
+                        )
+                      }
+                      className={`
+                        w-full
+                        text-left
+                        border
+                        rounded-2xl
+                        p-5
+                        transition
+
+                        ${
+                          selected
+                            ? `
+                              border-cyan-400
+                              bg-cyan-400/[0.06]
+                              shadow-[0_0_30px_rgba(34,211,238,0.05)]
+                            `
+                            : `
+                              border-zinc-800
+                              bg-black/40
+                              hover:border-zinc-600
+                            `
+                        }
+                      `}
+                    >
+
+                      <div className="flex items-start justify-between gap-4">
+
+                        <div>
+
+                          <div className="flex items-center gap-2 flex-wrap">
+
+                            <p className="text-white font-black">
+                              {
+                                address.recipient_name
+                              }
+                            </p>
+
+                            {address.is_default && (
+                              <span
+                                className="
+                                  border
+                                  border-lime-400/25
+                                  bg-lime-400/[0.05]
+                                  text-lime-400
+                                  rounded-full
+                                  px-2
+                                  py-1
+                                  text-[7px]
+                                  font-black
+                                "
+                              >
+                                DEFAULT
+                              </span>
+                            )}
+
+                          </div>
+
+                          <p className="text-zinc-500 text-xs mt-2">
+                            {
+                              address.phone
+                            }
+                          </p>
+
+                        </div>
+
+                        <div
+                          className={`
+                            w-5
+                            h-5
+                            rounded-full
+                            border
+                            flex
+                            items-center
+                            justify-center
+
+                            ${
+                              selected
+                                ? "border-cyan-400"
+                                : "border-zinc-700"
+                            }
+                          `}
+                        >
+                          {selected && (
+                            <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full" />
+                          )}
+                        </div>
+
+                      </div>
+
+                      <p className="text-zinc-400 text-sm leading-7 mt-4">
+
+                        {
+                          address.address_line
+                        }
+
+                        {address.subdistrict
+                          ? ` ต.${address.subdistrict}`
+                          : ""}
+
+                        {address.district
+                          ? ` อ.${address.district}`
+                          : ""}
+
+                        {` จ.${address.province}`}
+
+                        {` ${address.postal_code}`}
+
+                      </p>
+
+                    </button>
+                  );
+                }
+              )}
+
+              {/* MANAGE ADDRESS */}
+
+              <button
+                onClick={() =>
+                  router.push(
+                    "/shipping"
+                  )
+                }
+                className="
+                  w-full
+                  border
+                  border-dashed
+                  border-zinc-700
+                  text-zinc-400
+                  rounded-2xl
+                  p-5
+                  text-xs
+                  font-black
+                  hover:border-cyan-400
+                  hover:text-cyan-400
+                  transition
+                "
+              >
+                + เพิ่ม / แก้ไข ที่อยู่จัดส่ง
+              </button>
+
+            </div>
+
+            {/* MODAL FOOTER */}
+
+            <div
+              className="
+                sticky
+                bottom-0
+                border-t
+                border-zinc-800
+                bg-zinc-950/95
+                backdrop-blur-xl
+                p-6
+              "
+            >
+              <button
+                onClick={
+                  saveItemShipping
+                }
+                disabled={
+                  savingShipping ||
+                  !selectedAddressId
+                }
+                className="
+                  w-full
+                  bg-lime-400
+                  text-black
+                  py-4
+                  rounded-xl
+                  font-black
+                  hover:bg-lime-300
+                  disabled:bg-zinc-800
+                  disabled:text-zinc-600
+                  transition
+                "
+              >
+                {savingShipping
+                  ? "กำลังบันทึก..."
+                  : "ยืนยันที่อยู่สำหรับ Item นี้"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
+
+// =====================================
+// COLLECTION STAT
+// =====================================
 
 function CollectionStat({
   label,
@@ -558,6 +1663,10 @@ function CollectionStat({
     </div>
   );
 }
+
+// =====================================
+// MINI INFO
+// =====================================
 
 function MiniInfo({
   label,

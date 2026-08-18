@@ -22,30 +22,26 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [
-    menuOpen,
-    setMenuOpen,
-  ] = useState(false);
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
-  const [
-    playerOpen,
-    setPlayerOpen,
-  ] = useState(false);
+  const [playerOpen, setPlayerOpen] =
+    useState(false);
 
-  const [
-    userEmail,
-    setUserEmail,
-  ] = useState("");
+  const [userEmail, setUserEmail] =
+    useState("");
 
   const [
     walletBalance,
     setWalletBalance,
   ] = useState(0);
 
-  const [
-    isAdmin,
-    setIsAdmin,
-  ] = useState(false);
+  const [isAdmin, setIsAdmin] =
+    useState(false);
+
+  // =====================================
+  // MENU
+  // =====================================
 
   const menus: MenuItem[] = [
     {
@@ -61,6 +57,10 @@ export default function Navbar() {
       path: "/collection",
     },
     {
+      label: "SHIPPING",
+      path: "/shipping",
+    },
+    {
       label: "WALLET",
       path: "/wallet",
     },
@@ -71,9 +71,9 @@ export default function Navbar() {
     },
   ];
 
-  // =========================
+  // =====================================
   // LOAD PLAYER
-  // =========================
+  // =====================================
 
   useEffect(() => {
     async function loadPlayer() {
@@ -89,12 +89,15 @@ export default function Navbar() {
         return;
       }
 
-      const user =
-        session.user;
+      const user = session.user;
 
       setUserEmail(
         user.email ?? "PLAYER"
       );
+
+      // =====================================
+      // LOAD WALLET
+      // =====================================
 
       const {
         data: wallet,
@@ -116,9 +119,9 @@ export default function Navbar() {
         wallet?.balance ?? 0
       );
 
-      // =========================
+      // =====================================
       // CHECK ADMIN
-      // =========================
+      // =====================================
 
       try {
         const response =
@@ -154,9 +157,9 @@ export default function Navbar() {
     loadPlayer();
   }, [pathname]);
 
-  // =========================
+  // =====================================
   // VISIBLE MENUS
-  // =========================
+  // =====================================
 
   const visibleMenus =
     menus.filter(
@@ -165,9 +168,9 @@ export default function Navbar() {
         isAdmin
     );
 
-  // =========================
-  // ACTIVE
-  // =========================
+  // =====================================
+  // ACTIVE MENU
+  // =====================================
 
   function isActive(
     path: string
@@ -181,9 +184,9 @@ export default function Navbar() {
     );
   }
 
-  // =========================
+  // =====================================
   // NAVIGATE
-  // =========================
+  // =====================================
 
   function goTo(
     path: string
@@ -194,9 +197,9 @@ export default function Navbar() {
     router.push(path);
   }
 
-  // =========================
+  // =====================================
   // LOGOUT
-  // =========================
+  // =====================================
 
   async function logout() {
     await supabase.auth.signOut();
@@ -257,7 +260,9 @@ export default function Navbar() {
           gap-4
         "
       >
-        {/* LOGO */}
+        {/* =====================================
+            LOGO
+        ===================================== */}
 
         <button
           onClick={() =>
@@ -340,7 +345,9 @@ export default function Navbar() {
           </div>
         </button>
 
-        {/* DESKTOP MENU */}
+        {/* =====================================
+            DESKTOP MENU
+        ===================================== */}
 
         <nav
           className="
@@ -360,6 +367,10 @@ export default function Navbar() {
               const adminMenu =
                 menu.label ===
                 "ADMIN";
+
+              const shippingMenu =
+                menu.label ===
+                "SHIPPING";
 
               return (
                 <button
@@ -407,6 +418,14 @@ export default function Navbar() {
                           hover:border-orange-400
                           hover:bg-orange-400/10
                         `
+                        : shippingMenu
+                        ? `
+                          border-cyan-400/15
+                          text-zinc-400
+                          hover:text-cyan-400
+                          hover:border-cyan-400/50
+                          hover:bg-cyan-400/[0.04]
+                        `
                         : `
                           border-zinc-800
                           text-zinc-500
@@ -423,9 +442,13 @@ export default function Navbar() {
                     </span>
                   )}
 
-                  {
-                    menu.label
-                  }
+                  {shippingMenu && (
+                    <span className="mr-1">
+                      ◇
+                    </span>
+                  )}
+
+                  {menu.label}
 
                   {active && (
                     <span
@@ -452,7 +475,9 @@ export default function Navbar() {
           )}
         </nav>
 
-        {/* DESKTOP PLAYER */}
+        {/* =====================================
+            DESKTOP PLAYER
+        ===================================== */}
 
         <div
           className="
@@ -463,6 +488,8 @@ export default function Navbar() {
             relative
           "
         >
+          {/* WALLET */}
+
           <button
             onClick={() =>
               goTo("/wallet")
@@ -497,12 +524,11 @@ export default function Navbar() {
                 mt-0.5
               "
             >
-              {
-                walletBalance
-              }{" "}
-              LT
+              {walletBalance} LT
             </p>
           </button>
+
+          {/* PLAYER BUTTON */}
 
           <button
             onClick={() =>
@@ -601,7 +627,9 @@ export default function Navbar() {
             </span>
           </button>
 
-          {/* PLAYER DROPDOWN */}
+          {/* =====================================
+              PLAYER DROPDOWN
+          ===================================== */}
 
           {playerOpen && (
             <div
@@ -619,6 +647,8 @@ export default function Navbar() {
                 backdrop-blur-xl
               "
             >
+              {/* ACCOUNT INFO */}
+
               <div
                 className="
                   border
@@ -629,7 +659,6 @@ export default function Navbar() {
                 "
               >
                 <div className="flex items-center justify-between gap-3">
-
                   <p
                     className="
                       text-zinc-600
@@ -657,7 +686,6 @@ export default function Navbar() {
                       ADMIN
                     </span>
                   )}
-
                 </div>
 
                 <p
@@ -694,13 +722,12 @@ export default function Navbar() {
                       font-black
                     "
                   >
-                    {
-                      walletBalance
-                    }{" "}
-                    LT
+                    {walletBalance} LT
                   </p>
                 </div>
               </div>
+
+              {/* ADMIN */}
 
               {isAdmin && (
                 <button
@@ -731,6 +758,8 @@ export default function Navbar() {
                 </button>
               )}
 
+              {/* COLLECTION */}
+
               <button
                 onClick={() =>
                   goTo(
@@ -757,6 +786,36 @@ export default function Navbar() {
               >
                 MY COLLECTION
               </button>
+
+              {/* SHIPPING */}
+
+              <button
+                onClick={() =>
+                  goTo(
+                    "/shipping"
+                  )
+                }
+                className="
+                  w-full
+                  border
+                  border-transparent
+                  text-left
+                  text-zinc-400
+                  px-4
+                  py-3
+                  rounded-xl
+                  text-xs
+                  font-bold
+                  hover:border-cyan-400/30
+                  hover:bg-cyan-400/5
+                  hover:text-cyan-400
+                  transition
+                "
+              >
+                ที่อยู่จัดส่ง
+              </button>
+
+              {/* WALLET */}
 
               <button
                 onClick={() =>
@@ -790,6 +849,8 @@ export default function Navbar() {
                 "
               />
 
+              {/* LOGOUT */}
+
               <button
                 onClick={logout}
                 className="
@@ -815,7 +876,9 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* MOBILE CONTROLS */}
+        {/* =====================================
+            MOBILE CONTROLS
+        ===================================== */}
 
         <div
           className="
@@ -845,10 +908,7 @@ export default function Navbar() {
                 font-black
               "
             >
-              {
-                walletBalance
-              }{" "}
-              LT
+              {walletBalance} LT
             </p>
           </button>
 
@@ -950,7 +1010,9 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* =====================================
+          MOBILE MENU
+      ===================================== */}
 
       {menuOpen && (
         <div
@@ -971,6 +1033,8 @@ export default function Navbar() {
               py-4
             "
           >
+            {/* MOBILE PLAYER */}
+
             <div
               className="
                 border
@@ -1073,13 +1137,12 @@ export default function Navbar() {
                     font-black
                   "
                 >
-                  {
-                    walletBalance
-                  }{" "}
-                  LT
+                  {walletBalance} LT
                 </p>
               </div>
             </div>
+
+            {/* MOBILE NAVIGATION */}
 
             <div
               className="
@@ -1097,6 +1160,10 @@ export default function Navbar() {
                   const adminMenu =
                     menu.label ===
                     "ADMIN";
+
+                  const shippingMenu =
+                    menu.label ===
+                    "SHIPPING";
 
                   return (
                     <button
@@ -1127,21 +1194,26 @@ export default function Navbar() {
                             ? "border-cyan-400 bg-cyan-400/10 text-cyan-400"
                             : adminMenu
                             ? "border-orange-400/25 text-orange-400"
+                            : shippingMenu
+                            ? "border-cyan-400/20 text-cyan-300"
                             : "border-zinc-800 text-zinc-400 hover:text-white"
                         }
                       `}
                     >
                       {adminMenu
                         ? "◆ "
+                        : shippingMenu
+                        ? "◇ "
                         : ""}
-                      {
-                        menu.label
-                      }
+
+                      {menu.label}
                     </button>
                   );
                 }
               )}
             </div>
+
+            {/* TOP UP */}
 
             <button
               onClick={() =>
@@ -1162,6 +1234,8 @@ export default function Navbar() {
             >
               + TOP UP TOKEN
             </button>
+
+            {/* LOGOUT */}
 
             <button
               onClick={logout}
