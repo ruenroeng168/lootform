@@ -12,6 +12,10 @@ type Grade =
   | "EPIC"
   | "LEGENDARY";
 
+type EnvironmentMode =
+  | "TEST"
+  | "LIVE";
+
 type ActiveSeason = {
   id: number;
 
@@ -63,15 +67,24 @@ function rollGrade(
     rareEnd +
     season.epic_rate;
 
-  if (roll < commonEnd) {
+  if (
+    roll <
+    commonEnd
+  ) {
     return "COMMON";
   }
 
-  if (roll < rareEnd) {
+  if (
+    roll <
+    rareEnd
+  ) {
     return "RARE";
   }
 
-  if (roll < epicEnd) {
+  if (
+    roll <
+    epicEnd
+  ) {
     return "EPIC";
   }
 
@@ -88,7 +101,69 @@ function createSerial(
 ) {
   return `LF-${seasonCode}-${String(
     number
-  ).padStart(4, "0")}`;
+  ).padStart(
+    4,
+    "0"
+  )}`;
+}
+
+// =====================================
+// LOAD SYSTEM MODE
+// =====================================
+
+async function getSystemMode(): Promise<
+  EnvironmentMode
+> {
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from(
+        "system_settings"
+      )
+      .select(`
+        environment_mode
+      `)
+      .eq(
+        "id",
+        1
+      )
+      .maybeSingle();
+
+  if (error) {
+    console.error(
+      "SYSTEM MODE ERROR:",
+      error
+    );
+
+    throw new Error(
+      "SYSTEM_MODE_LOAD_FAILED"
+    );
+  }
+
+  if (!data) {
+    throw new Error(
+      "SYSTEM_SETTINGS_NOT_FOUND"
+    );
+  }
+
+  const mode =
+    String(
+      data.environment_mode ??
+        ""
+    ).toUpperCase();
+
+  if (
+    mode !== "TEST" &&
+    mode !== "LIVE"
+  ) {
+    throw new Error(
+      "INVALID_SYSTEM_MODE"
+    );
+  }
+
+  return mode as EnvironmentMode;
 }
 
 // =====================================
@@ -117,6 +192,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "กรุณา Login ก่อน Craft",
         },
@@ -147,11 +223,44 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "Session หมดอายุ กรุณา Login ใหม่",
         },
         {
           status: 401,
+        }
+      );
+    }
+
+    // =====================================
+    // LOAD SYSTEM MODE
+    // =====================================
+
+    let environmentMode:
+      EnvironmentMode;
+
+    try {
+      environmentMode =
+        await getSystemMode();
+    } catch (error) {
+      console.error(
+        "CRAFT SYSTEM MODE ERROR:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+
+          code:
+            "SYSTEM_MODE_ERROR",
+
+          message:
+            "ไม่สามารถตรวจสอบ System Mode ได้ กรุณาติดต่อ Admin",
+        },
+        {
+          status: 500,
         }
       );
     }
@@ -165,7 +274,8 @@ export async function POST(
 
     const size =
       String(
-        body.size ?? ""
+        body.size ??
+          ""
       ).toUpperCase();
 
     if (
@@ -176,6 +286,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "กรุณาเลือก Size ที่ถูกต้อง",
         },
@@ -190,30 +301,45 @@ export async function POST(
     // =====================================
 
     const {
-      data: seasonData,
-      error: seasonError,
-    } = await supabaseAdmin
-      .from("season_settings")
-      .select(`
-        id,
-        season_code,
-        season_name,
-        product_name,
-        craft_cost,
-        common_rate,
-        rare_rate,
-        epic_rate,
-        legendary_rate,
-        is_active
-      `)
-      .eq("is_active", true)
-      .order("id", {
-        ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+      data:
+        seasonData,
 
-    if (seasonError) {
+      error:
+        seasonError,
+    } =
+      await supabaseAdmin
+        .from(
+          "season_settings"
+        )
+        .select(`
+          id,
+          season_code,
+          season_name,
+          product_name,
+          craft_cost,
+          common_rate,
+          rare_rate,
+          epic_rate,
+          legendary_rate,
+          is_active
+        `)
+        .eq(
+          "is_active",
+          true
+        )
+        .order(
+          "id",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(1)
+        .maybeSingle();
+
+    if (
+      seasonError
+    ) {
       console.error(
         "CRAFT SEASON ERROR:",
         seasonError
@@ -222,6 +348,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "ไม่สามารถโหลดข้อมูล Season ได้",
         },
@@ -231,11 +358,16 @@ export async function POST(
       );
     }
 
-    if (!seasonData) {
+    if (
+      !seasonData
+    ) {
       return NextResponse.json(
         {
           success: false,
-          code: "DROP_INACTIVE",
+
+          code:
+            "DROP_INACTIVE",
+
           message:
             "DROP CLOSED — ไม่มี Season ที่เปิดใช้งานอยู่",
         },
@@ -246,7 +378,8 @@ export async function POST(
     }
 
     const season =
-      seasonData as ActiveSeason;
+      seasonData as
+        ActiveSeason;
 
     // =====================================
     // VALIDATE SEASON SETTINGS
@@ -292,6 +425,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "Season Craft Cost ไม่ถูกต้อง",
         },
@@ -311,15 +445,20 @@ export async function POST(
     const invalidRate =
       rates.some(
         (rate) =>
-          !Number.isInteger(rate) ||
+          !Number.isInteger(
+            rate
+          ) ||
           rate < 0 ||
           rate > 100
       );
 
-    if (invalidRate) {
+    if (
+      invalidRate
+    ) {
       return NextResponse.json(
         {
           success: false,
+
           message:
             "Season Grade Odds ไม่ถูกต้อง",
         },
@@ -330,11 +469,13 @@ export async function POST(
     }
 
     if (
-      totalRate !== 100
+      totalRate !==
+      100
     ) {
       return NextResponse.json(
         {
           success: false,
+
           message:
             `Season Grade Odds ไม่ถูกต้อง (${totalRate}%)`,
         },
@@ -344,8 +485,8 @@ export async function POST(
       );
     }
 
-    const normalizedSeason: ActiveSeason =
-      {
+    const normalizedSeason:
+      ActiveSeason = {
         ...season,
 
         craft_cost:
@@ -370,21 +511,28 @@ export async function POST(
 
     const {
       data: wallet,
-      error: walletError,
-    } = await supabaseAdmin
-      .from("wallets")
-      .select(`
-        id,
-        user_id,
-        balance
-      `)
-      .eq(
-        "user_id",
-        user.id
-      )
-      .maybeSingle();
 
-    if (walletError) {
+      error:
+        walletError,
+    } =
+      await supabaseAdmin
+        .from(
+          "wallets"
+        )
+        .select(`
+          id,
+          user_id,
+          balance
+        `)
+        .eq(
+          "user_id",
+          user.id
+        )
+        .maybeSingle();
+
+    if (
+      walletError
+    ) {
       console.error(
         "CRAFT WALLET ERROR:",
         walletError
@@ -393,6 +541,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "ไม่สามารถโหลด Wallet ได้",
         },
@@ -402,10 +551,13 @@ export async function POST(
       );
     }
 
-    if (!wallet) {
+    if (
+      !wallet
+    ) {
       return NextResponse.json(
         {
           success: false,
+
           message:
             "ไม่พบ Wallet ของ Player",
         },
@@ -417,7 +569,8 @@ export async function POST(
 
     const currentBalance =
       Number(
-        wallet.balance ?? 0
+        wallet.balance ??
+          0
       );
 
     // =====================================
@@ -466,19 +619,32 @@ export async function POST(
     // =====================================
 
     const {
-      data: latestItem,
+      data:
+        latestItem,
+
       error:
         latestItemError,
-    } = await supabaseAdmin
-      .from("items")
-      .select("id")
-      .order("id", {
-        ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+    } =
+      await supabaseAdmin
+        .from(
+          "items"
+        )
+        .select(
+          "id"
+        )
+        .order(
+          "id",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(1)
+        .maybeSingle();
 
-    if (latestItemError) {
+    if (
+      latestItemError
+    ) {
       console.error(
         "LATEST ITEM ERROR:",
         latestItemError
@@ -487,6 +653,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "ไม่สามารถสร้าง Item ID ได้",
         },
@@ -498,7 +665,8 @@ export async function POST(
 
     const nextNumber =
       Number(
-        latestItem?.id ?? 0
+        latestItem?.id ??
+          0
       ) + 1;
 
     const serial =
@@ -513,50 +681,62 @@ export async function POST(
 
     const {
       data: newItem,
-      error: itemError,
-    } = await supabaseAdmin
-      .from("items")
-      .insert({
-        serial,
 
-        product:
-          normalizedSeason.product_name,
+      error:
+        itemError,
+    } =
+      await supabaseAdmin
+        .from(
+          "items"
+        )
+        .insert({
+          serial,
 
-        season:
-          normalizedSeason.season_code,
+          product:
+            normalizedSeason.product_name,
 
-        grade,
+          season:
+            normalizedSeason.season_code,
 
-        level: 0,
+          grade,
 
-        size,
+          level:
+            0,
 
-        owner_id:
-          user.id,
+          size,
 
-        production_status:
-          "CRAFTED",
+          owner_id:
+            user.id,
 
-        production_updated_at:
-          new Date().toISOString(),
-      })
-      .select(`
-        id,
-        serial,
-        product,
-        season,
-        grade,
-        level,
-        size,
-        owner_id,
-        production_status,
-        tracking_number,
-        production_updated_at,
-        created_at
-      `)
-      .single();
+          production_status:
+            "CRAFTED",
 
-    if (itemError) {
+          production_updated_at:
+            new Date().toISOString(),
+
+          environment_mode:
+            environmentMode,
+        })
+        .select(`
+          id,
+          serial,
+          product,
+          season,
+          grade,
+          level,
+          size,
+          owner_id,
+          production_status,
+          tracking_number,
+          production_updated_at,
+          created_at,
+          environment_mode
+        `)
+        .single();
+
+    if (
+      itemError
+    ) {
       console.error(
         "CRAFT ITEM ERROR:",
         itemError
@@ -565,6 +745,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           message:
             "สร้าง Item ไม่สำเร็จ",
         },
@@ -583,29 +764,34 @@ export async function POST(
       craftCost;
 
     const {
-      data: updatedWallet,
+      data:
+        updatedWallet,
+
       error:
         walletUpdateError,
-    } = await supabaseAdmin
-      .from("wallets")
-      .update({
-        balance:
-          newBalance,
+    } =
+      await supabaseAdmin
+        .from(
+          "wallets"
+        )
+        .update({
+          balance:
+            newBalance,
 
-        updated_at:
-          new Date().toISOString(),
-      })
-      .eq(
-        "user_id",
-        user.id
-      )
-      .select(`
-        id,
-        user_id,
-        balance,
-        updated_at
-      `)
-      .single();
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "user_id",
+          user.id
+        )
+        .select(`
+          id,
+          user_id,
+          balance,
+          updated_at
+        `)
+        .single();
 
     if (
       walletUpdateError
@@ -644,26 +830,30 @@ export async function POST(
     const {
       error:
         transactionError,
-    } = await supabaseAdmin
-      .from(
-        "wallet_transactions"
-      )
-      .insert({
-        user_id:
-          user.id,
+    } =
+      await supabaseAdmin
+        .from(
+          "wallet_transactions"
+        )
+        .insert({
+          user_id:
+            user.id,
 
-        type:
-          "CRAFT",
+          type:
+            "CRAFT",
 
-        amount:
-          -craftCost,
+          amount:
+            -craftCost,
 
-        description:
-          `CRAFT ${normalizedSeason.product_name} ${normalizedSeason.season_code} / ${grade} / ${size} / ${serial}`,
+          description:
+            `CRAFT ${normalizedSeason.product_name} ${normalizedSeason.season_code} / ${grade} / ${size} / ${serial}`,
 
-        item_id:
-          newItem.id,
-      });
+          item_id:
+            newItem.id,
+
+          environment_mode:
+            environmentMode,
+        });
 
     if (
       transactionError
@@ -679,7 +869,11 @@ export async function POST(
     // =====================================
 
     return NextResponse.json({
-      success: true,
+      success:
+        true,
+
+      environment:
+        environmentMode,
 
       item:
         newItem,
@@ -727,11 +921,15 @@ export async function POST(
 
     return NextResponse.json(
       {
-        success: false,
-        message: "Craft failed",
+        success:
+          false,
+
+        message:
+          "Craft failed",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
   }
