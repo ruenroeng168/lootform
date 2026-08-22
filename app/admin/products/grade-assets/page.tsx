@@ -2181,6 +2181,14 @@ export default function AdminGradeAssetsPage() {
                 modelUrl={
                   previewModel.url
                 }
+                modelName={
+                  `${selectedDesign?.design_code ?? "GRADE ASSET"} // ${previewModel.grade}`
+                }
+                onClose={() =>
+                  setPreviewModel(
+                    null
+                  )
+                }
               />
 
             </div>
