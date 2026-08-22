@@ -52,6 +52,13 @@ type Item = {
 
   shipping_address_id:
     number | null;
+
+  /* ===================================
+     IMMUTABLE ITEM ARTWORK SNAPSHOT
+  =================================== */
+
+  thumbnail_url_snapshot:
+    string | null;
 };
 
 type ShippingAddress = {
@@ -219,6 +226,22 @@ export default function CollectionPage() {
   ] =
     useState("");
 
+  const [
+    equippedItemId,
+    setEquippedItemId,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+  const [
+    equippingItemId,
+    setEquippingItemId,
+  ] =
+    useState<number | null>(
+      null
+    );
+
   // =====================================
   // LOAD COLLECTION
   // =====================================
@@ -306,7 +329,8 @@ export default function CollectionPage() {
             production_status,
             tracking_number,
             production_updated_at,
-            shipping_address_id
+            shipping_address_id,
+            thumbnail_url_snapshot
           `)
           .eq(
             "owner_id",
@@ -327,6 +351,42 @@ export default function CollectionPage() {
       setItems(
         (itemData ??
           []) as Item[]
+      );
+
+      // =====================================
+      // PLAYER PROFILE / EQUIPPED ITEM
+      // =====================================
+
+      const {
+        data:
+          profileData,
+
+        error:
+          profileError,
+      } =
+        await supabase
+          .from(
+            "player_profiles"
+          )
+          .select(
+            "equipped_item_id"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .maybeSingle();
+
+      if (
+        profileError
+      ) {
+        throw profileError;
+      }
+
+      setEquippedItemId(
+        profileData
+          ?.equipped_item_id ??
+          null
       );
 
       // =====================================
@@ -667,6 +727,191 @@ export default function CollectionPage() {
   }
 
   // =====================================
+  // EQUIP ITEM
+  // =====================================
+
+  async function equipItem(
+    item: Item
+  ) {
+    if (
+      equippingItemId
+    ) {
+      return;
+    }
+
+    setEquippingItemId(
+      item.id
+    );
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const {
+        data: {
+          session,
+        },
+      } =
+        await supabase.auth.getSession();
+
+      if (!session) {
+        router.push(
+          "/login"
+        );
+
+        return;
+      }
+
+      const response =
+        await fetch(
+          "/api/profile/equip",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+
+            body:
+              JSON.stringify({
+                itemId:
+                  item.id,
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to Equip Item"
+        );
+      }
+
+      setEquippedItemId(
+        item.id
+      );
+
+      setSuccessMessage(
+        `${item.serial} EQUIPPED TO CHARACTER`
+      );
+    } catch (error) {
+      console.error(
+        "EQUIP ITEM ERROR:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof
+        Error
+          ? error.message
+          : "Unable to Equip Item"
+      );
+    } finally {
+      setEquippingItemId(
+        null
+      );
+    }
+  }
+
+  // =====================================
+  // UNEQUIP ITEM
+  // =====================================
+
+  async function unequipItem(
+    item: Item
+  ) {
+    if (
+      equippingItemId
+    ) {
+      return;
+    }
+
+    setEquippingItemId(
+      item.id
+    );
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      const {
+        data: {
+          session,
+        },
+      } =
+        await supabase.auth.getSession();
+
+      if (!session) {
+        router.push(
+          "/login"
+        );
+
+        return;
+      }
+
+      const response =
+        await fetch(
+          "/api/profile/equip",
+          {
+            method:
+              "DELETE",
+
+            headers: {
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok
+      ) {
+        throw new Error(
+          result.message ||
+            "Unable to Unequip Item"
+        );
+      }
+
+      setEquippedItemId(
+        null
+      );
+
+      setSuccessMessage(
+        `${item.serial} REMOVED FROM CHARACTER`
+      );
+    } catch (error) {
+      console.error(
+        "UNEQUIP ITEM ERROR:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof
+        Error
+          ? error.message
+          : "Unable to Unequip Item"
+      );
+    } finally {
+      setEquippingItemId(
+        null
+      );
+    }
+  }
+
+  // =====================================
   // LOADING
   // =====================================
 
@@ -723,6 +968,29 @@ export default function CollectionPage() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+
+            <button
+              onClick={() =>
+                router.push(
+                  "/profile"
+                )
+              }
+              className="
+                border
+                border-purple-400/20
+                bg-purple-400/[0.03]
+                text-purple-400
+                rounded-xl
+                px-5
+                py-3
+                text-xs
+                font-black
+                hover:border-purple-400
+                transition
+              "
+            >
+              CHARACTER
+            </button>
 
             <button
               onClick={() =>
@@ -957,6 +1225,16 @@ export default function CollectionPage() {
                   item.production_status ===
                     "DELIVERED";
 
+              const
+                isEquipped =
+                  equippedItemId ===
+                  item.id;
+
+              const
+                isEquipping =
+                  equippingItemId ===
+                  item.id;
+
               return (
                 <article
                   key={
@@ -1004,32 +1282,37 @@ export default function CollectionPage() {
 
                     </div>
 
-                    <div className="border border-lime-400/20 bg-lime-400/5 text-lime-400 rounded-full px-3 py-1.5 text-[8px] font-black">
-                      OWNED
+                    <div className="flex items-center gap-2">
+
+                      {isEquipped && (
+                        <div className="border border-purple-400/30 bg-purple-400/[0.07] text-purple-400 rounded-full px-3 py-1.5 text-[8px] font-black shadow-[0_0_20px_rgba(192,132,252,0.08)]">
+                          ✓ EQUIPPED
+                        </div>
+                      )}
+
+                      <div className="border border-lime-400/20 bg-lime-400/5 text-lime-400 rounded-full px-3 py-1.5 text-[8px] font-black">
+                        OWNED
+                      </div>
+
                     </div>
 
                   </div>
 
-                  {/* PRODUCT IMAGE */}
+                  {/* PRODUCT IMAGE
+
+                      New items use the immutable artwork URL
+                      saved at Craft time.
+
+                      Legacy items without a snapshot fall back
+                      to the original local Grade image.
+                  */}
 
                   <div className="h-[280px] mt-2">
 
-                    <Image
-                      src={
-                        productImages[
-                          item.grade
-                        ]
+                    <CollectionItemImage
+                      item={
+                        item
                       }
-                      alt={
-                        item.product
-                      }
-                      width={
-                        600
-                      }
-                      height={
-                        700
-                      }
-                      className="w-full h-full object-contain"
                     />
 
                   </div>
@@ -1097,6 +1380,108 @@ export default function CollectionPage() {
                         item.season
                       }
                     />
+
+                  </div>
+
+                  {/* =====================================
+                      CHARACTER EQUIP
+                  ===================================== */}
+
+                  <div
+                    className={`
+                      mt-4
+                      border
+                      rounded-xl
+                      p-4
+
+                      ${
+                        isEquipped
+                          ? "border-purple-400/30 bg-purple-400/[0.05]"
+                          : "border-zinc-800 bg-black/40"
+                      }
+                    `}
+                  >
+
+                    <div className="flex items-start justify-between gap-4">
+
+                      <div>
+
+                        <p className="text-purple-400 text-[8px] tracking-[0.18em]">
+                          CHARACTER LOADOUT
+                        </p>
+
+                        <p className="text-white text-sm font-black mt-2">
+                          {isEquipped
+                            ? "ACTIVE ITEM"
+                            : "NOT EQUIPPED"}
+                        </p>
+
+                      </div>
+
+                      {isEquipped && (
+                        <span className="text-purple-400 text-lg font-black">
+                          ✓
+                        </span>
+                      )}
+
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        isEquipped
+                          ? unequipItem(
+                              item
+                            )
+                          : equipItem(
+                              item
+                            )
+                      }
+                      disabled={
+                        equippingItemId !==
+                        null
+                      }
+                      className={`
+                        w-full
+                        mt-4
+                        py-3
+                        rounded-xl
+                        text-xs
+                        font-black
+                        transition
+
+                        ${
+                          isEquipped
+                            ? "border border-purple-400/30 bg-purple-400/[0.05] text-purple-400 hover:bg-purple-400/[0.10]"
+                            : "bg-purple-400 text-black hover:bg-purple-300"
+                        }
+
+                        ${
+                          equippingItemId !==
+                          null
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }
+                      `}
+                    >
+                      {isEquipping
+                        ? "UPDATING..."
+                        : isEquipped
+                        ? "UNEQUIP FROM CHARACTER"
+                        : "EQUIP TO CHARACTER"}
+                    </button>
+
+                    {isEquipped && (
+                      <button
+                        onClick={() =>
+                          router.push(
+                            "/profile"
+                          )
+                        }
+                        className="w-full mt-2 border border-zinc-800 text-zinc-400 py-3 rounded-xl text-[10px] font-black hover:border-cyan-400 hover:text-cyan-400 transition"
+                      >
+                        VIEW CHARACTER
+                      </button>
+                    )}
 
                   </div>
 
@@ -1687,5 +2072,84 @@ function MiniInfo({
       </p>
 
     </div>
+  );
+}
+
+// =====================================
+// COLLECTION ITEM IMAGE
+// =====================================
+
+function CollectionItemImage({
+  item,
+}: {
+  item: Item;
+}) {
+  const [
+    snapshotFailed,
+    setSnapshotFailed,
+  ] =
+    useState(false);
+
+  const snapshotUrl =
+    item.thumbnail_url_snapshot
+      ?.trim() ??
+    "";
+
+  /*
+    NEW ITEM:
+    Use the exact Grade artwork saved into
+    thumbnail_url_snapshot at Craft time.
+
+    Native <img> is intentional here because the
+    snapshot URL comes from Supabase Storage and
+    does not require Next.js remote image config.
+  */
+
+  if (
+    snapshotUrl &&
+    !snapshotFailed
+  ) {
+    return (
+      <img
+        src={
+          snapshotUrl
+        }
+        alt={
+          item.product
+        }
+        onError={() =>
+          setSnapshotFailed(
+            true
+          )
+        }
+        className="w-full h-full object-contain"
+      />
+    );
+  }
+
+  /*
+    LEGACY / RECOVERY FALLBACK:
+    - old Item created before snapshot support
+    - historical Storage file is unavailable
+  */
+
+  return (
+    <Image
+      src={
+        productImages[
+          item.grade
+        ]
+      }
+      alt={
+        item.product
+      }
+      width={
+        600
+      }
+      height={
+        700
+      }
+      className="w-full h-full object-contain"
+    />
   );
 }

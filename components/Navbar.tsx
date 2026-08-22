@@ -1,114 +1,175 @@
 "use client";
 
 import Image from "next/image";
+
 import {
   useEffect,
   useState,
 } from "react";
+
 import {
   usePathname,
   useRouter,
 } from "next/navigation";
 
-import { supabase } from "@/lib/supabase";
+import {
+  supabase,
+} from "@/lib/supabase";
 
 type MenuItem = {
   label: string;
   path: string;
+  symbol?: string;
   adminOnly?: boolean;
 };
 
 export default function Navbar() {
-  const router = useRouter();
-  const pathname = usePathname();
+  const router =
+    useRouter();
 
-  const [menuOpen, setMenuOpen] =
+  const pathname =
+    usePathname();
+
+  const [
+    menuOpen,
+    setMenuOpen,
+  ] =
     useState(false);
 
-  const [playerOpen, setPlayerOpen] =
+  const [
+    playerOpen,
+    setPlayerOpen,
+  ] =
     useState(false);
 
-  const [userEmail, setUserEmail] =
+  const [
+    userEmail,
+    setUserEmail,
+  ] =
     useState("");
 
   const [
     walletBalance,
     setWalletBalance,
-  ] = useState(0);
+  ] =
+    useState(0);
 
-  const [isAdmin, setIsAdmin] =
+  const [
+    isAdmin,
+    setIsAdmin,
+  ] =
     useState(false);
 
-  // =====================================
+  // =====================================================
   // MENU
-  // =====================================
+  // =====================================================
 
   const menus: MenuItem[] = [
     {
       label: "HOME",
       path: "/",
     },
+
+    {
+      label: "GAME",
+      path: "/game",
+      symbol: "✦",
+    },
+
     {
       label: "CRAFT",
       path: "/craft",
     },
+
     {
       label: "COLLECTION",
       path: "/collection",
     },
+
     {
       label: "SHIPPING",
       path: "/shipping",
+      symbol: "◇",
     },
+
     {
       label: "WALLET",
       path: "/wallet",
     },
+
     {
       label: "ADMIN",
       path: "/admin",
+      symbol: "◆",
       adminOnly: true,
     },
   ];
 
-  // =====================================
+  // =====================================================
   // LOAD PLAYER
-  // =====================================
+  // =====================================================
 
   useEffect(() => {
     async function loadPlayer() {
       const {
-        data: { session },
+        data: {
+          session,
+        },
       } =
-        await supabase.auth.getSession();
+        await supabase
+          .auth
+          .getSession();
 
       if (!session) {
-        setUserEmail("");
-        setWalletBalance(0);
-        setIsAdmin(false);
+        setUserEmail(
+          ""
+        );
+
+        setWalletBalance(
+          0
+        );
+
+        setIsAdmin(
+          false
+        );
+
         return;
       }
 
-      const user = session.user;
+      const user =
+        session.user;
 
       setUserEmail(
-        user.email ?? "PLAYER"
+        user.email ??
+          "PLAYER"
       );
 
-      // =====================================
-      // LOAD WALLET
-      // =====================================
+      // =================================================
+      // WALLET
+      // =================================================
 
       const {
-        data: wallet,
-        error: walletError,
-      } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user.id)
-        .maybeSingle();
+        data:
+          wallet,
+        error:
+          walletError,
+      } =
+        await supabase
+          .from(
+            "wallets"
+          )
+          .select(
+            "balance"
+          )
+          .eq(
+            "user_id",
+            user.id
+          )
+          .maybeSingle();
 
-      if (walletError) {
+      if (
+        walletError
+      ) {
         console.error(
           "NAVBAR WALLET ERROR:",
           walletError
@@ -116,67 +177,90 @@ export default function Navbar() {
       }
 
       setWalletBalance(
-        wallet?.balance ?? 0
+        Number(
+          wallet?.balance ??
+            0
+        )
       );
 
-      // =====================================
-      // CHECK ADMIN
-      // =====================================
+      // =================================================
+      // ADMIN
+      // =================================================
 
       try {
         const response =
           await fetch(
             "/api/admin/check",
             {
-              method: "GET",
+              method:
+                "GET",
 
               headers: {
                 Authorization:
                   `Bearer ${session.access_token}`,
               },
+
+              cache:
+                "no-store",
             }
           );
 
         const result =
-          await response.json();
+          await response
+            .json();
 
         setIsAdmin(
           response.ok &&
-            result.isAdmin === true
+            result.isAdmin ===
+              true
         );
-      } catch (error) {
+      } catch (
+        error
+      ) {
         console.error(
           "ADMIN CHECK ERROR:",
           error
         );
 
-        setIsAdmin(false);
+        setIsAdmin(
+          false
+        );
       }
     }
 
-    loadPlayer();
-  }, [pathname]);
+    void loadPlayer();
+  }, [
+    pathname,
+  ]);
 
-  // =====================================
-  // VISIBLE MENUS
-  // =====================================
+  // =====================================================
+  // VISIBLE MENU
+  // =====================================================
 
   const visibleMenus =
     menus.filter(
-      (menu) =>
+      (
+        menu
+      ) =>
         !menu.adminOnly ||
         isAdmin
     );
 
-  // =====================================
+  // =====================================================
   // ACTIVE MENU
-  // =====================================
+  // =====================================================
 
   function isActive(
     path: string
   ) {
-    if (path === "/") {
-      return pathname === "/";
+    if (
+      path ===
+      "/"
+    ) {
+      return (
+        pathname ===
+        "/"
+      );
     }
 
     return pathname.startsWith(
@@ -184,120 +268,92 @@ export default function Navbar() {
     );
   }
 
-  // =====================================
-  // NAVIGATE
-  // =====================================
+  // =====================================================
+  // NAVIGATION
+  // =====================================================
 
   function goTo(
     path: string
   ) {
-    setMenuOpen(false);
-    setPlayerOpen(false);
+    setMenuOpen(
+      false
+    );
 
-    router.push(path);
+    setPlayerOpen(
+      false
+    );
+
+    router.push(
+      path
+    );
   }
 
-  // =====================================
+  // =====================================================
   // LOGOUT
-  // =====================================
+  // =====================================================
 
   async function logout() {
-    await supabase.auth.signOut();
+    await supabase
+      .auth
+      .signOut();
 
-    setMenuOpen(false);
-    setPlayerOpen(false);
+    setMenuOpen(
+      false
+    );
 
-    setUserEmail("");
-    setWalletBalance(0);
-    setIsAdmin(false);
+    setPlayerOpen(
+      false
+    );
 
-    router.push("/login");
+    setUserEmail(
+      ""
+    );
+
+    setWalletBalance(
+      0
+    );
+
+    setIsAdmin(
+      false
+    );
+
+    router.push(
+      "/login"
+    );
+
     router.refresh();
   }
 
+  // =====================================================
+  // PAGE
+  // =====================================================
+
   return (
-    <header
-      className="
-        sticky
-        top-0
-        z-50
-        w-full
-        border-b
-        border-cyan-400/10
-        bg-black/90
-        backdrop-blur-xl
-      "
-    >
+    <header className="sticky top-0 z-50 w-full border-b border-cyan-400/10 bg-black/90 backdrop-blur-xl">
+
       {/* TOP GLOW */}
 
-      <div
-        className="
-          absolute
-          top-0
-          left-1/2
-          -translate-x-1/2
-          w-[600px]
-          max-w-[80vw]
-          h-[1px]
-          bg-gradient-to-r
-          from-transparent
-          via-cyan-400
-          to-transparent
-          shadow-[0_0_25px_rgba(34,211,238,0.7)]
-        "
-      />
+      <div className="absolute left-1/2 top-0 h-[1px] w-[600px] max-w-[80vw] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_25px_rgba(34,211,238,0.7)]" />
 
-      <div
-        className="
-          max-w-7xl
-          mx-auto
-          px-4
-          sm:px-6
-          h-[76px]
-          flex
-          items-center
-          justify-between
-          gap-4
-        "
-      >
-        {/* =====================================
+      <div className="mx-auto flex h-[76px] max-w-[1500px] items-center justify-between gap-3 px-4 sm:px-6">
+
+        {/* =================================================
             LOGO
-        ===================================== */}
+        ================================================= */}
 
         <button
+          type="button"
           onClick={() =>
-            goTo("/")
+            goTo(
+              "/"
+            )
           }
-          className="
-            flex
-            items-center
-            gap-3
-            group
-            shrink-0
-          "
+          className="group flex shrink-0 items-center gap-3"
         >
-          <div
-            className="
-              relative
-              w-12
-              h-12
-              flex
-              items-center
-              justify-center
-            "
-          >
-            <div
-              className="
-                absolute
-                inset-0
-                rounded-full
-                bg-cyan-400/10
-                blur-xl
-                opacity-0
-                group-hover:opacity-100
-                transition
-              "
-            />
+
+          <div className="relative flex h-12 w-12 items-center justify-center">
+
+            <div className="absolute inset-0 rounded-full bg-cyan-400/10 opacity-0 blur-xl transition group-hover:opacity-100" />
 
             <Image
               src="/logo.png"
@@ -305,60 +361,35 @@ export default function Navbar() {
               width={48}
               height={48}
               priority
-              className="
-                relative
-                object-contain
-                transition
-                duration-300
-                group-hover:scale-105
-              "
+              className="relative object-contain transition duration-300 group-hover:scale-105"
             />
+
           </div>
 
-          <div
-            className="
-              hidden
-              sm:block
-              text-left
-            "
-          >
-            <p
-              className="
-                text-white
-                font-black
-                text-xl
-                tracking-tight
-              "
-            >
+          <div className="hidden text-left sm:block">
+
+            <p className="text-xl font-black tracking-tight text-white">
               LOOTFORM
             </p>
 
-            <p
-              className="
-                text-[8px]
-                text-cyan-400
-                tracking-[0.28em]
-              "
-            >
+            <p className="text-[8px] tracking-[0.28em] text-cyan-400">
               DIGITAL LOOT
             </p>
+
           </div>
+
         </button>
 
-        {/* =====================================
+        {/* =================================================
             DESKTOP MENU
-        ===================================== */}
+        ================================================= */}
 
-        <nav
-          className="
-            hidden
-            lg:flex
-            items-center
-            gap-2
-          "
-        >
+        <nav className="hidden items-center gap-1.5 lg:flex">
+
           {visibleMenus.map(
-            (menu) => {
+            (
+              menu
+            ) => {
               const active =
                 isActive(
                   menu.path
@@ -368,15 +399,16 @@ export default function Navbar() {
                 menu.label ===
                 "ADMIN";
 
-              const shippingMenu =
+              const gameMenu =
                 menu.label ===
-                "SHIPPING";
+                "GAME";
 
               return (
                 <button
                   key={
                     menu.label
                   }
+                  type="button"
                   onClick={() =>
                     goTo(
                       menu.path
@@ -384,13 +416,13 @@ export default function Navbar() {
                   }
                   className={`
                     relative
-                    px-4
-                    py-2.5
                     rounded-lg
-                    text-xs
+                    border
+                    px-3
+                    py-2.5
+                    text-[11px]
                     font-bold
                     tracking-wide
-                    border
                     transition-all
                     duration-300
 
@@ -408,47 +440,64 @@ export default function Navbar() {
                           border-cyan-400
                           bg-cyan-400/10
                           text-cyan-400
-                          shadow-[0_0_20px_rgba(34,211,238,0.12)]
+                          shadow-[0_0_22px_rgba(34,211,238,0.15)]
                         `
                         : adminMenu
                         ? `
                           border-orange-400/25
-                          text-orange-400
                           bg-orange-400/[0.03]
+                          text-orange-400
                           hover:border-orange-400
                           hover:bg-orange-400/10
-                        `
-                        : shippingMenu
-                        ? `
-                          border-cyan-400/15
-                          text-zinc-400
-                          hover:text-cyan-400
-                          hover:border-cyan-400/50
-                          hover:bg-cyan-400/[0.04]
                         `
                         : `
                           border-zinc-800
                           text-zinc-500
-                          hover:text-white
                           hover:border-zinc-600
                           hover:bg-white/[0.03]
+                          hover:text-white
                         `
                     }
                   `}
                 >
-                  {adminMenu && (
-                    <span className="mr-1">
-                      ◆
-                    </span>
-                  )}
 
-                  {shippingMenu && (
-                    <span className="mr-1">
-                      ◇
-                    </span>
-                  )}
+                  <span className="flex items-center justify-center gap-1.5">
 
-                  {menu.label}
+                    {menu.symbol && (
+                      <span
+                        className={`
+                          text-[9px]
+                          font-black
+                          transition-all
+                          duration-300
+
+                          ${
+                            active &&
+                            gameMenu
+                              ? "text-cyan-300 drop-shadow-[0_0_6px_rgba(34,211,238,0.95)]"
+                              : adminMenu
+                              ? "text-orange-400"
+                              : active
+                              ? "text-cyan-400"
+                              : "text-zinc-600"
+                          }
+                        `}
+                      >
+                        {
+                          menu.symbol
+                        }
+                      </span>
+                    )}
+
+                    <span>
+                      {
+                        menu.label
+                      }
+                    </span>
+
+                  </span>
+
+                  {/* ACTIVE DOT */}
 
                   {active && (
                     <span
@@ -456,9 +505,9 @@ export default function Navbar() {
                         absolute
                         -bottom-[5px]
                         left-1/2
-                        -translate-x-1/2
-                        w-1
                         h-1
+                        w-1
+                        -translate-x-1/2
                         rounded-full
 
                         ${
@@ -469,96 +518,71 @@ export default function Navbar() {
                       `}
                     />
                   )}
+
+                  {/* GAME EXTRA GLOW */}
+
+                  {active &&
+                    gameMenu && (
+                      <span className="pointer-events-none absolute inset-x-4 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+                    )}
+
                 </button>
               );
             }
           )}
+
         </nav>
 
-        {/* =====================================
+        {/* =================================================
             DESKTOP PLAYER
-        ===================================== */}
+        ================================================= */}
 
-        <div
-          className="
-            hidden
-            lg:flex
-            items-center
-            gap-3
-            relative
-          "
-        >
+        <div className="relative hidden items-center gap-3 lg:flex">
+
           {/* WALLET */}
 
           <button
+            type="button"
             onClick={() =>
-              goTo("/wallet")
+              goTo(
+                "/wallet"
+              )
             }
-            className="
-              border
-              border-lime-400/20
-              bg-lime-400/[0.03]
-              rounded-xl
-              px-4
-              py-2
-              text-left
-              hover:border-lime-400
-              transition
-            "
+            className="rounded-xl border border-lime-400/20 bg-lime-400/[0.03] px-4 py-2 text-left transition hover:border-lime-400"
           >
-            <p
-              className="
-                text-zinc-600
-                text-[8px]
-                tracking-[0.2em]
-              "
-            >
+
+            <p className="text-[8px] tracking-[0.2em] text-zinc-600">
               WALLET
             </p>
 
-            <p
-              className="
-                text-lime-400
-                text-sm
-                font-black
-                mt-0.5
-              "
-            >
-              {walletBalance} LT
+            <p className="mt-0.5 text-sm font-black text-lime-400">
+              {walletBalance.toLocaleString()}{" "}
+              LT
             </p>
+
           </button>
 
-          {/* PLAYER BUTTON */}
+          {/* PLAYER */}
 
           <button
+            type="button"
             onClick={() =>
               setPlayerOpen(
                 !playerOpen
               )
             }
-            className="
-              flex
-              items-center
-              gap-3
-              border
-              border-zinc-800
-              bg-zinc-950/80
-              rounded-xl
-              px-3
-              py-2
-              hover:border-cyan-400/50
-              transition
-            "
+            className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 transition hover:border-cyan-400/50"
           >
+
             <div
               className={`
-                w-9
-                h-9
-                rounded-lg
-                border
                 flex
+                h-9
+                w-9
                 items-center
                 justify-center
+                rounded-lg
+                border
                 text-xs
                 font-black
 
@@ -574,12 +598,8 @@ export default function Navbar() {
                 : "P1"}
             </div>
 
-            <div
-              className="
-                text-left
-                max-w-[150px]
-              "
-            >
+            <div className="max-w-[150px] text-left">
+
               <p
                 className={`
                   text-[7px]
@@ -597,23 +617,17 @@ export default function Navbar() {
                   : "PLAYER"}
               </p>
 
-              <p
-                className="
-                  text-zinc-300
-                  text-xs
-                  truncate
-                  mt-1
-                "
-              >
+              <p className="mt-1 truncate text-xs text-zinc-300">
                 {userEmail ||
                   "PLAYER"}
               </p>
+
             </div>
 
             <span
               className={`
-                text-zinc-600
                 text-xs
+                text-zinc-600
                 transition-transform
 
                 ${
@@ -625,315 +639,165 @@ export default function Navbar() {
             >
               ▼
             </span>
+
           </button>
 
-          {/* =====================================
+          {/* =================================================
               PLAYER DROPDOWN
-          ===================================== */}
+          ================================================= */}
 
           {playerOpen && (
-            <div
-              className="
-                absolute
-                top-[58px]
-                right-0
-                w-[260px]
-                border
-                border-zinc-800
-                bg-black/95
-                rounded-2xl
-                p-3
-                shadow-[0_20px_60px_rgba(0,0,0,0.7)]
-                backdrop-blur-xl
-              "
-            >
-              {/* ACCOUNT INFO */}
+            <div className="absolute right-0 top-[58px] w-[260px] rounded-2xl border border-zinc-800 bg-black/95 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.7)] backdrop-blur-xl">
 
-              <div
-                className="
-                  border
-                  border-zinc-800
-                  bg-zinc-950
-                  rounded-xl
-                  p-4
-                "
-              >
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+
                 <div className="flex items-center justify-between gap-3">
-                  <p
-                    className="
-                      text-zinc-600
-                      text-[8px]
-                      tracking-[0.2em]
-                    "
-                  >
+
+                  <p className="text-[8px] tracking-[0.2em] text-zinc-600">
                     PLAYER ACCOUNT
                   </p>
 
                   {isAdmin && (
-                    <span
-                      className="
-                        border
-                        border-orange-400/30
-                        bg-orange-400/5
-                        text-orange-400
-                        rounded-full
-                        px-2
-                        py-1
-                        text-[7px]
-                        font-black
-                      "
-                    >
+                    <span className="rounded-full border border-orange-400/30 bg-orange-400/5 px-2 py-1 text-[7px] font-black text-orange-400">
                       ADMIN
                     </span>
                   )}
+
                 </div>
 
-                <p
-                  className="
-                    text-cyan-400
-                    text-xs
-                    mt-2
-                    break-all
-                  "
-                >
-                  {userEmail}
+                <p className="mt-2 break-all text-xs text-cyan-400">
+                  {
+                    userEmail
+                  }
                 </p>
 
-                <div
-                  className="
-                    flex
-                    items-center
-                    justify-between
-                    mt-4
-                  "
-                >
-                  <p
-                    className="
-                      text-zinc-600
-                      text-[9px]
-                    "
-                  >
+                <div className="mt-4 flex items-center justify-between">
+
+                  <p className="text-[9px] text-zinc-600">
                     BALANCE
                   </p>
 
-                  <p
-                    className="
-                      text-lime-400
-                      font-black
-                    "
-                  >
-                    {walletBalance} LT
+                  <p className="font-black text-lime-400">
+                    {walletBalance.toLocaleString()}{" "}
+                    LT
                   </p>
+
                 </div>
+
               </div>
 
-              {/* ADMIN */}
+              {/* GAME HUB */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  goTo(
+                    "/game"
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-transparent px-4 py-3 text-left text-xs font-bold text-zinc-400 transition hover:border-cyan-400/30 hover:bg-cyan-400/5 hover:text-cyan-400"
+              >
+                <span className="mr-2 text-cyan-400">
+                  ✦
+                </span>
+
+                GAME HUB
+              </button>
 
               {isAdmin && (
                 <button
+                  type="button"
                   onClick={() =>
                     goTo(
                       "/admin"
                     )
                   }
-                  className="
-                    w-full
-                    mt-2
-                    border
-                    border-orange-400/20
-                    bg-orange-400/[0.03]
-                    text-left
-                    text-orange-400
-                    px-4
-                    py-3
-                    rounded-xl
-                    text-xs
-                    font-black
-                    hover:border-orange-400
-                    hover:bg-orange-400/10
-                    transition
-                  "
+                  className="mt-2 w-full rounded-xl border border-orange-400/20 bg-orange-400/[0.03] px-4 py-3 text-left text-xs font-black text-orange-400 transition hover:border-orange-400 hover:bg-orange-400/10"
                 >
                   ◆ ADMIN DASHBOARD
                 </button>
               )}
 
-              {/* COLLECTION */}
-
               <button
+                type="button"
                 onClick={() =>
                   goTo(
                     "/collection"
                   )
                 }
-                className="
-                  w-full
-                  mt-2
-                  border
-                  border-transparent
-                  text-left
-                  text-zinc-400
-                  px-4
-                  py-3
-                  rounded-xl
-                  text-xs
-                  font-bold
-                  hover:border-cyan-400/30
-                  hover:bg-cyan-400/5
-                  hover:text-cyan-400
-                  transition
-                "
+                className="mt-2 w-full rounded-xl border border-transparent px-4 py-3 text-left text-xs font-bold text-zinc-400 transition hover:border-cyan-400/30 hover:bg-cyan-400/5 hover:text-cyan-400"
               >
                 MY COLLECTION
               </button>
 
-              {/* SHIPPING */}
-
               <button
+                type="button"
                 onClick={() =>
                   goTo(
-                    "/shipping"
+                    "/wallet"
                   )
                 }
-                className="
-                  w-full
-                  border
-                  border-transparent
-                  text-left
-                  text-zinc-400
-                  px-4
-                  py-3
-                  rounded-xl
-                  text-xs
-                  font-bold
-                  hover:border-cyan-400/30
-                  hover:bg-cyan-400/5
-                  hover:text-cyan-400
-                  transition
-                "
-              >
-                ที่อยู่จัดส่ง
-              </button>
-
-              {/* WALLET */}
-
-              <button
-                onClick={() =>
-                  goTo("/wallet")
-                }
-                className="
-                  w-full
-                  border
-                  border-transparent
-                  text-left
-                  text-zinc-400
-                  px-4
-                  py-3
-                  rounded-xl
-                  text-xs
-                  font-bold
-                  hover:border-lime-400/30
-                  hover:bg-lime-400/5
-                  hover:text-lime-400
-                  transition
-                "
+                className="w-full rounded-xl border border-transparent px-4 py-3 text-left text-xs font-bold text-zinc-400 transition hover:border-lime-400/30 hover:bg-lime-400/5 hover:text-lime-400"
               >
                 MY WALLET
               </button>
 
-              <div
-                className="
-                  h-[1px]
-                  bg-zinc-900
-                  my-2
-                "
-              />
-
-              {/* LOGOUT */}
+              <div className="my-2 h-[1px] bg-zinc-900" />
 
               <button
-                onClick={logout}
-                className="
-                  w-full
-                  border
-                  border-transparent
-                  text-left
-                  text-red-400/70
-                  px-4
-                  py-3
-                  rounded-xl
-                  text-xs
-                  font-bold
-                  hover:border-red-400/30
-                  hover:bg-red-400/5
-                  hover:text-red-400
-                  transition
-                "
+                type="button"
+                onClick={
+                  logout
+                }
+                className="w-full rounded-xl border border-transparent px-4 py-3 text-left text-xs font-bold text-red-400/70 transition hover:border-red-400/30 hover:bg-red-400/5 hover:text-red-400"
               >
                 LOGOUT
               </button>
+
             </div>
           )}
+
         </div>
 
-        {/* =====================================
+        {/* =================================================
             MOBILE CONTROLS
-        ===================================== */}
+        ================================================= */}
 
-        <div
-          className="
-            flex
-            lg:hidden
-            items-center
-            gap-2
-          "
-        >
+        <div className="flex items-center gap-2 lg:hidden">
+
           <button
+            type="button"
             onClick={() =>
-              goTo("/wallet")
+              goTo(
+                "/wallet"
+              )
             }
-            className="
-              border
-              border-lime-400/20
-              bg-lime-400/[0.03]
-              rounded-lg
-              px-3
-              py-2
-            "
+            className="rounded-lg border border-lime-400/20 bg-lime-400/[0.03] px-3 py-2"
           >
-            <p
-              className="
-                text-lime-400
-                text-xs
-                font-black
-              "
-            >
-              {walletBalance} LT
+
+            <p className="text-xs font-black text-lime-400">
+              {walletBalance.toLocaleString()}{" "}
+              LT
             </p>
+
           </button>
 
           {isAdmin && (
             <button
+              type="button"
               onClick={() =>
-                goTo("/admin")
+                goTo(
+                  "/admin"
+                )
               }
-              className="
-                border
-                border-orange-400/30
-                bg-orange-400/[0.05]
-                text-orange-400
-                rounded-lg
-                px-3
-                py-2
-                text-xs
-                font-black
-              "
+              className="rounded-lg border border-orange-400/30 bg-orange-400/[0.05] px-3 py-2 text-xs font-black text-orange-400"
             >
-              ADMIN
+              ◆
             </button>
           )}
 
           <button
+            type="button"
             onClick={() => {
               setMenuOpen(
                 !menuOpen
@@ -943,27 +807,15 @@ export default function Navbar() {
                 false
               );
             }}
-            className="
-              w-11
-              h-11
-              border
-              border-zinc-800
-              rounded-xl
-              flex
-              flex-col
-              items-center
-              justify-center
-              gap-1.5
-              hover:border-cyan-400
-              transition
-            "
+            className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 rounded-xl border border-zinc-800 transition hover:border-cyan-400"
             aria-label="Open menu"
           >
+
             <span
               className={`
                 block
-                w-5
                 h-[1px]
+                w-5
                 bg-zinc-300
                 transition
 
@@ -978,8 +830,8 @@ export default function Navbar() {
             <span
               className={`
                 block
-                w-5
                 h-[1px]
+                w-5
                 bg-zinc-300
                 transition
 
@@ -994,8 +846,8 @@ export default function Navbar() {
             <span
               className={`
                 block
-                w-5
                 h-[1px]
+                w-5
                 bg-zinc-300
                 transition
 
@@ -1006,61 +858,37 @@ export default function Navbar() {
                 }
               `}
             />
+
           </button>
+
         </div>
+
       </div>
 
-      {/* =====================================
+      {/* =================================================
           MOBILE MENU
-      ===================================== */}
+      ================================================= */}
 
       {menuOpen && (
-        <div
-          className="
-            lg:hidden
-            border-t
-            border-zinc-900
-            bg-black/95
-            backdrop-blur-xl
-          "
-        >
-          <div
-            className="
-              max-w-7xl
-              mx-auto
-              px-4
-              sm:px-6
-              py-4
-            "
-          >
-            {/* MOBILE PLAYER */}
+        <div className="border-t border-zinc-900 bg-black/95 backdrop-blur-xl lg:hidden">
 
-            <div
-              className="
-                border
-                border-zinc-800
-                bg-zinc-950/80
-                rounded-2xl
-                p-4
-                mb-4
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-3
-                "
-              >
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+
+            {/* ACCOUNT */}
+
+            <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4">
+
+              <div className="flex items-center gap-3">
+
                 <div
                   className={`
-                    w-10
-                    h-10
-                    rounded-xl
-                    border
                     flex
+                    h-10
+                    w-10
                     items-center
                     justify-center
+                    rounded-xl
+                    border
                     text-xs
                     font-black
 
@@ -1076,11 +904,8 @@ export default function Navbar() {
                     : "P1"}
                 </div>
 
-                <div
-                  className="
-                    min-w-0
-                  "
-                >
+                <div className="min-w-0">
+
                   <p
                     className={`
                       text-[8px]
@@ -1098,60 +923,39 @@ export default function Navbar() {
                       : "PLAYER"}
                   </p>
 
-                  <p
-                    className="
-                      text-cyan-400
-                      text-xs
-                      truncate
-                      mt-1
-                    "
-                  >
-                    {userEmail}
+                  <p className="mt-1 truncate text-xs text-cyan-400">
+                    {
+                      userEmail
+                    }
                   </p>
+
                 </div>
+
               </div>
 
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  mt-4
-                  border-t
-                  border-zinc-900
-                  pt-3
-                "
-              >
-                <p
-                  className="
-                    text-zinc-600
-                    text-[9px]
-                  "
-                >
+              <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3">
+
+                <p className="text-[9px] text-zinc-600">
                   WALLET
                 </p>
 
-                <p
-                  className="
-                    text-lime-400
-                    font-black
-                  "
-                >
-                  {walletBalance} LT
+                <p className="font-black text-lime-400">
+                  {walletBalance.toLocaleString()}{" "}
+                  LT
                 </p>
+
               </div>
+
             </div>
 
-            {/* MOBILE NAVIGATION */}
+            {/* MENU LIST */}
 
-            <div
-              className="
-                grid
-                gap-2
-              "
-            >
+            <div className="grid gap-2">
+
               {visibleMenus.map(
-                (menu) => {
+                (
+                  menu
+                ) => {
                   const active =
                     isActive(
                       menu.path
@@ -1161,15 +965,16 @@ export default function Navbar() {
                     menu.label ===
                     "ADMIN";
 
-                  const shippingMenu =
+                  const gameMenu =
                     menu.label ===
-                    "SHIPPING";
+                    "GAME";
 
                   return (
                     <button
                       key={
                         menu.label
                       }
+                      type="button"
                       onClick={() =>
                         goTo(
                           menu.path
@@ -1177,11 +982,11 @@ export default function Navbar() {
                       }
                       className={`
                         w-full
-                        text-left
-                        px-4
-                        py-4
                         rounded-xl
                         border
+                        px-4
+                        py-4
+                        text-left
                         text-sm
                         font-black
                         transition
@@ -1194,43 +999,57 @@ export default function Navbar() {
                             ? "border-cyan-400 bg-cyan-400/10 text-cyan-400"
                             : adminMenu
                             ? "border-orange-400/25 text-orange-400"
-                            : shippingMenu
-                            ? "border-cyan-400/20 text-cyan-300"
                             : "border-zinc-800 text-zinc-400 hover:text-white"
                         }
                       `}
                     >
-                      {adminMenu
-                        ? "◆ "
-                        : shippingMenu
-                        ? "◇ "
-                        : ""}
 
-                      {menu.label}
+                      <span className="flex items-center gap-2">
+
+                        {menu.symbol && (
+                          <span
+                            className={
+                              active &&
+                              gameMenu
+                                ? "text-cyan-300 drop-shadow-[0_0_6px_rgba(34,211,238,1)]"
+                                : adminMenu
+                                ? "text-orange-400"
+                                : active
+                                ? "text-cyan-400"
+                                : "text-zinc-600"
+                            }
+                          >
+                            {
+                              menu.symbol
+                            }
+                          </span>
+                        )}
+
+                        <span>
+                          {
+                            menu.label
+                          }
+                        </span>
+
+                      </span>
+
                     </button>
                   );
                 }
               )}
+
             </div>
 
-            {/* TOP UP */}
+            {/* TOPUP */}
 
             <button
+              type="button"
               onClick={() =>
                 goTo(
                   "/wallet/topup"
                 )
               }
-              className="
-                w-full
-                mt-3
-                bg-lime-400
-                text-black
-                font-black
-                px-4
-                py-4
-                rounded-xl
-              "
+              className="mt-3 w-full rounded-xl bg-lime-400 px-4 py-4 font-black text-black"
             >
               + TOP UP TOKEN
             </button>
@@ -1238,25 +1057,20 @@ export default function Navbar() {
             {/* LOGOUT */}
 
             <button
-              onClick={logout}
-              className="
-                w-full
-                mt-2
-                border
-                border-red-400/20
-                bg-red-400/[0.03]
-                text-red-400
-                font-bold
-                px-4
-                py-4
-                rounded-xl
-              "
+              type="button"
+              onClick={
+                logout
+              }
+              className="mt-2 w-full rounded-xl border border-red-400/20 bg-red-400/[0.03] px-4 py-4 font-bold text-red-400"
             >
               LOGOUT
             </button>
+
           </div>
+
         </div>
       )}
+
     </header>
   );
 }
