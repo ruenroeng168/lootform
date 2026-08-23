@@ -1,9 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
 
 import Navbar from "@/components/Navbar";
+
 import LootformHeroSprite, {
   type HeroDirection,
   type HeroGrade,
@@ -18,7 +28,16 @@ import {
   startGameSession,
 } from "@/lib/game-session";
 
-import { supabase } from "@/lib/supabase";
+import {
+  GameEventError,
+  sendGameStartEvent,
+  sendMonsterDefeatedEvent,
+  sendTreasureFoundEvent,
+} from "@/lib/game-event";
+
+import {
+  supabase,
+} from "@/lib/supabase";
 
 // =========================================================
 // TYPES
@@ -37,28 +56,56 @@ type LoadoutSlot =
 
 type EquipmentItem = {
   id: number;
+
   serial: string;
-  product?: string | null;
-  product_name_snapshot?: string | null;
-  grade: Grade;
-  upgrade_level: number | null;
-  thumbnail_url_snapshot: string | null;
+
+  product?:
+    | string
+    | null;
+
+  product_name_snapshot?:
+    | string
+    | null;
+
+  grade:
+    Grade;
+
+  upgrade_level:
+    | number
+    | null;
+
+  thumbnail_url_snapshot:
+    | string
+    | null;
 };
 
 type EquipmentEntry = {
   id: number;
+
   slot: string;
+
   item_id: number;
-  item: EquipmentItem | null;
+
+  item:
+    | EquipmentItem
+    | null;
 };
 
 type EquipmentApiResponse = {
   ok: boolean;
 
   slots?: {
-    HEAD?: EquipmentEntry | null;
-    TOP?: EquipmentEntry | null;
-    BOTTOM?: EquipmentEntry | null;
+    HEAD?:
+      | EquipmentEntry
+      | null;
+
+    TOP?:
+      | EquipmentEntry
+      | null;
+
+    BOTTOM?:
+      | EquipmentEntry
+      | null;
   };
 
   error?: string;
@@ -66,10 +113,15 @@ type EquipmentApiResponse = {
 
 type PlayerStats = {
   maxStamina: number;
+
   sightRange: number;
+
   maxHp: number;
+
   atk: number;
+
   def: number;
+
   power: number;
 };
 
@@ -87,17 +139,27 @@ type MonsterTier =
 
 type TreasureEntity = {
   id: string;
+
   x: number;
+
   y: number;
-  type: "TREASURE";
+
+  type:
+    "TREASURE";
 };
 
 type MonsterEntity = {
   id: string;
+
   x: number;
+
   y: number;
-  type: "MONSTER";
-  tier: MonsterTier;
+
+  type:
+    "MONSTER";
+
+  tier:
+    MonsterTier;
 };
 
 type Entity =
@@ -106,41 +168,69 @@ type Entity =
 
 type TreasurePopup = {
   title: string;
+
   sub: string;
+
   gain: number;
 } | null;
 
 type MonsterDefinition = {
   name: string;
+
   hp: number;
+
   atk: number;
+
   def: number;
+
   score: number;
 };
 
 type BattleResult = {
   won: boolean;
+
   roundCount: number;
+
   playerHp: number;
+
   monsterHp: number;
-  monster: MonsterDefinition;
-  rounds: BattleRound[];
+
+  monster:
+    MonsterDefinition;
+
+  rounds:
+    BattleRound[];
 };
 
 type ActiveBattle = {
-  entity: MonsterEntity;
-  targetX: number;
-  targetY: number;
-  nextStamina: number;
-  nextStep: number;
-  result: BattleResult;
+  entity:
+    MonsterEntity;
+
+  targetX:
+    number;
+
+  targetY:
+    number;
+
+  nextStamina:
+    number;
+
+  nextStep:
+    number;
+
+  result:
+    BattleResult;
 };
 
 type LiveGameSession = {
   id: string;
+
   status: string;
+
   startedAt: string;
+
   gameVersion: string;
+
   engine: string;
 };
 
@@ -174,91 +264,161 @@ const MOVE_COST =
 // =========================================================
 
 const BASE_STATS = {
-  stamina: 20,
-  sight: 2,
-  hp: 100,
-  atk: 8,
-  def: 8,
+  stamina:
+    20,
+
+  sight:
+    2,
+
+  hp:
+    100,
+
+  atk:
+    8,
+
+  def:
+    8,
 };
 
 // =========================================================
 // GRADE MULTIPLIER
 // =========================================================
 
-const GRADE_MULTIPLIER: Record<Grade, number> = {
-  COMMON: 1,
-  RARE: 1.25,
-  EPIC: 1.6,
-  LEGENDARY: 2,
-};
+const GRADE_MULTIPLIER:
+  Record<
+    Grade,
+    number
+  > = {
+    COMMON:
+      1,
+
+    RARE:
+      1.25,
+
+    EPIC:
+      1.6,
+
+    LEGENDARY:
+      2,
+  };
 
 // =========================================================
 // SLOT FACTORS
 // =========================================================
 
-const SLOT_FACTORS: Record<
-  LoadoutSlot,
-  {
-    stamina: number;
-    sight: number;
-    atk: number;
-    def: number;
-  }
-> = {
-  HEAD: {
-    stamina: 2,
-    sight: 0.8,
-    atk: 1,
-    def: 1,
-  },
+const SLOT_FACTORS:
+  Record<
+    LoadoutSlot,
+    {
+      stamina: number;
+      sight: number;
+      atk: number;
+      def: number;
+    }
+  > = {
+    HEAD: {
+      stamina:
+        2,
 
-  TOP: {
-    stamina: 8,
-    sight: 0.1,
-    atk: 3,
-    def: 4,
-  },
+      sight:
+        0.8,
 
-  BOTTOM: {
-    stamina: 6,
-    sight: 0.1,
-    atk: 2,
-    def: 4,
-  },
-};
+      atk:
+        1,
+
+      def:
+        1,
+    },
+
+    TOP: {
+      stamina:
+        8,
+
+      sight:
+        0.1,
+
+      atk:
+        3,
+
+      def:
+        4,
+    },
+
+    BOTTOM: {
+      stamina:
+        6,
+
+      sight:
+        0.1,
+
+      atk:
+        2,
+
+      def:
+        4,
+    },
+  };
 
 // =========================================================
 // MONSTERS
 // =========================================================
 
-const MONSTER_STATS: Record<
-  MonsterTier,
-  MonsterDefinition
-> = {
-  SCOUT: {
-    name: "VOID SCOUT",
-    hp: 38,
-    atk: 9,
-    def: 5,
-    score: 80,
-  },
+const MONSTER_STATS:
+  Record<
+    MonsterTier,
+    MonsterDefinition
+  > = {
+    SCOUT: {
+      name:
+        "VOID SCOUT",
 
-  GUARD: {
-    name: "GRID GUARD",
-    hp: 65,
-    atk: 15,
-    def: 11,
-    score: 150,
-  },
+      hp:
+        38,
 
-  ELITE: {
-    name: "VOID ELITE",
-    hp: 95,
-    atk: 22,
-    def: 17,
-    score: 280,
-  },
-};
+      atk:
+        9,
+
+      def:
+        5,
+
+      score:
+        80,
+    },
+
+    GUARD: {
+      name:
+        "GRID GUARD",
+
+      hp:
+        65,
+
+      atk:
+        15,
+
+      def:
+        11,
+
+      score:
+        150,
+    },
+
+    ELITE: {
+      name:
+        "VOID ELITE",
+
+      hp:
+        95,
+
+      atk:
+        22,
+
+      def:
+        17,
+
+      score:
+        280,
+    },
+  };
 
 // =========================================================
 // WALLS
@@ -325,10 +485,14 @@ function isInsideMap(
   y: number
 ) {
   return (
-    x >= 0 &&
-    x < MAP_SIZE &&
-    y >= 0 &&
-    y < MAP_SIZE
+    x >=
+      0 &&
+    x <
+      MAP_SIZE &&
+    y >=
+      0 &&
+    y <
+      MAP_SIZE
   );
 }
 
@@ -366,7 +530,9 @@ function getItemName(
     | null
     | undefined
 ) {
-  if (!item) {
+  if (
+    !item
+  ) {
     return "EMPTY SLOT";
   }
 
@@ -379,10 +545,12 @@ function getItemName(
 }
 
 function shortSessionId(
-  value: string
+  value:
+    string
 ) {
   if (
-    value.length <= 12
+    value.length <=
+    12
   ) {
     return value;
   }
@@ -400,10 +568,11 @@ function shortSessionId(
 // =========================================================
 
 function getHighestGrade(
-  equipment: Record<
-    LoadoutSlot,
-    EquipmentEntry | null
-  >
+  equipment:
+    Record<
+      LoadoutSlot,
+      EquipmentEntry | null
+    >
 ): HeroGrade {
   const grades =
     (
@@ -458,10 +627,11 @@ function getHighestGrade(
 // =========================================================
 
 function calculatePlayerStats(
-  slots: Record<
-    LoadoutSlot,
-    EquipmentEntry | null
-  >
+  slots:
+    Record<
+      LoadoutSlot,
+      EquipmentEntry | null
+    >
 ): PlayerStats {
   let stamina =
     BASE_STATS.stamina;
@@ -490,7 +660,9 @@ function calculatePlayerStats(
           slot
         ]?.item;
 
-      if (!item) {
+      if (
+        !item
+      ) {
         return;
       }
 
@@ -573,9 +745,14 @@ function calculatePlayerStats(
 // =========================================================
 
 function calculateVisibleTiles(
-  startX: number,
-  startY: number,
-  sightRange: number
+  startX:
+    number,
+
+  startY:
+    number,
+
+  sightRange:
+    number
 ) {
   const visible =
     new Set<string>();
@@ -589,9 +766,14 @@ function calculateVisibleTiles(
     distance: number;
   }[] = [
     {
-      x: startX,
-      y: startY,
-      distance: 0,
+      x:
+        startX,
+
+      y:
+        startY,
+
+      distance:
+        0,
     },
   ];
 
@@ -609,7 +791,9 @@ function calculateVisibleTiles(
     const current =
       queue.shift();
 
-    if (!current) {
+    if (
+      !current
+    ) {
       continue;
     }
 
@@ -629,20 +813,35 @@ function calculateVisibleTiles(
 
     const directions = [
       {
-        x: 1,
-        y: 0,
+        x:
+          1,
+
+        y:
+          0,
       },
+
       {
-        x: -1,
-        y: 0,
+        x:
+          -1,
+
+        y:
+          0,
       },
+
       {
-        x: 0,
-        y: 1,
+        x:
+          0,
+
+        y:
+          1,
       },
+
       {
-        x: 0,
-        y: -1,
+        x:
+          0,
+
+        y:
+          -1,
       },
     ];
 
@@ -699,8 +898,12 @@ function calculateVisibleTiles(
       }
 
       queue.push({
-        x: nextX,
-        y: nextY,
+        x:
+          nextX,
+
+        y:
+          nextY,
+
         distance:
           current.distance +
           1,
@@ -721,13 +924,15 @@ function randomMonsterTier():
     Math.random();
 
   if (
-    roll < 0.5
+    roll <
+    0.5
   ) {
     return "SCOUT";
   }
 
   if (
-    roll < 0.85
+    roll <
+    0.85
   ) {
     return "GUARD";
   }
@@ -747,13 +952,17 @@ function createEntities():
   }[] = [];
 
   for (
-    let y = 0;
-    y < MAP_SIZE;
+    let y =
+      0;
+    y <
+      MAP_SIZE;
     y++
   ) {
     for (
-      let x = 0;
-      x < MAP_SIZE;
+      let x =
+        0;
+      x <
+        MAP_SIZE;
       x++
     ) {
       if (
@@ -766,15 +975,19 @@ function createEntities():
       }
 
       if (
-        x === START_X &&
-        y === START_Y
+        x ===
+          START_X &&
+        y ===
+          START_Y
       ) {
         continue;
       }
 
       if (
-        x === EXIT_X &&
-        y === EXIT_Y
+        x ===
+          EXIT_X &&
+        y ===
+          EXIT_Y
       ) {
         continue;
       }
@@ -790,7 +1003,8 @@ function createEntities():
     let i =
       available.length -
       1;
-    i > 0;
+    i >
+      0;
     i--
   ) {
     const j =
@@ -826,8 +1040,10 @@ function createEntities():
     0;
 
   for (
-    let i = 0;
-    i < 7;
+    let i =
+      0;
+    i <
+      7;
     i++
   ) {
     const tile =
@@ -835,7 +1051,9 @@ function createEntities():
         cursor++
       ];
 
-    if (!tile) {
+    if (
+      !tile
+    ) {
       break;
     }
 
@@ -855,8 +1073,10 @@ function createEntities():
   }
 
   for (
-    let i = 0;
-    i < 5;
+    let i =
+      0;
+    i <
+      5;
     i++
   ) {
     const tile =
@@ -864,7 +1084,9 @@ function createEntities():
         cursor++
       ];
 
-    if (!tile) {
+    if (
+      !tile
+    ) {
       break;
     }
 
@@ -924,9 +1146,12 @@ function resolveAutoBattle(
     60;
 
   while (
-    playerHp > 0 &&
-    monsterHp > 0 &&
-    round < MAX_ROUNDS
+    playerHp >
+      0 &&
+    monsterHp >
+      0 &&
+    round <
+      MAX_ROUNDS
   ) {
     round +=
       1;
@@ -955,7 +1180,8 @@ function resolveAutoBattle(
       0;
 
     if (
-      monsterHp > 0
+      monsterHp >
+      0
     ) {
       monsterDamage =
         Math.max(
@@ -995,7 +1221,8 @@ function resolveAutoBattle(
 
   return {
     won:
-      monsterHp <= 0,
+      monsterHp <=
+      0,
 
     roundCount:
       round,
@@ -1324,7 +1551,9 @@ export default function GameTestPage() {
           throw authError;
         }
 
-        if (!session) {
+        if (
+          !session
+        ) {
           router.push(
             "/login"
           );
@@ -1531,7 +1760,7 @@ export default function GameTestPage() {
     );
 
   // =====================================================
-  // START REAL GAME SESSION
+  // START REAL GAME SESSION + GAME_START EVENT
   // =====================================================
 
   const startExpedition =
@@ -1555,14 +1784,42 @@ export default function GameTestPage() {
         );
 
         try {
-          // ===============================================
-          // SERVER SESSION FIRST
-          // ===============================================
-
           const created =
             await startGameSession(
               GAME_CODE
             );
+
+          await sendGameStartEvent(
+            created.session.id,
+            {
+              source:
+                "GRID_EXPEDITION",
+
+              map:
+                "SECTOR_A_01",
+
+              hero_grade:
+                heroGrade,
+
+              max_stamina:
+                playerStats.maxStamina,
+
+              max_hp:
+                playerStats.maxHp,
+
+              sight_range:
+                playerStats.sightRange,
+
+              power:
+                playerStats.power,
+
+              atk:
+                playerStats.atk,
+
+              def:
+                playerStats.def,
+            }
+          );
 
           setLiveSession({
             id:
@@ -1580,10 +1837,6 @@ export default function GameTestPage() {
             engine:
               created.game.engine,
           });
-
-          // ===============================================
-          // START GAME ONLY AFTER SESSION EXISTS
-          // ===============================================
 
           movementLock.current =
             false;
@@ -1645,6 +1898,7 @@ export default function GameTestPage() {
           );
 
           setLog([
+            "SERVER: GAME_START RECORDED ✓",
             `SESSION: ${created.session.id}`,
             `GAME: ${created.game.code} v${created.game.version}`,
             "SYSTEM: Expedition started.",
@@ -1664,16 +1918,23 @@ export default function GameTestPage() {
 
           if (
             error instanceof
+            GameEventError
+          ) {
+            setSessionError(
+              `GAME EVENT ${error.code}: ${error.message}`
+            );
+          } else if (
+            error instanceof
             GameSessionError
           ) {
             setSessionError(
-              `${error.code}: ${error.message}`
+              `GAME SESSION ${error.code}: ${error.message}`
             );
           } else {
             setSessionError(
               error instanceof Error
                 ? error.message
-                : "Unable to create Game Session."
+                : "Unable to start expedition."
             );
           }
 
@@ -1690,7 +1951,191 @@ export default function GameTestPage() {
         }
       },
       [
+        heroGrade,
         playerStats,
+      ]
+    );
+
+  // =====================================================
+  // TREASURE SERVER EVENT
+  // =====================================================
+
+  const recordTreasureEvent =
+    useCallback(
+      async (
+        sessionId:
+          string,
+
+        gain:
+          number,
+
+        targetX:
+          number,
+
+        targetY:
+          number,
+
+        nextStep:
+          number,
+
+        scoreAfter:
+          number
+      ) => {
+        try {
+          const result =
+            await sendTreasureFoundEvent(
+              sessionId,
+              gain,
+              {
+                source:
+                  "GRID_EXPEDITION",
+
+                map:
+                  "SECTOR_A_01",
+
+                x:
+                  targetX,
+
+                y:
+                  targetY,
+
+                step:
+                  nextStep,
+
+                score_gain:
+                  gain,
+
+                run_score:
+                  scoreAfter,
+              }
+            );
+
+          addLog(
+            `SERVER: TREASURE_FOUND EVENT #${result.event.id} ✓`
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            "TREASURE EVENT ERROR:",
+            error
+          );
+
+          if (
+            error instanceof
+            GameEventError
+          ) {
+            addLog(
+              `⚠ SERVER EVENT FAILED: ${error.code}`
+            );
+          } else {
+            addLog(
+              "⚠ SERVER EVENT FAILED: TREASURE_FOUND"
+            );
+          }
+        }
+      },
+      [
+        addLog,
+      ]
+    );
+
+  // =====================================================
+  // MONSTER DEFEATED SERVER EVENT
+  // =====================================================
+
+  const recordMonsterDefeatedEvent =
+    useCallback(
+      async (
+        sessionId:
+          string,
+
+        entity:
+          MonsterEntity,
+
+        result:
+          BattleResult,
+
+        targetX:
+          number,
+
+        targetY:
+          number,
+
+        nextStep:
+          number,
+
+        scoreAfter:
+          number
+      ) => {
+        try {
+          const response =
+            await sendMonsterDefeatedEvent(
+              sessionId,
+              result.monster.score,
+              {
+                source:
+                  "GRID_EXPEDITION",
+
+                map:
+                  "SECTOR_A_01",
+
+                monster:
+                  result.monster.name,
+
+                tier:
+                  entity.tier,
+
+                x:
+                  targetX,
+
+                y:
+                  targetY,
+
+                step:
+                  nextStep,
+
+                rounds:
+                  result.roundCount,
+
+                hp_left:
+                  result.playerHp,
+
+                score_gain:
+                  result.monster.score,
+
+                run_score:
+                  scoreAfter,
+              }
+            );
+
+          addLog(
+            `SERVER: MONSTER_DEFEATED EVENT #${response.event.id} ✓`
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            "MONSTER EVENT ERROR:",
+            error
+          );
+
+          if (
+            error instanceof
+            GameEventError
+          ) {
+            addLog(
+              `⚠ SERVER EVENT FAILED: ${error.code}`
+            );
+          } else {
+            addLog(
+              "⚠ SERVER EVENT FAILED: MONSTER_DEFEATED"
+            );
+          }
+        }
+      },
+      [
+        addLog,
       ]
     );
 
@@ -1712,6 +2157,7 @@ export default function GameTestPage() {
           targetX,
           targetY,
           nextStamina,
+          nextStep,
           result,
         } =
           activeBattle;
@@ -1719,17 +2165,17 @@ export default function GameTestPage() {
         if (
           result.won
         ) {
+          const scoreAfter =
+            runScore +
+            result.monster
+              .score;
+
           setPlayerHp(
             result.playerHp
           );
 
           setRunScore(
-            (
-              current
-            ) =>
-              current +
-              result.monster
-                .score
+            scoreAfter
           );
 
           setMonstersDefeated(
@@ -1764,6 +2210,28 @@ export default function GameTestPage() {
           addLog(
             `⚔️ ${result.monster.name} DEFEATED +${result.monster.score} SCORE`
           );
+
+          // =================================================
+          // REAL SERVER EVENT
+          // =================================================
+
+          if (
+            liveSession
+          ) {
+            void recordMonsterDefeatedEvent(
+              liveSession.id,
+              entity,
+              result,
+              targetX,
+              targetY,
+              nextStep,
+              scoreAfter
+            );
+          } else {
+            addLog(
+              "⚠ MONSTER EVENT SKIPPED: NO LIVE SESSION"
+            );
+          }
 
           if (
             nextStamina <=
@@ -1801,6 +2269,9 @@ export default function GameTestPage() {
       [
         activeBattle,
         addLog,
+        liveSession,
+        recordMonsterDefeatedEvent,
+        runScore,
       ]
     );
 
@@ -1827,30 +2298,30 @@ export default function GameTestPage() {
           return;
         }
 
-        // ===============================================
-        // DIRECTION
-        // ===============================================
-
         if (
-          dx > 0
+          dx >
+          0
         ) {
           setHeroDirection(
             "RIGHT"
           );
         } else if (
-          dx < 0
+          dx <
+          0
         ) {
           setHeroDirection(
             "LEFT"
           );
         } else if (
-          dy < 0
+          dy <
+          0
         ) {
           setHeroDirection(
             "UP"
           );
         } else if (
-          dy > 0
+          dy >
+          0
         ) {
           setHeroDirection(
             "DOWN"
@@ -1864,10 +2335,6 @@ export default function GameTestPage() {
         const targetY =
           posY +
           dy;
-
-        // ===============================================
-        // MAP VALIDATION
-        // ===============================================
 
         if (
           !isInsideMap(
@@ -1894,10 +2361,6 @@ export default function GameTestPage() {
 
           return;
         }
-
-        // ===============================================
-        // STAMINA
-        // ===============================================
 
         if (
           stamina <
@@ -1942,10 +2405,6 @@ export default function GameTestPage() {
                 targetY
           );
 
-        // ===============================================
-        // MONSTER
-        // ===============================================
-
         if (
           entity?.type ===
           "MONSTER"
@@ -1974,10 +2433,6 @@ export default function GameTestPage() {
           return;
         }
 
-        // ===============================================
-        // TREASURE
-        // ===============================================
-
         if (
           entity?.type ===
           "TREASURE"
@@ -1989,12 +2444,12 @@ export default function GameTestPage() {
             ) +
             50;
 
+          const scoreAfter =
+            runScore +
+            gain;
+
           setRunScore(
-            (
-              current
-            ) =>
-              current +
-              gain
+            scoreAfter
           );
 
           setEntities(
@@ -2033,6 +2488,23 @@ export default function GameTestPage() {
           );
 
           if (
+            liveSession
+          ) {
+            void recordTreasureEvent(
+              liveSession.id,
+              gain,
+              targetX,
+              targetY,
+              nextStep,
+              scoreAfter
+            );
+          } else {
+            addLog(
+              "⚠ TREASURE EVENT SKIPPED: NO LIVE SESSION"
+            );
+          }
+
+          if (
             nextStamina <=
             0
           ) {
@@ -2047,10 +2519,6 @@ export default function GameTestPage() {
           return;
         }
 
-        // ===============================================
-        // NORMAL MOVE
-        // ===============================================
-
         setPosX(
           targetX
         );
@@ -2058,10 +2526,6 @@ export default function GameTestPage() {
         setPosY(
           targetY
         );
-
-        // ===============================================
-        // EXIT
-        // ===============================================
 
         if (
           targetX ===
@@ -2097,11 +2561,14 @@ export default function GameTestPage() {
         addLog,
         entities,
         gameStatus,
+        liveSession,
         playMovementAnimation,
         playerHp,
         playerStats,
         posX,
         posY,
+        recordTreasureEvent,
+        runScore,
         stamina,
         stepCount,
         treasurePopup,
@@ -2214,11 +2681,13 @@ export default function GameTestPage() {
   ) {
     return (
       <main className="min-h-screen bg-black text-white">
+
         <Navbar />
 
         <div className="flex min-h-[80vh] items-center justify-center text-sm font-black tracking-[0.25em] text-cyan-400">
           LOADING GAME...
         </div>
+
       </main>
     );
   }
@@ -2229,30 +2698,33 @@ export default function GameTestPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
+
       <Navbar />
 
       <div className="mx-auto max-w-[1400px] px-5 pb-12 pt-7 sm:px-6">
 
-        {/* =================================================
-            HEADER
-        ================================================= */}
-
         <div className="flex flex-wrap items-end justify-between gap-4">
+
           <div>
+
             <p className="text-[8px] font-black tracking-[0.3em] text-purple-400">
               LOOTFORM GAME // REAL SESSION
             </p>
 
             <h1 className="mt-2 text-4xl font-black sm:text-5xl">
+
               GRID{" "}
+
               <span className="text-cyan-400">
                 EXPEDITION
               </span>
+
             </h1>
 
             <p className="mt-2 text-[8px] text-zinc-600">
               EXPLORE // FIGHT // LOOT // FIND THE EXIT
             </p>
+
           </div>
 
           <button
@@ -2266,11 +2738,8 @@ export default function GameTestPage() {
           >
             ← GAME HUB
           </button>
-        </div>
 
-        {/* =================================================
-            ERRORS
-        ================================================= */}
+        </div>
 
         {errorMessage && (
           <div className="mt-5 rounded-xl border border-red-400/30 bg-red-400/[0.04] p-4 text-sm text-red-400">
@@ -2280,19 +2749,17 @@ export default function GameTestPage() {
 
         {sessionError && (
           <div className="mt-5 rounded-xl border border-red-400/30 bg-red-400/[0.04] p-4">
+
             <p className="text-[7px] font-black tracking-[0.2em] text-red-400">
-              GAME SESSION ERROR
+              GAME SESSION / EVENT ERROR
             </p>
 
             <p className="mt-2 font-mono text-[9px] text-zinc-300">
               {sessionError}
             </p>
+
           </div>
         )}
-
-        {/* =================================================
-            SESSION STATUS
-        ================================================= */}
 
         <section
           className={
@@ -2301,8 +2768,11 @@ export default function GameTestPage() {
               : "mt-5 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3"
           }
         >
+
           <div className="flex flex-wrap items-center justify-between gap-3">
+
             <div>
+
               <p className="text-[6px] font-black tracking-[0.2em] text-zinc-600">
                 GAME SESSION
               </p>
@@ -2320,11 +2790,14 @@ export default function GameTestPage() {
                     )
                   : "NOT STARTED"}
               </p>
+
             </div>
 
             {liveSession ? (
               <div className="flex flex-wrap items-center gap-4">
+
                 <div>
+
                   <p className="text-[5px] text-zinc-600">
                     VERSION
                   </p>
@@ -2332,9 +2805,11 @@ export default function GameTestPage() {
                   <p className="mt-1 text-[8px] font-black text-white">
                     {liveSession.gameVersion}
                   </p>
+
                 </div>
 
                 <div>
+
                   <p className="text-[5px] text-zinc-600">
                     ENGINE
                   </p>
@@ -2342,35 +2817,27 @@ export default function GameTestPage() {
                   <p className="mt-1 text-[8px] font-black text-white">
                     {liveSession.engine}
                   </p>
+
                 </div>
 
                 <span className="rounded-full border border-lime-400/30 bg-lime-400/[0.05] px-3 py-1.5 text-[7px] font-black text-lime-400">
                   ● SESSION LIVE
                 </span>
+
               </div>
             ) : (
               <span className="rounded-full border border-zinc-800 px-3 py-1.5 text-[7px] font-black text-zinc-600">
                 OFFLINE
               </span>
             )}
-          </div>
-        </section>
 
-        {/* =================================================
-            MAIN GRID
-        ================================================= */}
+          </div>
+
+        </section>
 
         <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]">
 
-          {/* =================================================
-              GAME MAP
-          ================================================= */}
-
           <div className="relative min-h-[680px] overflow-hidden rounded-[28px] border border-cyan-400/20 bg-zinc-950 p-5">
-
-            {/* =================================================
-                COMBAT
-            ================================================= */}
 
             {activeBattle && (
               <CombatScene
@@ -2434,16 +2901,13 @@ export default function GameTestPage() {
               />
             )}
 
-            {/* =================================================
-                TREASURE EFFECT
-            ================================================= */}
-
             {treasurePopup && (
               <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/90 backdrop-blur-sm">
 
                 <div className="treasure-flash absolute inset-0" />
 
                 <div className="pointer-events-none absolute inset-0">
+
                   <div className="absolute left-1/2 top-1/2 h-[320px] w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-400/10 blur-[90px]" />
 
                   <div className="sparkle-1 absolute left-[25%] top-[32%] text-2xl">
@@ -2461,19 +2925,25 @@ export default function GameTestPage() {
                   <div className="sparkle-4 absolute bottom-[32%] right-[34%] text-2xl">
                     ✦
                   </div>
+
                 </div>
 
                 <div className="relative z-10 w-full max-w-[520px] px-6 text-center">
+
                   <p className="text-[8px] font-black tracking-[0.35em] text-yellow-300">
                     LOOT DISCOVERED
                   </p>
 
                   <div className="mt-5 flex justify-center">
+
                     <div className="treasure-chest-popup">
+
                       <TreasureChestIcon
                         size="lg"
                       />
+
                     </div>
+
                   </div>
 
                   <h2 className="mt-6 text-3xl font-black text-yellow-200 sm:text-4xl">
@@ -2485,7 +2955,9 @@ export default function GameTestPage() {
                   </p>
 
                   <div className="treasure-reward mt-6 inline-flex rounded-2xl border border-yellow-400/30 bg-yellow-400/10 px-6 py-4">
+
                     <div className="text-center">
+
                       <p className="text-[8px] font-black tracking-[0.25em] text-yellow-300">
                         BONUS SCORE
                       </p>
@@ -2493,10 +2965,13 @@ export default function GameTestPage() {
                       <p className="mt-2 text-3xl font-black text-white">
                         +{treasurePopup.gain}
                       </p>
+
                     </div>
+
                   </div>
 
                   <div className="mt-8">
+
                     <button
                       type="button"
                       onClick={() =>
@@ -2508,14 +2983,13 @@ export default function GameTestPage() {
                     >
                       CONTINUE EXPEDITION
                     </button>
+
                   </div>
+
                 </div>
+
               </div>
             )}
-
-            {/* =================================================
-                READY SCREEN
-            ================================================= */}
 
             {gameStatus ===
               "READY" &&
@@ -2525,6 +2999,7 @@ export default function GameTestPage() {
                   <div className="w-full max-w-md text-center">
 
                     <div className="flex justify-center">
+
                       <LootformHeroSprite
                         size={
                           115
@@ -2533,10 +3008,11 @@ export default function GameTestPage() {
                           heroGrade
                         }
                       />
+
                     </div>
 
                     <p className="mt-5 text-[8px] font-black tracking-[0.26em] text-purple-400">
-                      REAL GAME SESSION
+                      SERVER CONNECTED EXPEDITION
                     </p>
 
                     <h2 className="mt-2 text-3xl font-black">
@@ -2544,14 +3020,16 @@ export default function GameTestPage() {
                     </h2>
 
                     <p className="mt-3 text-[8px] leading-5 text-zinc-600">
-                      LOOTFORM creates an authenticated server session before the map starts.
+                      LOOTFORM creates a Game Session and records GAME_START before the map begins.
                     </p>
 
                     {sessionError && (
                       <div className="mt-5 rounded-xl border border-red-400/20 bg-red-400/[0.04] px-4 py-3">
+
                         <p className="text-[8px] text-red-400">
                           {sessionError}
                         </p>
+
                       </div>
                     )}
 
@@ -2566,17 +3044,14 @@ export default function GameTestPage() {
                       className="mt-7 rounded-xl bg-cyan-400 px-8 py-4 text-xs font-black text-black transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {startingSession
-                        ? "CREATING SESSION..."
+                        ? "CREATING SESSION + EVENT..."
                         : "▶ START EXPEDITION"}
                     </button>
 
                   </div>
+
                 </div>
               )}
-
-            {/* =================================================
-                RESULT SCREEN
-            ================================================= */}
 
             {gameStatus !==
               "READY" &&
@@ -2600,6 +3075,7 @@ export default function GameTestPage() {
                     </p>
 
                     <h2 className="mt-3 text-4xl font-black">
+
                       {gameStatus ===
                       "COMPLETE"
                         ? "MISSION COMPLETE"
@@ -2607,9 +3083,11 @@ export default function GameTestPage() {
                           "DEFEATED"
                         ? "HERO DEFEATED"
                         : "STAMINA EMPTY"}
+
                     </h2>
 
                     <div className="mt-7 grid grid-cols-2 gap-3">
+
                       <ResultBox
                         label="RUN SCORE"
                         value={
@@ -2635,10 +3113,12 @@ export default function GameTestPage() {
                         label="HP"
                         value={`${playerHp}/${playerStats.maxHp}`}
                       />
+
                     </div>
 
                     {liveSession && (
                       <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+
                         <p className="text-[6px] text-zinc-600">
                           SESSION
                         </p>
@@ -2648,11 +3128,12 @@ export default function GameTestPage() {
                             liveSession.id
                           )}
                         </p>
+
                       </div>
                     )}
 
                     <p className="mt-4 text-[7px] leading-5 text-zinc-600">
-                      Session completion and Game Events will be connected in the next backend step.
+                      GAME_START, TREASURE_FOUND and MONSTER_DEFEATED are connected. Final session completion will be connected in the next step.
                     </p>
 
                     <button
@@ -2666,19 +3147,19 @@ export default function GameTestPage() {
                       className="mt-7 rounded-xl bg-white px-9 py-3 text-[10px] font-black text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {startingSession
-                        ? "CREATING SESSION..."
+                        ? "CREATING SESSION + EVENT..."
                         : "PLAY AGAIN"}
                     </button>
+
                   </div>
+
                 </div>
               )}
 
-            {/* =================================================
-                MAP HEADER
-            ================================================= */}
-
             <div className="flex items-center justify-between gap-4">
+
               <div>
+
                 <p className="text-[7px] tracking-[0.15em] text-zinc-600">
                   MAP
                 </p>
@@ -2686,9 +3167,11 @@ export default function GameTestPage() {
                 <p className="mt-1 text-sm font-black">
                   SECTOR A-01
                 </p>
+
               </div>
 
               <div className="flex gap-2">
+
                 <MiniStatus
                   label="STEP"
                   value={
@@ -2702,12 +3185,10 @@ export default function GameTestPage() {
                     runScore
                   }
                 />
-              </div>
-            </div>
 
-            {/* =================================================
-                GRID
-            ================================================= */}
+              </div>
+
+            </div>
 
             <div className="mt-5 flex min-h-[500px] items-start justify-center overflow-auto rounded-2xl border border-zinc-900 bg-black/50 p-5">
 
@@ -2718,6 +3199,7 @@ export default function GameTestPage() {
                     `repeat(${MAP_SIZE}, clamp(29px, 3.1vw, 38px))`,
                 }}
               >
+
                 {Array.from({
                   length:
                     MAP_SIZE *
@@ -2812,16 +3294,12 @@ export default function GameTestPage() {
                         className={`relative flex aspect-square items-center justify-center overflow-visible rounded-[5px] border transition-all duration-200 ${tileStyle}`}
                       >
 
-                        {/* WALL */}
-
                         {visible &&
                           wall && (
                             <span className="text-xs text-zinc-500">
                               ▦
                             </span>
                           )}
-
-                        {/* EXIT */}
 
                         {explored &&
                           exit &&
@@ -2837,20 +3315,18 @@ export default function GameTestPage() {
                             </span>
                           )}
 
-                        {/* TREASURE */}
-
                         {visible &&
                           entity?.type ===
                             "TREASURE" &&
                           !hero && (
                             <div className="loot-float relative z-20">
+
                               <TreasureChestIcon
                                 size="sm"
                               />
+
                             </div>
                           )}
-
-                        {/* MONSTER */}
 
                         {visible &&
                           entity?.type ===
@@ -2883,13 +3359,13 @@ export default function GameTestPage() {
                                   ? "👹"
                                   : "👾"}
                               </span>
+
                             </div>
                           )}
 
-                        {/* HERO */}
-
                         {hero && (
                           <div className="absolute z-30 flex items-center justify-center">
+
                             <LootformHeroSprite
                               size={
                                 50
@@ -2904,6 +3380,7 @@ export default function GameTestPage() {
                                 heroMoving
                               }
                             />
+
                           </div>
                         )}
 
@@ -2911,14 +3388,13 @@ export default function GameTestPage() {
                     );
                   }
                 )}
+
               </div>
+
             </div>
 
-            {/* =================================================
-                LEGEND
-            ================================================= */}
-
             <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[7px] font-black text-zinc-600">
+
               <span>
                 HERO
               </span>
@@ -2942,19 +3418,12 @@ export default function GameTestPage() {
               <span>
                 ▦ WALL
               </span>
+
             </div>
 
           </div>
 
-          {/* =================================================
-              HUD
-          ================================================= */}
-
           <aside className="space-y-4">
-
-            {/* =================================================
-                HERO STATS
-            ================================================= */}
 
             <section className="rounded-[24px] border border-zinc-800 bg-zinc-950 p-5">
 
@@ -2965,6 +3434,7 @@ export default function GameTestPage() {
               <div className="mt-3 flex items-center gap-4">
 
                 <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl border border-cyan-400/20 bg-black">
+
                   <LootformHeroSprite
                     size={
                       65
@@ -2973,9 +3443,11 @@ export default function GameTestPage() {
                       heroGrade
                     }
                   />
+
                 </div>
 
                 <div>
+
                   <h2 className="text-xl font-black">
                     LOOT HERO
                   </h2>
@@ -2987,6 +3459,7 @@ export default function GameTestPage() {
                   <p className="mt-2 text-[7px] font-black text-orange-400">
                     {heroGrade}
                   </p>
+
                 </div>
 
               </div>
@@ -3053,10 +3526,6 @@ export default function GameTestPage() {
 
             </section>
 
-            {/* =================================================
-                LOADOUT
-            ================================================= */}
-
             <section className="rounded-[24px] border border-zinc-800 bg-zinc-950 p-5">
 
               <p className="text-[8px] font-black tracking-[0.25em] text-purple-400">
@@ -3087,6 +3556,7 @@ export default function GameTestPage() {
                         }
                         className="rounded-xl border border-zinc-800 bg-black p-3"
                       >
+
                         <p className="text-[6px] tracking-[0.15em] text-zinc-600">
                           {slot}
                         </p>
@@ -3119,17 +3589,15 @@ export default function GameTestPage() {
                           </p>
 
                         </div>
+
                       </div>
                     );
                   }
                 )}
 
               </div>
-            </section>
 
-            {/* =================================================
-                GAME SESSION
-            ================================================= */}
+            </section>
 
             <section className="rounded-[24px] border border-zinc-800 bg-zinc-950 p-5">
 
@@ -3178,6 +3646,18 @@ export default function GameTestPage() {
 
                   </div>
 
+                  <div className="mt-2 rounded-xl border border-purple-400/15 bg-purple-400/[0.03] p-3">
+
+                    <p className="text-[6px] text-zinc-600">
+                      SERVER EVENTS
+                    </p>
+
+                    <p className="mt-1 text-[8px] font-black text-purple-400">
+                      START + TREASURE + MONSTER CONNECTED
+                    </p>
+
+                  </div>
+
                 </div>
               ) : (
                 <div className="mt-4 rounded-xl border border-zinc-800 bg-black p-3">
@@ -3190,10 +3670,6 @@ export default function GameTestPage() {
               )}
 
             </section>
-
-            {/* =================================================
-                MOVEMENT
-            ================================================= */}
 
             <section className="rounded-[24px] border border-zinc-800 bg-zinc-950 p-5">
 
@@ -3307,11 +3783,7 @@ export default function GameTestPage() {
 
             </section>
 
-            {/* =================================================
-                LOG
-            ================================================= */}
-
-            <section className="h-[170px] overflow-y-auto rounded-[20px] border border-zinc-800 bg-black p-4">
+            <section className="h-[190px] overflow-y-auto rounded-[20px] border border-zinc-800 bg-black p-4">
 
               <p className="mb-3 text-[7px] font-black tracking-[0.2em] text-zinc-700">
                 EXPEDITION LOG
@@ -3339,10 +3811,6 @@ export default function GameTestPage() {
 
         </section>
 
-        {/* =================================================
-            SECURITY NOTE
-        ================================================= */}
-
         <section className="mt-5 rounded-xl border border-orange-400/15 bg-orange-400/[0.03] p-4">
 
           <p className="text-[7px] font-black tracking-[0.2em] text-orange-400">
@@ -3350,203 +3818,376 @@ export default function GameTestPage() {
           </p>
 
           <p className="mt-2 text-[8px] leading-5 text-zinc-600">
-            RUN SCORE is still a prototype gameplay value. This browser page cannot directly grant EXP, LT, Items, Wallet Balance or Global Rank. Real rewards will be handled by the LOOTFORM server.
+            GAME_START, TREASURE_FOUND and MONSTER_DEFEATED are recorded as server gameplay telemetry. Run Score is still a prototype value. This browser cannot directly grant EXP, LT, Items, Wallet Balance, Collection Score or Global Rank.
           </p>
 
         </section>
 
       </div>
 
-      {/* =================================================
-          EFFECTS
-      ================================================= */}
-
       <style jsx global>{`
+
         .loot-float {
-          animation: lootChestFloat 1.25s ease-in-out infinite;
+          animation:
+            lootChestFloat
+            1.25s
+            ease-in-out
+            infinite;
         }
 
         .monster-float {
-          animation: monsterFloat 1.1s ease-in-out infinite;
+          animation:
+            monsterFloat
+            1.1s
+            ease-in-out
+            infinite;
         }
 
         .treasure-flash {
-          background: radial-gradient(
-            circle at center,
-            rgba(250, 204, 21, 0.18) 0%,
-            rgba(250, 204, 21, 0.06) 28%,
-            rgba(0, 0, 0, 0) 62%
-          );
-          animation: treasureFlash 850ms ease-out 1;
+          background:
+            radial-gradient(
+              circle at center,
+              rgba(250, 204, 21, 0.18) 0%,
+              rgba(250, 204, 21, 0.06) 28%,
+              rgba(0, 0, 0, 0) 62%
+            );
+
+          animation:
+            treasureFlash
+            850ms
+            ease-out
+            1;
         }
 
         .treasure-chest-popup {
           animation:
-            chestPop 700ms cubic-bezier(0.18, 0.89, 0.32, 1.28) 1,
-            chestGlow 1.4s ease-in-out infinite;
+            chestPop
+            700ms
+            cubic-bezier(
+              0.18,
+              0.89,
+              0.32,
+              1.28
+            )
+            1,
+            chestGlow
+            1.4s
+            ease-in-out
+            infinite;
         }
 
         .treasure-reward {
-          animation: rewardPulse 1.1s ease-in-out infinite;
+          animation:
+            rewardPulse
+            1.1s
+            ease-in-out
+            infinite;
         }
 
         .sparkle-1,
         .sparkle-2,
         .sparkle-3,
         .sparkle-4 {
-          color: rgba(253, 224, 71, 0.95);
-          text-shadow: 0 0 14px rgba(253, 224, 71, 0.9);
+          color:
+            rgba(
+              253,
+              224,
+              71,
+              0.95
+            );
+
+          text-shadow:
+            0 0 14px
+            rgba(
+              253,
+              224,
+              71,
+              0.9
+            );
         }
 
         .sparkle-1 {
-          animation: sparkleFloat1 1.5s ease-in-out infinite;
+          animation:
+            sparkleFloat1
+            1.5s
+            ease-in-out
+            infinite;
         }
 
         .sparkle-2 {
-          animation: sparkleFloat2 1.9s ease-in-out infinite;
+          animation:
+            sparkleFloat2
+            1.9s
+            ease-in-out
+            infinite;
         }
 
         .sparkle-3 {
-          animation: sparkleFloat3 1.7s ease-in-out infinite;
+          animation:
+            sparkleFloat3
+            1.7s
+            ease-in-out
+            infinite;
         }
 
         .sparkle-4 {
-          animation: sparkleFloat4 2.1s ease-in-out infinite;
+          animation:
+            sparkleFloat4
+            2.1s
+            ease-in-out
+            infinite;
         }
 
         @keyframes lootChestFloat {
+
           0%,
           100% {
-            transform: translateY(0) scale(1);
+            transform:
+              translateY(0)
+              scale(1);
           }
 
           50% {
-            transform: translateY(-4px) scale(1.03);
+            transform:
+              translateY(-4px)
+              scale(1.03);
           }
+
         }
 
         @keyframes monsterFloat {
+
           0%,
           100% {
-            transform: translateY(0);
+            transform:
+              translateY(0);
           }
 
           50% {
-            transform: translateY(-3px);
+            transform:
+              translateY(-3px);
           }
+
         }
 
         @keyframes treasureFlash {
+
           0% {
-            opacity: 0;
-            transform: scale(0.92);
+            opacity:
+              0;
+
+            transform:
+              scale(0.92);
           }
 
           30% {
-            opacity: 1;
-            transform: scale(1);
+            opacity:
+              1;
+
+            transform:
+              scale(1);
           }
 
           100% {
-            opacity: 1;
-            transform: scale(1.04);
+            opacity:
+              1;
+
+            transform:
+              scale(1.04);
           }
+
         }
 
         @keyframes chestPop {
+
           0% {
-            opacity: 0;
-            transform: translateY(22px) scale(0.55) rotate(-6deg);
+            opacity:
+              0;
+
+            transform:
+              translateY(22px)
+              scale(0.55)
+              rotate(-6deg);
           }
 
           55% {
-            opacity: 1;
-            transform: translateY(-10px) scale(1.08) rotate(2deg);
+            opacity:
+              1;
+
+            transform:
+              translateY(-10px)
+              scale(1.08)
+              rotate(2deg);
           }
 
           100% {
-            opacity: 1;
-            transform: translateY(0) scale(1) rotate(0deg);
+            opacity:
+              1;
+
+            transform:
+              translateY(0)
+              scale(1)
+              rotate(0deg);
           }
+
         }
 
         @keyframes chestGlow {
+
           0%,
           100% {
             filter:
-              drop-shadow(0 0 10px rgba(250, 204, 21, 0.45))
-              drop-shadow(0 0 24px rgba(249, 115, 22, 0.25));
+              drop-shadow(
+                0 0 10px
+                rgba(
+                  250,
+                  204,
+                  21,
+                  0.45
+                )
+              )
+              drop-shadow(
+                0 0 24px
+                rgba(
+                  249,
+                  115,
+                  22,
+                  0.25
+                )
+              );
           }
 
           50% {
             filter:
-              drop-shadow(0 0 18px rgba(250, 204, 21, 0.9))
-              drop-shadow(0 0 32px rgba(249, 115, 22, 0.45));
+              drop-shadow(
+                0 0 18px
+                rgba(
+                  250,
+                  204,
+                  21,
+                  0.9
+                )
+              )
+              drop-shadow(
+                0 0 32px
+                rgba(
+                  249,
+                  115,
+                  22,
+                  0.45
+                )
+              );
           }
+
         }
 
         @keyframes rewardPulse {
+
           0%,
           100% {
-            transform: scale(1);
+            transform:
+              scale(1);
           }
 
           50% {
-            transform: scale(1.03);
+            transform:
+              scale(1.03);
           }
+
         }
 
         @keyframes sparkleFloat1 {
+
           0%,
           100% {
-            transform: translateY(0) scale(1);
-            opacity: 0.55;
+            transform:
+              translateY(0)
+              scale(1);
+
+            opacity:
+              0.55;
           }
 
           50% {
-            transform: translateY(-8px) scale(1.18);
-            opacity: 1;
+            transform:
+              translateY(-8px)
+              scale(1.18);
+
+            opacity:
+              1;
           }
+
         }
 
         @keyframes sparkleFloat2 {
+
           0%,
           100% {
-            transform: translateY(0) scale(1);
-            opacity: 0.5;
+            transform:
+              translateY(0)
+              scale(1);
+
+            opacity:
+              0.5;
           }
 
           50% {
-            transform: translateY(-10px) scale(1.16);
-            opacity: 1;
+            transform:
+              translateY(-10px)
+              scale(1.16);
+
+            opacity:
+              1;
           }
+
         }
 
         @keyframes sparkleFloat3 {
+
           0%,
           100% {
-            transform: translateY(0) scale(1);
-            opacity: 0.45;
+            transform:
+              translateY(0)
+              scale(1);
+
+            opacity:
+              0.45;
           }
 
           50% {
-            transform: translateY(-7px) scale(1.14);
-            opacity: 1;
+            transform:
+              translateY(-7px)
+              scale(1.14);
+
+            opacity:
+              1;
           }
+
         }
 
         @keyframes sparkleFloat4 {
+
           0%,
           100% {
-            transform: translateY(0) scale(1);
-            opacity: 0.6;
+            transform:
+              translateY(0)
+              scale(1);
+
+            opacity:
+              0.6;
           }
 
           50% {
-            transform: translateY(-9px) scale(1.2);
-            opacity: 1;
+            transform:
+              translateY(-9px)
+              scale(1.2);
+
+            opacity:
+              1;
           }
+
         }
+
       `}</style>
 
     </main>
@@ -3562,9 +4203,14 @@ function MoveButton({
   onClick,
   disabled,
 }: {
-  label: string;
-  onClick: () => void;
-  disabled: boolean;
+  label:
+    string;
+
+  onClick:
+    () => void;
+
+  disabled:
+    boolean;
 }) {
   return (
     <button
@@ -3592,7 +4238,8 @@ function StatBox({
   valueClassName =
     "text-cyan-400",
 }: {
-  label: string;
+  label:
+    string;
 
   value:
     string | number;
@@ -3627,17 +4274,25 @@ function StatBar({
   max,
   barClassName,
 }: {
-  label: string;
-  value: number;
-  max: number;
-  barClassName: string;
+  label:
+    string;
+
+  value:
+    number;
+
+  max:
+    number;
+
+  barClassName:
+    string;
 }) {
   const percentage =
     Math.max(
       0,
       Math.min(
         100,
-        max > 0
+        max >
+          0
           ? (
               value /
               max
@@ -3686,8 +4341,11 @@ function MiniStatus({
   label,
   value,
 }: {
-  label: string;
-  value: number;
+  label:
+    string;
+
+  value:
+    number;
 }) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-black px-3 py-2">
@@ -3712,7 +4370,8 @@ function ResultBox({
   label,
   value,
 }: {
-  label: string;
+  label:
+    string;
 
   value:
     string | number;
@@ -3740,8 +4399,11 @@ function SessionInfo({
   label,
   value,
 }: {
-  label: string;
-  value: string;
+  label:
+    string;
+
+  value:
+    string;
 }) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-black p-3">
@@ -3763,9 +4425,12 @@ function SessionInfo({
 // =========================================================
 
 function TreasureChestIcon({
-  size = "sm",
+  size =
+    "sm",
 }: {
-  size?: "sm" | "lg";
+  size?:
+    | "sm"
+    | "lg";
 }) {
   const isLarge =
     size ===
@@ -3780,8 +4445,6 @@ function TreasureChestIcon({
       }
     >
 
-      {/* GLOW */}
-
       <div
         className={
           isLarge
@@ -3789,8 +4452,6 @@ function TreasureChestIcon({
             : "absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-400/25 blur-xl"
         }
       />
-
-      {/* LID */}
 
       <div
         className={
@@ -3800,8 +4461,6 @@ function TreasureChestIcon({
         }
       />
 
-      {/* LID LINE */}
-
       <div
         className={
           isLarge
@@ -3809,8 +4468,6 @@ function TreasureChestIcon({
             : "absolute left-1/2 top-[3px] h-[1px] w-[12px] -translate-x-1/2 rounded-full bg-amber-900/70"
         }
       />
-
-      {/* BODY */}
 
       <div
         className={
@@ -3820,8 +4477,6 @@ function TreasureChestIcon({
         }
       >
 
-        {/* GOLD STRIPE */}
-
         <div
           className={
             isLarge
@@ -3829,8 +4484,6 @@ function TreasureChestIcon({
               : "absolute left-1/2 top-0 h-full w-[3px] -translate-x-1/2 bg-gradient-to-b from-yellow-300 to-amber-500"
           }
         />
-
-        {/* LOCK */}
 
         <div
           className={
