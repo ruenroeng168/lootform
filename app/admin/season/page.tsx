@@ -36,9 +36,37 @@ type SeasonSettings = {
   start_at: string | null;
   end_at: string | null;
 
+  hero_image_url: string | null;
+  hero_image_path: string | null;
+  hero_model_url: string | null;
+  hero_model_path: string | null;
+
   created_at: string;
   updated_at: string;
 };
+
+const MAX_HERO_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_HERO_MODEL_SIZE = 50 * 1024 * 1024;
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function validateHeroImageFile(file: File) {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) return "รองรับเฉพาะ JPEG, PNG และ WEBP";
+  if (file.size > MAX_HERO_IMAGE_SIZE) return "Hero Image ต้องไม่เกิน 5 MB";
+  return "";
+}
+
+function validateHeroModelFile(file: File) {
+  if (!file.name.toLowerCase().endsWith(".glb")) return "รองรับเฉพาะไฟล์ .glb";
+  if (file.size > MAX_HERO_MODEL_SIZE) return "Hero Model ต้องไม่เกิน 50 MB";
+  if (file.size <= 0) return "GLB file is empty";
+  return "";
+}
 
 export default function AdminSeasonPage() {
   const router =
@@ -53,6 +81,11 @@ export default function AdminSeasonPage() {
     saving,
     setSaving,
   ] = useState(false);
+
+  const [
+    uploadingAsset,
+    setUploadingAsset,
+  ] = useState<"" | "image" | "model">("");
 
   const [
     errorMessage,
@@ -465,6 +498,156 @@ export default function AdminSeasonPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function uploadHeroImage(file: File) {
+    if (!season) return;
+
+    const validationError = validateHeroImageFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setUploadingAsset("image");
+
+    try {
+      const {
+        data: { session: authSession },
+      } = await supabase.auth.getSession();
+
+      if (!authSession) {
+        router.push("/login");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("season_id", String(season.id));
+      formData.append("file", file);
+
+      const response = await fetch("/api/admin/season/upload-image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authSession.access_token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Unable to upload hero image");
+      }
+
+      setSeason(result.season as SeasonSettings);
+      setSuccessMessage("HERO IMAGE UPLOADED");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to upload hero image"
+      );
+    } finally {
+      setUploadingAsset("");
+    }
+  }
+
+  async function uploadHeroModel(file: File) {
+    if (!season) return;
+
+    const validationError = validateHeroModelFile(file);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setUploadingAsset("model");
+
+    try {
+      const {
+        data: { session: authSession },
+      } = await supabase.auth.getSession();
+
+      if (!authSession) {
+        router.push("/login");
+        return;
+      }
+
+      setSuccessMessage(
+        `PREPARING ${file.name} (${formatFileSize(file.size)})...`
+      );
+
+      const prepareResponse = await fetch("/api/admin/season/upload-model", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession.access_token}`,
+        },
+        body: JSON.stringify({
+          season_id: season.id,
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type,
+        }),
+      });
+
+      const prepareResult = await prepareResponse.json();
+
+      if (!prepareResponse.ok || !prepareResult?.ok) {
+        throw new Error(prepareResult?.error || "Cannot prepare hero model upload");
+      }
+
+      const prepared = prepareResult.upload;
+
+      if (!prepared?.bucket || !prepared?.path || !prepared?.token) {
+        throw new Error("Signed upload data is incomplete.");
+      }
+
+      setSuccessMessage(
+        `UPLOADING ${file.name} (${formatFileSize(file.size)})...`
+      );
+
+      const { error: storageError } = await supabase.storage
+        .from(prepared.bucket)
+        .uploadToSignedUrl(prepared.path, prepared.token, file, {
+          contentType: prepared.content_type || "model/gltf-binary",
+        });
+
+      if (storageError) {
+        throw new Error(storageError.message);
+      }
+
+      setSuccessMessage("FINALIZING HERO MODEL...");
+
+      const finalizeResponse = await fetch("/api/admin/season/upload-model", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession.access_token}`,
+        },
+        body: JSON.stringify({
+          season_id: season.id,
+          model_path: prepared.path,
+        }),
+      });
+
+      const finalizeResult = await finalizeResponse.json();
+
+      if (!finalizeResponse.ok || !finalizeResult?.ok) {
+        throw new Error(finalizeResult?.error || "Cannot finalize hero model");
+      }
+
+      setSeason(finalizeResult.season as SeasonSettings);
+      setSuccessMessage("HERO MODEL UPLOADED");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to upload hero model"
+      );
+    } finally {
+      setUploadingAsset("");
     }
   }
 
@@ -887,6 +1070,114 @@ export default function AdminSeasonPage() {
                     </button>
 
                   </div>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            <section className="mt-6 border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6 sm:p-8">
+
+              <p className="text-cyan-400 text-[9px] tracking-[0.3em]">
+                LANDING PAGE
+              </p>
+
+              <h2 className="text-2xl font-black mt-2">
+                HERO BOX ASSET
+              </h2>
+
+              <p className="text-zinc-500 text-sm mt-3">
+                Optional image or 3D (.glb) shown inside the floating mystery box on the
+                guest landing page. If both are set, the 3D model takes priority. If
+                neither is set, a placeholder emoji is shown instead.
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-5 mt-6">
+
+                <div className="border border-zinc-800 bg-black/40 rounded-2xl p-5">
+
+                  <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
+                    HERO IMAGE (JPEG / PNG / WEBP, MAX 5 MB)
+                  </p>
+
+                  {season.hero_image_url ? (
+                    <div className="mt-4 flex h-[140px] items-center justify-center overflow-hidden rounded-xl border border-zinc-800 bg-black/50">
+                      <img
+                        src={season.hero_image_url}
+                        alt="Hero box"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-4 flex h-[140px] items-center justify-center rounded-xl border border-dashed border-zinc-700 text-zinc-600 text-[10px]">
+                      NO IMAGE SET
+                    </div>
+                  )}
+
+                  <label className="mt-4 block">
+                    <span
+                      className={`inline-block w-full text-center border border-cyan-400/30 bg-cyan-400/[0.05] text-cyan-400 rounded-xl py-3 text-xs font-black cursor-pointer hover:bg-cyan-400/10 transition ${
+                        uploadingAsset === "image" ? "opacity-50 pointer-events-none" : ""
+                      }`}
+                    >
+                      {uploadingAsset === "image" ? "UPLOADING..." : "UPLOAD HERO IMAGE"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingAsset !== ""}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void uploadHeroImage(file);
+                      }}
+                    />
+                  </label>
+
+                </div>
+
+                <div className="border border-zinc-800 bg-black/40 rounded-2xl p-5">
+
+                  <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
+                    HERO 3D MODEL (.GLB, MAX 50 MB)
+                  </p>
+
+                  <div className="mt-4 flex h-[140px] items-center justify-center rounded-xl border border-dashed border-zinc-700 text-center px-4">
+                    {season.hero_model_url ? (
+                      <p className="text-lime-400 text-[10px] font-black break-all">
+                        GLB SET
+                        <br />
+                        <span className="text-zinc-600 font-normal">
+                          {season.hero_model_path?.split("/").pop()}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-zinc-600 text-[10px]">NO MODEL SET</p>
+                    )}
+                  </div>
+
+                  <label className="mt-4 block">
+                    <span
+                      className={`inline-block w-full text-center border border-purple-400/30 bg-purple-400/[0.05] text-purple-400 rounded-xl py-3 text-xs font-black cursor-pointer hover:bg-purple-400/10 transition ${
+                        uploadingAsset === "model" ? "opacity-50 pointer-events-none" : ""
+                      }`}
+                    >
+                      {uploadingAsset === "model" ? "UPLOADING..." : "UPLOAD HERO GLB"}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".glb"
+                      className="hidden"
+                      disabled={uploadingAsset !== ""}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) void uploadHeroModel(file);
+                      }}
+                    />
+                  </label>
 
                 </div>
 
