@@ -10,8 +10,6 @@ import {
   useRouter,
 } from "next/navigation";
 
-import Image from "next/image";
-
 import Navbar from "@/components/Navbar";
 import CharacterAvatar from "@/components/CharacterAvatar";
 
@@ -28,6 +26,100 @@ type Grade =
   | "RARE"
   | "EPIC"
   | "LEGENDARY";
+
+type EquipmentSlot =
+  | "HEAD"
+  | "TOP"
+  | "BOTTOM"
+  | "SHOES"
+  | "ACCESSORY";
+
+type PlayerLoadoutSlot =
+  | "HEAD"
+  | "TOP"
+  | "BOTTOM";
+
+type Item = {
+  id: number;
+  serial: string;
+  product: string;
+  season: string;
+  grade: Grade;
+  level: number;
+  size: string | null;
+  created_at: string;
+
+  product_id: number | null;
+  design_id: number | null;
+
+  equip_slot_snapshot: EquipmentSlot | null;
+
+  upgrade_level: number;
+  upgrade_exp: number;
+
+  thumbnail_url_snapshot: string | null;
+  model_url_snapshot: string | null;
+};
+
+type ItemImageSource = {
+  grade: Grade;
+  thumbnail_url_snapshot: string | null;
+};
+
+type EquipmentApiItem = {
+  id: number;
+  owner_id: string | null;
+
+  serial: string;
+  product: string;
+  season: string;
+  grade: Grade;
+
+  level: number;
+  size: string | null;
+
+  product_id: number | null;
+  design_id: number | null;
+
+  equip_slot_snapshot: EquipmentSlot | null;
+
+  upgrade_level: number | null;
+  upgrade_exp: number | null;
+
+  thumbnail_url_snapshot: string | null;
+  model_url_snapshot: string | null;
+};
+
+type EquipmentEntry = {
+  id: number;
+  slot: EquipmentSlot;
+  item_id: number;
+
+  created_at: string;
+  updated_at: string;
+
+  item: EquipmentApiItem | null;
+};
+
+type EquipmentSlots = {
+  HEAD: EquipmentEntry | null;
+  TOP: EquipmentEntry | null;
+  BOTTOM: EquipmentEntry | null;
+  SHOES: EquipmentEntry | null;
+  ACCESSORY: EquipmentEntry | null;
+};
+
+type EquipmentApiResponse = {
+  ok: boolean;
+
+  equipment?: EquipmentEntry[];
+  slots?: Partial<EquipmentSlots>;
+  count?: number;
+
+  code?: string;
+  error?: string;
+  message?: string;
+};
 
 type PlayerProfile = {
   user_id: string;
@@ -57,24 +149,14 @@ type PlayerCharacterModel = {
 
 type EquippedItem = {
   id: number;
-
   serial: string;
-
   product: string;
-
   season: string;
-
   grade: Grade;
-
   level: number;
-
-  size:
-    string | null;
-
-  production_status:
-    string;
-
-  created_at: string;
+  size: string | null;
+  upgrade_level: number;
+  upgrade_exp: number;
 };
 
 // =====================================
@@ -149,6 +231,29 @@ const gradeGlow: Record<
     "shadow-[0_0_120px_rgba(251,146,60,0.28)]",
 };
 
+const EMPTY_EQUIPMENT_SLOTS: EquipmentSlots = {
+  HEAD: null,
+  TOP: null,
+  BOTTOM: null,
+  SHOES: null,
+  ACCESSORY: null,
+};
+
+const PLAYER_LOADOUT_SLOTS: PlayerLoadoutSlot[] = [
+  "HEAD",
+  "TOP",
+  "BOTTOM",
+];
+
+const slotSubLabel: Record<
+  PlayerLoadoutSlot,
+  string
+> = {
+  HEAD: "HEADWEAR",
+  TOP: "SHIRT",
+  BOTTOM: "PANTS",
+};
+
 // =====================================
 // PAGE
 // =====================================
@@ -186,10 +291,34 @@ export default function ProfilePage() {
     >(null);
 
   const [
-    collectionCount,
-    setCollectionCount,
+    items,
+    setItems,
   ] =
-    useState(0);
+    useState<Item[]>([]);
+
+  const [
+    equipmentSlots,
+    setEquipmentSlots,
+  ] =
+    useState<EquipmentSlots>({
+      ...EMPTY_EQUIPMENT_SLOTS,
+    });
+
+  const [
+    selectedEquipmentSlot,
+    setSelectedEquipmentSlot,
+  ] =
+    useState<PlayerLoadoutSlot>(
+      "TOP"
+    );
+
+  const [
+    equippingItemId,
+    setEquippingItemId,
+  ] =
+    useState<number | null>(
+      null
+    );
 
   const [
     playerCharacter,
@@ -204,6 +333,215 @@ export default function ProfilePage() {
     setErrorMessage,
   ] =
     useState("");
+
+  // =====================================
+  // LOAD EQUIPMENT (HEAD / TOP / BOTTOM)
+  // =====================================
+
+  async function loadEquipment(
+    accessToken: string
+  ) {
+    const response =
+      await fetch(
+        "/api/profile/equipment",
+        {
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
+
+          cache: "no-store",
+        }
+      );
+
+    const result =
+      (await response.json()) as EquipmentApiResponse;
+
+    if (
+      !response.ok ||
+      !result.ok
+    ) {
+      throw new Error(
+        result.error ||
+          "Unable to load equipment."
+      );
+    }
+
+    const nextSlots: EquipmentSlots = {
+      HEAD:
+        result.slots?.HEAD ??
+        null,
+
+      TOP:
+        result.slots?.TOP ??
+        null,
+
+      BOTTOM:
+        result.slots?.BOTTOM ??
+        null,
+
+      SHOES:
+        result.slots?.SHOES ??
+        null,
+
+      ACCESSORY:
+        result.slots?.ACCESSORY ??
+        null,
+    };
+
+    setEquipmentSlots(
+      nextSlots
+    );
+
+    const topItem =
+      nextSlots.TOP?.item ??
+      null;
+
+    if (topItem) {
+      setEquippedItem({
+        id: topItem.id,
+        serial: topItem.serial,
+        product: topItem.product,
+        season: topItem.season,
+        grade: topItem.grade,
+        level: topItem.level,
+        size: topItem.size,
+
+        upgrade_level:
+          Number(
+            topItem.upgrade_level ??
+              0
+          ),
+
+        upgrade_exp:
+          Number(
+            topItem.upgrade_exp ??
+              0
+          ),
+      });
+    }
+
+    return nextSlots;
+  }
+
+  // =====================================
+  // EQUIP ITEM
+  // =====================================
+
+  async function equipItem(
+    item: Item
+  ) {
+    if (
+      equippingItemId !==
+      null
+    ) {
+      return;
+    }
+
+    setEquippingItemId(
+      item.id
+    );
+
+    setErrorMessage("");
+
+    try {
+      const {
+        data: {
+          session,
+        },
+        error:
+          sessionError,
+      } =
+        await supabase.auth.getSession();
+
+      if (
+        sessionError
+      ) {
+        throw sessionError;
+      }
+
+      if (
+        !session
+      ) {
+        router.push(
+          "/login"
+        );
+
+        return;
+      }
+
+      const response =
+        await fetch(
+          "/api/profile/equipment",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${session.access_token}`,
+            },
+
+            body:
+              JSON.stringify({
+                item_id: item.id,
+              }),
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result?.ok
+      ) {
+        throw new Error(
+          result?.error ||
+            result?.message ||
+            "Unable to equip item."
+        );
+      }
+
+      const resolvedSlot =
+        result?.slot as
+          | EquipmentSlot
+          | undefined;
+
+      if (
+        resolvedSlot === "HEAD" ||
+        resolvedSlot === "TOP" ||
+        resolvedSlot === "BOTTOM"
+      ) {
+        setSelectedEquipmentSlot(
+          resolvedSlot
+        );
+      }
+
+      await loadEquipment(
+        session.access_token
+      );
+    } catch (error) {
+      console.error(
+        "PROFILE EQUIPMENT ERROR:",
+        error
+      );
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to equip item."
+      );
+    } finally {
+      setEquippingItemId(
+        null
+      );
+    }
+  }
 
   // =====================================
   // LOAD PROFILE
@@ -347,95 +685,104 @@ export default function ProfilePage() {
       );
 
       // =====================================
-      // COLLECTION COUNT
+      // ITEMS (FULL COLLECTION)
       // =====================================
 
       const {
-        count,
+        data:
+          itemData,
+
         error:
-          collectionError,
+          itemError,
       } =
         await supabase
           .from(
             "items"
           )
-          .select(
-            "id",
-            {
-              count: "exact",
-              head: true,
-            }
-          )
+          .select(`
+            id,
+            serial,
+            product,
+            season,
+            grade,
+            level,
+            size,
+            created_at,
+            product_id,
+            design_id,
+            equip_slot_snapshot,
+            upgrade_level,
+            upgrade_exp,
+            thumbnail_url_snapshot,
+            model_url_snapshot
+          `)
           .eq(
             "owner_id",
             user.id
+          )
+          .order(
+            "id",
+            {
+              ascending: false,
+            }
           );
 
       if (
-        collectionError
+        itemError
       ) {
-        throw collectionError;
+        throw itemError;
       }
 
-      setCollectionCount(
-        count ?? 0
+      const safeItems =
+        (itemData ?? []) as Item[];
+
+      setItems(
+        safeItems
       );
 
       // =====================================
-      // EQUIPPED ITEM
+      // EQUIPMENT (HEAD / TOP / BOTTOM)
       // =====================================
 
-      if (
-        safeProfile
-          .equipped_item_id
-      ) {
-        const {
-          data:
-            itemData,
-
-          error:
-            itemError,
-        } =
-          await supabase
-            .from(
-              "items"
-            )
-            .select(`
-              id,
-              serial,
-              product,
-              season,
-              grade,
-              level,
-              size,
-              production_status,
-              created_at
-            `)
-            .eq(
-              "id",
-              safeProfile
-                .equipped_item_id
-            )
-            .eq(
-              "owner_id",
-              user.id
-            )
-            .maybeSingle();
+      if (session) {
+        const nextSlots =
+          await loadEquipment(
+            session.access_token
+          );
 
         if (
-          itemError
+          !nextSlots.TOP &&
+          safeProfile.equipped_item_id
         ) {
-          throw itemError;
-        }
+          const legacyEquipped =
+            safeItems.find(
+              (item) =>
+                item.id ===
+                safeProfile.equipped_item_id
+            );
 
-        setEquippedItem(
-          itemData as
-            EquippedItem | null
-        );
-      } else {
-        setEquippedItem(
-          null
-        );
+          if (
+            legacyEquipped
+          ) {
+            setEquippedItem({
+              id: legacyEquipped.id,
+              serial: legacyEquipped.serial,
+              product: legacyEquipped.product,
+              season: legacyEquipped.season,
+              grade: legacyEquipped.grade,
+              level: legacyEquipped.level,
+              size: legacyEquipped.size,
+
+              upgrade_level:
+                legacyEquipped.upgrade_level ??
+                0,
+
+              upgrade_exp:
+                legacyEquipped.upgrade_exp ??
+                0,
+            });
+          }
+        }
       }
     } catch (error) {
       console.error(
@@ -510,8 +857,51 @@ export default function ProfilePage() {
 
   const activeGrade:
     Grade =
+      equipmentSlots
+        .TOP
+        ?.item
+        ?.grade ??
       equippedItem?.grade ??
       "COMMON";
+
+  const selectedSlotEntry =
+    equipmentSlots[
+      selectedEquipmentSlot
+    ];
+
+  const selectedSlotItem =
+    selectedSlotEntry?.item ??
+    null;
+
+  const compatibleItems =
+    useMemo(() => {
+      return items.filter(
+        (
+          item
+        ) => {
+          if (
+            item.equip_slot_snapshot ===
+            selectedEquipmentSlot
+          ) {
+            return true;
+          }
+
+          if (
+            selectedSlotEntry
+              ?.item_id ===
+            item.id
+          ) {
+            return true;
+          }
+
+          return false;
+        }
+      );
+    }, [
+      items,
+      selectedEquipmentSlot,
+      selectedSlotEntry,
+    ]);
 
   // =====================================
   // LOADING
@@ -854,7 +1244,7 @@ export default function ProfilePage() {
 
                 <Info
                   label="COLLECTION"
-                  value={`${collectionCount} ITEMS`}
+                  value={`${items.length} ITEMS`}
                   className="text-white"
                 />
 
@@ -883,141 +1273,512 @@ export default function ProfilePage() {
             </section>
 
             {/* =====================================
-                EQUIPPED ITEM
+                LOADOUT
             ===================================== */}
 
-            <section
-              className={`
-                border
-                rounded-[28px]
-                bg-zinc-950/80
-                p-6
+            <section className="border border-zinc-800 bg-zinc-950/80 rounded-[28px] p-6">
 
-                ${
-                  gradeBorder[
-                    activeGrade
-                  ]
-                }
-              `}
-            >
+              <div className="flex items-start justify-between gap-4">
 
-              <p
-                className={`
-                  text-[9px]
-                  tracking-[0.3em]
+                <div>
 
-                  ${
-                    gradeText[
-                      activeGrade
-                    ]
-                  }
-                `}
-              >
-                EQUIPPED LOOT
-              </p>
-
-              <h2 className="text-2xl font-black mt-2">
-                ACTIVE ITEM
-              </h2>
-
-              {!equippedItem && (
-                <div className="border border-dashed border-zinc-800 bg-black/30 rounded-2xl p-8 mt-5 text-center">
-
-                  <p className="text-zinc-600 text-sm font-black">
-                    NO ITEM EQUIPPED
+                  <p className="text-orange-400 text-[9px] tracking-[0.3em]">
+                    CHARACTER EQUIPMENT
                   </p>
 
-                  <p className="text-zinc-700 text-xs mt-2">
-                    Equip an Item from your Collection.
+                  <h2 className="text-2xl font-black mt-2">
+                    LOADOUT
+                  </h2>
+
+                </div>
+
+                <div className="text-right">
+
+                  <p className="text-zinc-600 text-[7px]">
+                    EQUIPPED
                   </p>
 
-                  <button
-                    onClick={() =>
-                      router.push(
-                        "/collection"
-                      )
+                  <p className="mt-0.5 text-[11px] font-black text-lime-400">
+                    {
+                      PLAYER_LOADOUT_SLOTS.filter(
+                        (slot) =>
+                          equipmentSlots[slot]
+                            ?.item
+                      ).length
                     }
-                    className="mt-5 border border-cyan-400/30 text-cyan-400 px-5 py-3 rounded-xl text-xs font-black hover:bg-cyan-400/10 transition"
-                  >
-                    OPEN COLLECTION
-                  </button>
+                    /3
+                  </p>
 
                 </div>
-              )}
 
-              {equippedItem && (
-                <div className="mt-5">
+              </div>
 
-                  <div className="relative h-[230px] border border-zinc-800 bg-black/40 rounded-2xl overflow-hidden">
+              <div className="mt-4 grid grid-cols-3 gap-2">
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                {PLAYER_LOADOUT_SLOTS.map(
+                  (slot) => {
+                    const entry =
+                      equipmentSlots[
+                        slot
+                      ];
 
-                    <Image
-                      src={
-                        productImages[
-                          equippedItem.grade
-                        ]
-                      }
-                      alt={
-                        equippedItem.product
-                      }
-                      width={600}
-                      height={650}
-                      className="relative z-10 w-full h-full object-contain"
-                    />
+                    const item =
+                      entry?.item ??
+                      null;
+
+                    const selected =
+                      selectedEquipmentSlot ===
+                      slot;
+
+                    const upgradeLevel =
+                      Number(
+                        item?.upgrade_level ??
+                          0
+                      );
+
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() =>
+                          setSelectedEquipmentSlot(
+                            slot
+                          )
+                        }
+                        className={`
+                          relative
+                          min-h-[132px]
+                          overflow-hidden
+                          rounded-xl
+                          border
+                          p-2.5
+                          text-left
+                          transition
+                          ${
+                            selected
+                              ? "border-cyan-400/60 bg-cyan-400/[0.06]"
+                              : item
+                              ? `${gradeBorder[item.grade]} bg-black/50 hover:border-zinc-600`
+                              : "border-zinc-800 bg-black/35 hover:border-zinc-600"
+                          }
+                        `}
+                      >
+
+                        <div className="flex items-start justify-between gap-2">
+
+                          <div>
+
+                            <p
+                              className={`
+                                text-[8px]
+                                font-black
+                                tracking-[0.18em]
+                                ${
+                                  selected
+                                    ? "text-cyan-400"
+                                    : "text-zinc-400"
+                                }
+                              `}
+                            >
+                              {slot}
+                            </p>
+
+                            <p className="mt-0.5 text-[6px] text-zinc-700">
+                              {
+                                slotSubLabel[
+                                  slot
+                                ]
+                              }
+                            </p>
+
+                          </div>
+
+                          {item && (
+                            <span
+                              className={`
+                                rounded-md
+                                border
+                                px-1.5
+                                py-0.5
+                                text-[6px]
+                                font-black
+                                ${
+                                  upgradeLevel >
+                                  0
+                                    ? "border-lime-400/30 bg-lime-400/[0.08] text-lime-400"
+                                    : "border-zinc-700 bg-black/50 text-zinc-500"
+                                }
+                              `}
+                            >
+                              +{upgradeLevel}
+                            </span>
+                          )}
+
+                        </div>
+
+                        {item ? (
+                          <>
+
+                            <div className="mt-2 flex h-[58px] items-center justify-center">
+
+                              <ItemImage
+                                item={item}
+                                alt={
+                                  item.product
+                                }
+                                className="h-full w-full scale-[1.12] object-contain"
+                              />
+
+                            </div>
+
+                            <p
+                              className={`mt-1 truncate text-[7px] font-black ${gradeText[item.grade]}`}
+                            >
+                              {item.grade}
+                            </p>
+
+                            <p className="mt-0.5 truncate text-[8px] font-black text-white">
+                              {item.product}
+                            </p>
+
+                            {upgradeLevel >
+                            0 ? (
+                              <p className="mt-0.5 text-[6px] font-black text-lime-400">
+                                UPGRADED +
+                                {upgradeLevel}
+                              </p>
+                            ) : (
+                              <p className="mt-0.5 text-[6px] font-black text-zinc-600">
+                                BASE +0
+                              </p>
+                            )}
+
+                          </>
+                        ) : (
+                          <div className="mt-4 flex min-h-[74px] flex-col items-center justify-center">
+
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[14px] font-black text-zinc-700">
+                              +
+                            </div>
+
+                            <p className="mt-2 text-[7px] font-black text-zinc-600">
+                              EMPTY SLOT
+                            </p>
+
+                          </div>
+                        )}
+
+                        {selected && (
+                          <div className="absolute bottom-0 left-1/2 h-[2px] w-10 -translate-x-1/2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+                        )}
+
+                      </button>
+                    );
+                  }
+                )}
+
+              </div>
+
+              <div className="mt-4 border-t border-zinc-900 pt-4">
+
+                <div className="flex items-center justify-between gap-4">
+
+                  <div>
+
+                    <p className="text-zinc-600 text-[6px] tracking-[0.18em]">
+                      INVENTORY
+                    </p>
+
+                    <p className="mt-0.5 text-[10px] font-black text-white">
+                      SELECT ITEM FOR{" "}
+
+                      <span className="text-cyan-400">
+                        {
+                          selectedEquipmentSlot
+                        }
+                      </span>
+                    </p>
 
                   </div>
 
-                  <p
-                    className={`
-                      text-3xl
-                      font-black
-                      mt-5
-
-                      ${
-                        gradeText[
-                          equippedItem.grade
-                        ]
-                      }
-                    `}
-                  >
-                    {equippedItem.grade}
+                  <p className="text-[7px] text-zinc-600">
+                    {
+                      compatibleItems.length
+                    }{" "}
+                    AVAILABLE
                   </p>
-
-                  <p className="text-white text-xl font-black mt-2">
-                    {equippedItem.product}
-                  </p>
-
-                  <p className="text-cyan-400 font-mono text-sm mt-2">
-                    {equippedItem.serial}
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-3 mt-4">
-
-                    <MiniInfo
-                      label="SIZE"
-                      value={
-                        equippedItem.size ??
-                        "-"
-                      }
-                    />
-
-                    <MiniInfo
-                      label="LEVEL"
-                      value={`LV.${equippedItem.level}`}
-                    />
-
-                    <MiniInfo
-                      label="SEASON"
-                      value={
-                        equippedItem.season
-                      }
-                    />
-
-                  </div>
 
                 </div>
-              )}
+
+                {compatibleItems.length ===
+                0 ? (
+                  <div className="mt-3 flex min-h-[72px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
+
+                    <div className="text-center">
+
+                      <p className="text-[9px] font-black text-zinc-600">
+                        NO{" "}
+                        {
+                          selectedEquipmentSlot
+                        }{" "}
+                        ITEM
+                      </p>
+
+                      <p className="mt-1 text-[6px] text-zinc-700">
+                        CRAFT OR COLLECT A COMPATIBLE ITEM
+                      </p>
+
+                    </div>
+
+                  </div>
+                ) : (
+                  <div className="mt-3 grid max-h-[140px] grid-cols-3 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-4">
+
+                    {compatibleItems.map(
+                      (item) => {
+                        const isEquipped =
+                          selectedSlotEntry
+                            ?.item_id ===
+                          item.id;
+
+                        const updating =
+                          equippingItemId ===
+                          item.id;
+
+                        return (
+                          <button
+                            type="button"
+                            key={item.id}
+                            onClick={() =>
+                              void equipItem(
+                                item
+                              )
+                            }
+                            disabled={
+                              equippingItemId !==
+                              null
+                            }
+                            className={`
+                              relative
+                              min-h-[94px]
+                              overflow-hidden
+                              rounded-lg
+                              border
+                              px-2
+                              py-1.5
+                              text-left
+                              transition
+                              ${
+                                isEquipped
+                                  ? `${gradeBorder[item.grade]} bg-white/[0.06]`
+                                  : "border-zinc-800 bg-black/40 hover:border-zinc-600"
+                              }
+                              ${
+                                equippingItemId !==
+                                null
+                                  ? "cursor-not-allowed opacity-60"
+                                  : ""
+                              }
+                            `}
+                          >
+
+                            <div className="relative h-[34px]">
+
+                              <ItemImage
+                                item={item}
+                                alt={
+                                  item.product
+                                }
+                                className="h-full w-full object-contain"
+                              />
+
+                            </div>
+
+                            <div className="mt-1 flex items-center justify-between gap-1">
+
+                              <p
+                                className={`text-[6px] font-black ${gradeText[item.grade]}`}
+                              >
+                                {item.grade}
+                              </p>
+
+                              <span
+                                className={
+                                  item.upgrade_level >
+                                  0
+                                    ? "text-[6px] font-black text-lime-400"
+                                    : "text-[6px] font-black text-zinc-600"
+                                }
+                              >
+                                +
+                                {
+                                  item.upgrade_level ??
+                                  0
+                                }
+                              </span>
+
+                            </div>
+
+                            <p className="mt-0.5 truncate text-[8px] font-black text-white">
+                              {item.product}
+                            </p>
+
+                            <p className="mt-0.5 truncate font-mono text-[6px] text-cyan-400">
+                              {item.serial}
+                            </p>
+
+                            {isEquipped && (
+                              <div className="absolute right-1.5 top-1.5 rounded-md bg-lime-400 px-1.5 py-0.5 text-[5px] font-black text-black">
+                                EQUIPPED
+                              </div>
+                            )}
+
+                            {updating && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+
+                                <p className="text-[7px] font-black text-cyan-400 animate-pulse">
+                                  EQUIPPING...
+                                </p>
+
+                              </div>
+                            )}
+
+                          </button>
+                        );
+                      }
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
+              <div className="mt-4">
+
+                {selectedSlotItem ? (
+                  <div className="grid items-center gap-3 rounded-xl border border-zinc-800 bg-black/45 p-3 sm:grid-cols-[80px_1fr_auto]">
+
+                    <div className="flex h-[80px] items-center justify-center rounded-lg border border-zinc-800 bg-black/50">
+
+                      <ItemImage
+                        item={
+                          selectedSlotItem
+                        }
+                        alt={
+                          selectedSlotItem.product
+                        }
+                        className="h-full w-full object-contain"
+                      />
+
+                    </div>
+
+                    <div className="min-w-0">
+
+                      <div className="flex items-center gap-2">
+
+                        <p
+                          className={`text-base font-black ${gradeText[selectedSlotItem.grade]}`}
+                        >
+                          {
+                            selectedSlotItem.grade
+                          }
+                        </p>
+
+                        <span className="rounded-md border border-zinc-700 bg-black/50 px-1.5 py-0.5 text-[6px] font-black text-zinc-500">
+                          {
+                            selectedEquipmentSlot
+                          }
+                        </span>
+
+                      </div>
+
+                      <p className="mt-0.5 truncate text-[11px] font-black text-white">
+                        {
+                          selectedSlotItem.product
+                        }
+                      </p>
+
+                      <p className="mt-0.5 truncate font-mono text-[7px] text-cyan-400">
+                        {
+                          selectedSlotItem.serial
+                        }
+                      </p>
+
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+
+                        <MiniInfo
+                          label="SIZE"
+                          value={
+                            selectedSlotItem.size ??
+                            "-"
+                          }
+                        />
+
+                        <MiniInfo
+                          label="ITEM LV"
+                          value={`${selectedSlotItem.level}`}
+                        />
+
+                        <MiniInfo
+                          label="SEASON"
+                          value={
+                            selectedSlotItem.season
+                          }
+                        />
+
+                      </div>
+
+                    </div>
+
+                    <div className="min-w-[92px] rounded-xl border border-lime-400/20 bg-lime-400/[0.04] px-3 py-2 text-center">
+
+                      <p className="text-[6px] tracking-[0.12em] text-zinc-600">
+                        UPGRADE
+                      </p>
+
+                      <p className="mt-1 text-xl font-black text-lime-400">
+                        +
+                        {Number(
+                          selectedSlotItem.upgrade_level ??
+                            0
+                        )}
+                      </p>
+
+                      <p
+                        className={
+                          Number(
+                            selectedSlotItem.upgrade_level ??
+                              0
+                          ) > 0
+                            ? "mt-0.5 text-[6px] font-black text-lime-400"
+                            : "mt-0.5 text-[6px] font-black text-zinc-600"
+                        }
+                      >
+                        {Number(
+                          selectedSlotItem.upgrade_level ??
+                            0
+                        ) > 0
+                          ? "UPGRADED"
+                          : "BASE ITEM"}
+                      </p>
+
+                    </div>
+
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-zinc-800 bg-black/25 px-3 py-3 text-center">
+
+                    <p className="text-[8px] font-black text-zinc-600">
+                      {
+                        selectedEquipmentSlot
+                      }{" "}
+                      SLOT EMPTY
+                    </p>
+
+                  </div>
+                )}
+
+              </div>
 
             </section>
 
@@ -1096,6 +1857,71 @@ export default function ProfilePage() {
       `}</style>
 
     </main>
+  );
+}
+
+// =====================================
+// ITEM IMAGE
+// =====================================
+
+function ItemImage({
+  item,
+  alt,
+  className,
+}: {
+  item: ItemImageSource;
+  alt: string;
+  className: string;
+}) {
+  const snapshotUrl =
+    typeof item.thumbnail_url_snapshot ===
+      "string"
+      ? item.thumbnail_url_snapshot.trim()
+      : "";
+
+  const fallbackUrl =
+    productImages[
+      item.grade
+    ];
+
+  const initialUrl =
+    snapshotUrl ||
+    fallbackUrl;
+
+  return (
+    <img
+      src={
+        initialUrl
+      }
+      alt={
+        alt
+      }
+      className={
+        className
+      }
+      loading="lazy"
+      decoding="async"
+      onError={(
+        event
+      ) => {
+        const image =
+          event.currentTarget;
+
+        if (
+          image.dataset
+            .fallbackApplied ===
+          "1"
+        ) {
+          return;
+        }
+
+        image.dataset.fallbackApplied =
+          "1";
+
+        image.src =
+          fallbackUrl;
+      }}
+    />
   );
 }
 
