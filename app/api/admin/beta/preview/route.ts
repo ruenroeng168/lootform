@@ -166,8 +166,14 @@ export async function GET(
           beta_ends_at,
           updated_at
         `)
-        .eq(
+        .order(
           "id",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(
           1
         )
         .maybeSingle();

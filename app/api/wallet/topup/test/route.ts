@@ -205,8 +205,14 @@ export async function POST(
         .select(
           "environment_mode"
         )
-        .eq(
+        .order(
           "id",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(
           1
         )
         .maybeSingle();

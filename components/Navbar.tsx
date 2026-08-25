@@ -43,6 +43,12 @@ export default function Navbar() {
     useState(false);
 
   const [
+    isAuthenticated,
+    setIsAuthenticated,
+  ] =
+    useState(false);
+
+  const [
     userEmail,
     setUserEmail,
   ] =
@@ -121,6 +127,10 @@ export default function Navbar() {
           .getSession();
 
       if (!session) {
+        setIsAuthenticated(
+          false
+        );
+
         setUserEmail(
           ""
         );
@@ -135,6 +145,10 @@ export default function Navbar() {
 
         return;
       }
+
+      setIsAuthenticated(
+        true
+      );
 
       const user =
         session.user;
@@ -275,6 +289,26 @@ export default function Navbar() {
   function goTo(
     path: string
   ) {
+    if (
+      !isAuthenticated &&
+      path !== "/" &&
+      path !== "/login"
+    ) {
+      setMenuOpen(
+        false
+      );
+
+      setPlayerOpen(
+        false
+      );
+
+      router.push(
+        "/login"
+      );
+
+      return;
+    }
+
     setMenuOpen(
       false
     );
@@ -302,6 +336,10 @@ export default function Navbar() {
     );
 
     setPlayerOpen(
+      false
+    );
+
+    setIsAuthenticated(
       false
     );
 
@@ -556,8 +594,9 @@ export default function Navbar() {
             </p>
 
             <p className="mt-0.5 text-sm font-black text-lime-400">
-              {walletBalance.toLocaleString()}{" "}
-              LT
+              {isAuthenticated
+                ? `${walletBalance.toLocaleString()} LT`
+                : "LOGIN"}
             </p>
 
           </button>
@@ -566,11 +605,19 @@ export default function Navbar() {
 
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (!isAuthenticated) {
+                goTo(
+                  "/login"
+                );
+
+                return;
+              }
+
               setPlayerOpen(
                 !playerOpen
-              )
-            }
+              );
+            }}
             className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/80 px-3 py-2 transition hover:border-cyan-400/50"
           >
 
@@ -595,7 +642,9 @@ export default function Navbar() {
             >
               {isAdmin
                 ? "AD"
-                : "P1"}
+                : isAuthenticated
+                ? "P1"
+                : "G"}
             </div>
 
             <div className="max-w-[150px] text-left">
@@ -614,12 +663,16 @@ export default function Navbar() {
               >
                 {isAdmin
                   ? "ADMIN"
-                  : "PLAYER"}
+                  : isAuthenticated
+                  ? "PLAYER"
+                  : "GUEST"}
               </p>
 
               <p className="mt-1 truncate text-xs text-zinc-300">
                 {userEmail ||
-                  "PLAYER"}
+                  (isAuthenticated
+                    ? "PLAYER"
+                    : "SIGN IN")}
               </p>
 
             </div>
@@ -776,8 +829,9 @@ export default function Navbar() {
           >
 
             <p className="text-xs font-black text-lime-400">
-              {walletBalance.toLocaleString()}{" "}
-              LT
+              {isAuthenticated
+                ? `${walletBalance.toLocaleString()} LT`
+                : "LOGIN"}
             </p>
 
           </button>
@@ -901,7 +955,9 @@ export default function Navbar() {
                 >
                   {isAdmin
                     ? "AD"
-                    : "P1"}
+                    : isAuthenticated
+                    ? "P1"
+                    : "G"}
                 </div>
 
                 <div className="min-w-0">
@@ -920,12 +976,17 @@ export default function Navbar() {
                   >
                     {isAdmin
                       ? "ADMIN"
-                      : "PLAYER"}
+                      : isAuthenticated
+                      ? "PLAYER"
+                      : "GUEST"}
                   </p>
 
                   <p className="mt-1 truncate text-xs text-cyan-400">
                     {
-                      userEmail
+                      userEmail ||
+                      (isAuthenticated
+                        ? "PLAYER"
+                        : "SIGN IN")
                     }
                   </p>
 
@@ -1054,16 +1115,20 @@ export default function Navbar() {
               + TOP UP TOKEN
             </button>
 
-            {/* LOGOUT */}
+            {/* ACCOUNT ACTION */}
 
             <button
               type="button"
               onClick={
-                logout
+                isAuthenticated
+                  ? logout
+                  : () => goTo("/login")
               }
               className="mt-2 w-full rounded-xl border border-red-400/20 bg-red-400/[0.03] px-4 py-4 font-bold text-red-400"
             >
-              LOGOUT
+              {isAuthenticated
+                ? "LOGOUT"
+                : "LOGIN"}
             </button>
 
           </div>

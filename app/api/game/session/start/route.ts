@@ -379,12 +379,71 @@ export async function POST(
     }
 
     // =====================================================
-    // 7. CREATE SESSION
+    // 7. CLOSE PREVIOUS ACTIVE SESSION FOR THIS GAME
+    //
+    // Keep one active session per player/game. Starting a new
+    // run abandons the previous unfinished run instead of
+    // leaving ACTIVE sessions behind indefinitely.
     // =====================================================
 
     const now =
       new Date()
         .toISOString();
+
+    const {
+      error:
+        abandonError,
+    } =
+      await supabaseAdmin
+        .from(
+          "game_sessions"
+        )
+        .update({
+          status:
+            "ABANDONED",
+
+          completed_at:
+            now,
+
+          last_event_at:
+            now,
+        })
+        .eq(
+          "user_id",
+          userId
+        )
+        .eq(
+          "game_id",
+          game.id
+        )
+        .eq(
+          "status",
+          "ACTIVE"
+        );
+
+    if (abandonError) {
+      console.error(
+        "START GAME - ABANDON PREVIOUS SESSION ERROR:",
+        abandonError
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+
+          code:
+            "SESSION_CLEANUP_FAILED",
+
+          error:
+            "Unable to prepare a new game session.",
+        },
+        500
+      );
+    }
+
+    // =====================================================
+    // 8. CREATE SESSION
+    // =====================================================
 
     const {
       data:
@@ -466,7 +525,7 @@ export async function POST(
     }
 
     // =====================================================
-    // 8. RESPONSE
+    // 9. RESPONSE
     //
     // No EXP / LT / Item authority is sent to the game.
     // =====================================================

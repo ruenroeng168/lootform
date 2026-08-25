@@ -136,6 +136,8 @@ type CraftResponse = {
   message?: string;
   error?: string;
   code?: string;
+  request_id?: string;
+  idempotent_replay?: boolean;
 
   item?: CraftedItem;
 
@@ -154,6 +156,7 @@ type CraftResponse = {
 };
 
 type CraftLock = {
+  requestId: string;
   productId: number;
   designId: number;
   size: string;
@@ -330,6 +333,90 @@ function getErrorMessage(
   }
 
   return "Craft failed";
+}
+
+async function sendCraftRequest(
+  accessToken: string,
+  locked: CraftLock
+) {
+  let lastError:
+    unknown =
+      null;
+
+  for (
+    let attempt = 0;
+    attempt < 2;
+    attempt += 1
+  ) {
+    try {
+      const response =
+        await fetch(
+          "/api/craft",
+          {
+            method:
+              "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${accessToken}`,
+            },
+
+            body:
+              JSON.stringify({
+                request_id:
+                  locked.requestId,
+
+                product_id:
+                  locked.productId,
+
+                design_id:
+                  locked.designId,
+
+                size:
+                  locked.size,
+              }),
+          }
+        );
+
+      const craftData =
+        (await response
+          .json()) as CraftResponse;
+
+      if (
+        response.status >=
+          500 &&
+        attempt === 0
+      ) {
+        continue;
+      }
+
+      return {
+        response,
+        craftData,
+      };
+    } catch (
+      error
+    ) {
+      lastError =
+        error;
+
+      if (
+        attempt === 1
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError instanceof
+    Error
+    ? lastError
+    : new Error(
+        "Craft request failed"
+      );
 }
 
 function AssetImage({
@@ -982,6 +1069,9 @@ export default function CraftPage() {
       performance.now();
 
     craftLockRef.current = {
+      requestId:
+        crypto.randomUUID(),
+
       productId:
         selectedProduct.id,
 
@@ -1123,38 +1213,14 @@ export default function CraftPage() {
         return;
       }
 
-      const response =
-        await fetch(
-          "/api/craft",
-          {
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              Authorization:
-                `Bearer ${session.access_token}`,
-            },
-
-            body:
-              JSON.stringify({
-                product_id:
-                  locked.productId,
-
-                design_id:
-                  locked.designId,
-
-                size:
-                  locked.size,
-              }),
-          }
+      const {
+        response,
+        craftData,
+      } =
+        await sendCraftRequest(
+          session.access_token,
+          locked
         );
-
-      const craftData =
-        (await response
-          .json()) as CraftResponse;
 
       if (
         !response.ok ||

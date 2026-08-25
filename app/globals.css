@@ -1,26 +1,134 @@
 @import "tailwindcss";
 
+/* =========================================================
+   LOOTFORM DESIGN TOKENS
+
+   Grounded in the Grade system that already runs the product:
+   COMMON / RARE / EPIC / LEGENDARY. These four colors are not
+   decoration — they are the same colors a player sees on their
+   drop rates, their inventory, and their character loadout, so
+   the brand and the mechanic read as one system everywhere.
+========================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* -- surface ------------------------------------------- */
+  --bg: #0a0a0d;
+  --surface: #131318;
+  --surface-raised: #1b1b22;
+  --border: #2a2a33;
+  --border-strong: #3a3a45;
+
+  /* -- text ------------------------------------------------ */
+  --foreground: #f3f2ed;
+  --muted: #8b8b96;
+  --muted-dim: #5c5c66;
+
+  /* -- grade colors ----------------------------------------
+     Kept close to the cyan / purple / amber already in use
+     across the app, formalized into one shared source. */
+  --grade-common: #a8adbb;
+  --grade-rare: #38c6f4;
+  --grade-epic: #b565f7;
+  --grade-legendary: #f0a93b;
+
+  --accent: var(--grade-rare);
+
+  /* -- shape / rhythm ---------------------------------------
+     Small radius, thin hairline borders, HUD-style corner
+     brackets — technical rather than soft-SaaS-rounded. */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-background: var(--bg);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
+  background: var(--bg);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), "Noto Sans Thai", sans-serif;
+  font-feature-settings: "tnum" 1;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), "Noto Sans Thai", sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.font-mono,
+.tabular-data {
+  font-family: var(--font-mono), monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+/* =========================================================
+   SIGNATURE ELEMENT — HUD corner brackets
+
+   A small L-shaped bracket at each corner of a card, colored
+   by the item's grade. Echoes the "targeting reticle / scan"
+   language already present in the product (LIVE 3D, DRAG TO
+   ROTATE, scan-line loaders) instead of adding decoration
+   that has nothing to do with the product.
+
+   Usage:
+   <div class="hud-frame" style="--grade-color: var(--grade-epic)">
+========================================================= */
+
+.hud-frame {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.hud-frame::before,
+.hud-frame::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--grade-color, var(--accent));
+  pointer-events: none;
+}
+
+.hud-frame::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+  border-top-left-radius: var(--radius-md);
+}
+
+.hud-frame::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+  border-bottom-right-radius: var(--radius-md);
+}
+
+.hud-glow {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--grade-color, var(--accent)) 35%, transparent),
+    0 0 24px -8px color-mix(in srgb, var(--grade-color, var(--accent)) 60%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
