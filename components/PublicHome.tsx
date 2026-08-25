@@ -75,11 +75,9 @@ export default function PublicHome() {
     };
   }, []);
 
-  const availableDesigns = catalog
+  const catalogDesigns = catalog
     .flatMap((product) =>
-      product.designs
-        .filter((design) => design.craft_ready)
-        .map((design) => ({ product, design }))
+      product.designs.map((design) => ({ product, design }))
     )
     .slice(0, 8);
 
@@ -203,26 +201,34 @@ export default function PublicHome() {
 
           {catalogLoading ? (
             <p className="mt-6 text-sm text-[var(--muted-dim)]">Loading catalog…</p>
-          ) : !dropOpen || availableDesigns.length === 0 ? (
+          ) : !dropOpen || catalogDesigns.length === 0 ? (
             <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] bg-black/20 p-8 text-center text-sm text-[var(--muted-dim)]">
               No drop is live right now — check back soon.
             </div>
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {availableDesigns.map(({ product, design }) => (
+              {catalogDesigns.map(({ product, design }) => (
                 <button
                   key={design.id}
                   type="button"
                   onClick={() => router.push("/login")}
-                  className="hud-frame overflow-hidden p-3 text-left transition hover:brightness-110"
+                  className={`hud-frame relative overflow-hidden p-3 text-left transition hover:brightness-110 ${
+                    design.craft_ready ? "" : "opacity-70"
+                  }`}
                   style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}
                 >
+                  {!design.craft_ready && (
+                    <span className="absolute right-2 top-2 z-10 rounded-full border border-[var(--border-strong)] bg-black/70 px-2 py-1 font-mono text-[7px] tracking-[0.16em] text-[var(--muted-dim)]">
+                      COMING SOON
+                    </span>
+                  )}
+
                   <div className="flex h-[120px] items-center justify-center overflow-hidden rounded-lg bg-black/25">
                     {design.thumbnail_url ? (
                       <img
                         src={design.thumbnail_url}
                         alt={design.name}
-                        className="h-full w-full object-contain"
+                        className={`h-full w-full object-contain ${design.craft_ready ? "" : "grayscale"}`}
                         loading="lazy"
                       />
                     ) : (
