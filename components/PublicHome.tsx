@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CSSProperties } from "react";
 import Navbar from "@/components/Navbar";
@@ -11,8 +12,76 @@ const gradeCards = [
   { grade: "LEGENDARY", rate: "ULTRA RARE", color: "var(--grade-legendary)" },
 ];
 
+type CatalogDesign = {
+  id: number;
+  name: string;
+  craft_cost_lt: number;
+  thumbnail_url: string | null;
+  available_sizes: string[];
+  craft_ready: boolean;
+};
+
+type CatalogProduct = {
+  id: number;
+  name: string;
+  category: string;
+  description: string | null;
+  designs: CatalogDesign[];
+};
+
+type CatalogResponse = {
+  success: boolean;
+  drop_open: boolean;
+  season: { code: string; name: string } | null;
+  catalog: CatalogProduct[];
+};
+
 export default function PublicHome() {
   const router = useRouter();
+
+  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
+  const [dropOpen, setDropOpen] = useState(false);
+  const [seasonName, setSeasonName] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCatalog() {
+      try {
+        const response = await fetch("/api/catalog", { cache: "no-store" });
+        const result = (await response.json()) as CatalogResponse;
+
+        if (cancelled || !response.ok || !result.success) {
+          return;
+        }
+
+        setDropOpen(result.drop_open);
+        setSeasonName(result.season?.name ?? "");
+        setCatalog(result.catalog ?? []);
+      } catch {
+        // Guests can still browse the marketing page if the catalog fails to load.
+      } finally {
+        if (!cancelled) {
+          setCatalogLoading(false);
+        }
+      }
+    }
+
+    void loadCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const availableDesigns = catalog
+    .flatMap((product) =>
+      product.designs
+        .filter((design) => design.craft_ready)
+        .map((design) => ({ product, design }))
+    )
+    .slice(0, 8);
 
   return (
     <main className="min-h-screen bg-[var(--bg)] text-[var(--foreground)] relative overflow-hidden">
@@ -115,6 +184,67 @@ export default function PublicHome() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="mt-16">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="font-mono text-[9px] tracking-[0.28em] text-[var(--grade-rare)]">
+                {seasonName ? `SEASON // ${seasonName}` : "PRODUCT CATALOG"}
+              </p>
+              <h2 className="font-display mt-2 text-2xl font-black sm:text-3xl">
+                BROWSE THIS DROP
+              </h2>
+            </div>
+            <p className="max-w-[420px] text-xs text-[var(--muted-dim)]">
+              Preview what&apos;s craftable this season. Create a player to craft, reveal a grade and start your collection.
+            </p>
+          </div>
+
+          {catalogLoading ? (
+            <p className="mt-6 text-sm text-[var(--muted-dim)]">Loading catalog…</p>
+          ) : !dropOpen || availableDesigns.length === 0 ? (
+            <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] bg-black/20 p-8 text-center text-sm text-[var(--muted-dim)]">
+              No drop is live right now — check back soon.
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {availableDesigns.map(({ product, design }) => (
+                <button
+                  key={design.id}
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="hud-frame overflow-hidden p-3 text-left transition hover:brightness-110"
+                  style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}
+                >
+                  <div className="flex h-[120px] items-center justify-center overflow-hidden rounded-lg bg-black/25">
+                    {design.thumbnail_url ? (
+                      <img
+                        src={design.thumbnail_url}
+                        alt={design.name}
+                        className="h-full w-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="font-mono text-[8px] tracking-[0.2em] text-[var(--muted-dim)]">
+                        NO PREVIEW
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-3 truncate font-mono text-[8px] tracking-[0.18em] text-[var(--muted-dim)]">
+                    {product.category}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-white">
+                    {design.name}
+                  </p>
+                  <p className="mt-1 text-xs font-black text-[var(--grade-rare)]">
+                    {design.craft_cost_lt.toLocaleString()} LT
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="mt-16 grid gap-4 md:grid-cols-3">
