@@ -2,8 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import Navbar from "@/components/Navbar";
+
+const HeroBoxModel3D = dynamic(() => import("@/components/HeroBoxModel3D"), {
+  ssr: false,
+});
 
 type Grade = "COMMON" | "RARE" | "EPIC" | "LEGENDARY";
 
@@ -39,6 +44,8 @@ type CatalogSeason = {
   odds: Record<Grade, number>;
   start_at: string | null;
   end_at: string | null;
+  hero_image_url: string | null;
+  hero_model_url: string | null;
 };
 
 type RecentPull = {
@@ -244,14 +251,23 @@ export default function PublicHome() {
             <div className="loot-box-float relative mx-auto h-[280px] w-[280px] sm:h-[320px] sm:w-[320px]">
               <div className="absolute inset-0 rounded-[32px] bg-[var(--grade-rare)]/25 blur-[60px]" />
               <div
-                className="hud-frame hud-glow relative flex h-full w-full flex-col items-center justify-center gap-3 rounded-[24px] bg-gradient-to-br from-[var(--surface-raised)] to-black/60"
+                className="hud-frame hud-glow relative flex h-full w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--surface-raised)] to-black/60"
                 style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}
               >
-                <span className="text-6xl">🎁</span>
-                <p className="font-mono text-[9px] tracking-[0.24em] text-[var(--grade-rare)]">
-                  {season?.name ?? "SEASON DROP"}
-                </p>
-                <p className="font-display text-lg font-black">MYSTERY BOX</p>
+                {season?.hero_model_url ? (
+                  <HeroBoxModel3D
+                    modelUrl={season.hero_model_url}
+                    fallback={<HeroBoxPlaceholder seasonName={season?.name} />}
+                  />
+                ) : season?.hero_image_url ? (
+                  <img
+                    src={season.hero_image_url}
+                    alt="Season hero"
+                    className="h-full w-full object-contain p-6"
+                  />
+                ) : (
+                  <HeroBoxPlaceholder seasonName={season?.name} />
+                )}
               </div>
 
               {GRADE_ORDER.map((grade, index) => {
@@ -306,10 +322,19 @@ export default function PublicHome() {
                 BROWSE THIS DROP
               </h2>
             </div>
-            <p className="max-w-[420px] text-xs text-[var(--muted-dim)]">
-              Preview what&apos;s craftable this season. Create a player to open the box, reveal a
-              grade and start your collection.
-            </p>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <p className="max-w-[420px] text-xs text-[var(--muted-dim)]">
+                Preview what&apos;s craftable this season. Create a player to open the box,
+                reveal a grade and start your collection.
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push("/catalog")}
+                className="font-mono text-[9px] font-black tracking-[0.16em] text-[var(--grade-rare)] hover:underline"
+              >
+                VIEW FULL CATALOG →
+              </button>
+            </div>
           </div>
 
           {catalogLoading ? (
@@ -412,5 +437,17 @@ export default function PublicHome() {
         }
       `}</style>
     </main>
+  );
+}
+
+function HeroBoxPlaceholder({ seasonName }: { seasonName?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3">
+      <span className="text-6xl">🎁</span>
+      <p className="font-mono text-[9px] tracking-[0.24em] text-[var(--grade-rare)]">
+        {seasonName ?? "SEASON DROP"}
+      </p>
+      <p className="font-display text-lg font-black">MYSTERY BOX</p>
+    </div>
   );
 }

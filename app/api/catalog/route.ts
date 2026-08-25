@@ -49,6 +49,9 @@ type ActiveSeason = {
 
   start_at: string | null;
   end_at: string | null;
+
+  hero_image_url: string | null;
+  hero_model_url: string | null;
 };
 
 type RecentPullRow = {
@@ -356,7 +359,9 @@ export async function GET() {
           legendary_rate,
           is_active,
           start_at,
-          end_at
+          end_at,
+          hero_image_url,
+          hero_model_url
           `
         )
         .eq(
@@ -586,6 +591,12 @@ export async function GET() {
 
             end_at:
               season.end_at,
+
+            hero_image_url:
+              season.hero_image_url,
+
+            hero_model_url:
+              season.hero_model_url,
           },
 
           required_grades:
@@ -1132,6 +1143,12 @@ export async function GET() {
 
           end_at:
             season.end_at,
+
+          hero_image_url:
+            season.hero_image_url,
+
+          hero_model_url:
+            season.hero_model_url,
         },
 
         /*
