@@ -130,6 +130,57 @@ const gradeTheme: Record<
 };
 
 /* =========================================================
+   GRADE AURA
+
+   The model itself is never recolored — most GLBs here
+   (including AI-generated ones) are a single merged
+   mesh/material with one baked texture, so there is no
+   separate "shirt" part to isolate and tint without manual
+   re-authoring in a 3D tool.
+
+   Instead, grade is shown as a glowing ring aura on the
+   ground beneath the character. COMMON has no entry, so it
+   renders no aura at all — same "no special effect on the
+   base grade" convention already used for the Legendary-only
+   CSS streak effects below.
+========================================================= */
+
+type GradeAuraConfig = {
+  color: string;
+  ringRadii: number[];
+  opacity: number;
+  spinSpeed: number;
+};
+
+const gradeAuraConfig: Partial<
+  Record<
+    Grade,
+    GradeAuraConfig
+  >
+> = {
+  RARE: {
+    color: "#22d3ee",
+    ringRadii: [1.55, 1.8, 2.05],
+    opacity: 0.5,
+    spinSpeed: 0.18,
+  },
+
+  EPIC: {
+    color: "#c084fc",
+    ringRadii: [1.65, 1.95, 2.25],
+    opacity: 0.6,
+    spinSpeed: 0.25,
+  },
+
+  LEGENDARY: {
+    color: "#fb923c",
+    ringRadii: [1.75, 2.1, 2.45],
+    opacity: 0.72,
+    spinSpeed: 0.34,
+  },
+};
+
+/* =========================================================
    NORMALIZE GRADE
 ========================================================= */
 
@@ -595,6 +646,121 @@ function SafeLighting({
 }
 
 /* =========================================================
+   GRADE AURA RING
+
+   A set of concentric glowing rings on the ground beneath
+   the character, colored by grade. Additive blending stacks
+   the rings into a soft glow without needing a generated
+   gradient texture. Slowly spins around the character.
+
+   Renders nothing for COMMON (see gradeAuraConfig above).
+========================================================= */
+
+function CharacterAura({
+  grade,
+}: {
+  grade: Grade;
+}) {
+  const groupRef =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const config =
+    gradeAuraConfig[
+      grade
+    ];
+
+  useFrame(
+    (
+      _state,
+      delta
+    ) => {
+      if (
+        !groupRef.current ||
+        !config
+      ) {
+        return;
+      }
+
+      groupRef.current.rotation.y +=
+        delta *
+        config.spinSpeed;
+    }
+  );
+
+  if (!config) {
+    return null;
+  }
+
+  return (
+    <group
+      ref={
+        groupRef
+      }
+      position={[
+        0,
+        -1.0,
+        0,
+      ]}
+    >
+
+      {config.ringRadii.map(
+        (
+          radius,
+          index
+        ) => (
+          <mesh
+            key={
+              radius
+            }
+            rotation={[
+              -Math.PI /
+                2,
+              0,
+              0,
+            ]}
+          >
+
+            <ringGeometry
+              args={[
+                radius -
+                  0.035,
+                radius,
+                64,
+              ]}
+            />
+
+            <meshBasicMaterial
+              color={
+                config.color
+              }
+              transparent
+              opacity={
+                config.opacity -
+                index *
+                  0.14
+              }
+              blending={
+                THREE.AdditiveBlending
+              }
+              depthWrite={
+                false
+              }
+              side={
+                THREE.DoubleSide
+              }
+            />
+
+          </mesh>
+        )
+      )}
+
+    </group>
+  );
+}
+
+/* =========================================================
    SCENE
 ========================================================= */
 
@@ -631,6 +797,12 @@ function CharacterScene({
       <PlayerModel
         modelUrl={
           modelUrl
+        }
+      />
+
+      <CharacterAura
+        grade={
+          grade
         }
       />
 
