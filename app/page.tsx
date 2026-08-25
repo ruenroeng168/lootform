@@ -1302,7 +1302,7 @@ export default function HomePage() {
 
               <div className="absolute left-[44%] top-1/2 h-[250px] w-[250px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.02] blur-[45px]" />
 
-              <div className="absolute inset-y-0 left-0 right-[116px] z-10">
+              <div className="absolute inset-y-0 left-0 right-[140px] z-10">
 
                 <CharacterAvatar
                   grade={
@@ -1346,9 +1346,9 @@ export default function HomePage() {
 
               </div>
 
-              <div className="absolute right-1 top-1/2 z-30 flex w-[104px] -translate-y-1/2 flex-col gap-2 sm:right-2">
+              <div className="absolute right-1 top-1/2 z-30 flex w-[128px] -translate-y-1/2 flex-col gap-2 sm:right-2">
 
-                <p className="mb-1 text-center text-[6px] font-black tracking-[0.18em] text-zinc-700">
+                <p className="mb-1 text-center text-[8px] font-black tracking-[0.18em] text-zinc-500">
                   EQUIPMENT
                 </p>
 
@@ -1640,11 +1640,11 @@ export default function HomePage() {
                         }
                         className={`
                           relative
-                          min-h-[132px]
+                          min-h-[168px]
                           overflow-hidden
                           rounded-xl
                           border
-                          p-2.5
+                          p-3
                           text-left
                           transition
                           ${
@@ -1663,7 +1663,7 @@ export default function HomePage() {
 
                             <p
                               className={`
-                                text-[8px]
+                                text-[10px]
                                 font-black
                                 tracking-[0.18em]
                                 ${
@@ -1678,7 +1678,7 @@ export default function HomePage() {
                               }
                             </p>
 
-                            <p className="mt-0.5 text-[6px] text-zinc-700">
+                            <p className="mt-0.5 text-[8px] text-zinc-500">
                               {
                                 slotSubLabel[
                                   slot
@@ -1695,13 +1695,13 @@ export default function HomePage() {
                                 border
                                 px-1.5
                                 py-0.5
-                                text-[6px]
+                                text-[7px]
                                 font-black
                                 ${
                                   upgradeLevel >
                                   0
                                     ? "border-lime-400/30 bg-lime-400/[0.08] text-lime-400"
-                                    : "border-zinc-700 bg-black/50 text-zinc-500"
+                                    : "border-zinc-700 bg-black/50 text-zinc-400"
                                 }
                               `}
                             >
@@ -1717,7 +1717,7 @@ export default function HomePage() {
                         {item ? (
                           <>
 
-                            <div className="mt-2 flex h-[58px] items-center justify-center">
+                            <div className="mt-2 flex h-[76px] items-center justify-center">
 
                               <ItemImage
                                 item={
@@ -1726,20 +1726,20 @@ export default function HomePage() {
                                 alt={
                                   item.product
                                 }
-                                className="h-full w-full scale-[1.12] object-contain"
+                                className="h-full w-full scale-[1.15] object-contain"
                               />
 
                             </div>
 
                             <p
-                              className={`mt-1 truncate text-[7px] font-black ${gradeText[item.grade]}`}
+                              className={`mt-1.5 truncate text-[9px] font-black ${gradeText[item.grade]}`}
                             >
                               {
                                 item.grade
                               }
                             </p>
 
-                            <p className="mt-0.5 truncate text-[8px] font-black text-white">
+                            <p className="mt-0.5 truncate text-[10px] font-black text-white">
                               {
                                 item.product
                               }
@@ -1747,27 +1747,27 @@ export default function HomePage() {
 
                             {upgradeLevel >
                             0 ? (
-                              <p className="mt-0.5 text-[6px] font-black text-lime-400">
+                              <p className="mt-0.5 text-[8px] font-black text-lime-400">
                                 UPGRADED +
                                 {
                                   upgradeLevel
                                 }
                               </p>
                             ) : (
-                              <p className="mt-0.5 text-[6px] font-black text-zinc-600">
+                              <p className="mt-0.5 text-[8px] font-black text-zinc-500">
                                 BASE +0
                               </p>
                             )}
 
                           </>
                         ) : (
-                          <div className="mt-4 flex min-h-[74px] flex-col items-center justify-center">
+                          <div className="mt-4 flex min-h-[92px] flex-col items-center justify-center">
 
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[14px] font-black text-zinc-700">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[16px] font-black text-zinc-700">
                               +
                             </div>
 
-                            <p className="mt-2 text-[7px] font-black text-zinc-600">
+                            <p className="mt-2 text-[9px] font-black text-zinc-500">
                               EMPTY SLOT
                             </p>
 
@@ -1791,11 +1791,11 @@ export default function HomePage() {
 
                   <div>
 
-                    <p className="text-zinc-600 text-[6px] tracking-[0.18em]">
+                    <p className="text-zinc-500 text-[8px] tracking-[0.18em]">
                       INVENTORY
                     </p>
 
-                    <p className="mt-0.5 text-[10px] font-black text-white">
+                    <p className="mt-0.5 text-[11px] font-black text-white">
                       SELECT ITEM FOR{" "}
 
                       <span className="text-cyan-400">
@@ -1807,7 +1807,7 @@ export default function HomePage() {
 
                   </div>
 
-                  <p className="text-[7px] text-zinc-600">
+                  <p className="text-[8px] text-zinc-500">
                     {
                       compatibleItems.length
                     }{" "}
@@ -1818,11 +1818,11 @@ export default function HomePage() {
 
                 {compatibleItems.length ===
                 0 ? (
-                  <div className="mt-2.5 flex min-h-[72px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
+                  <div className="mt-2.5 flex min-h-[80px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
 
                     <div className="text-center">
 
-                      <p className="text-[9px] font-black text-zinc-600">
+                      <p className="text-[10px] font-black text-zinc-500">
                         NO{" "}
                         {
                           selectedEquipmentSlot
@@ -1830,7 +1830,7 @@ export default function HomePage() {
                         ITEM
                       </p>
 
-                      <p className="mt-1 text-[6px] text-zinc-700">
+                      <p className="mt-1 text-[8px] text-zinc-600">
                         CRAFT OR COLLECT A COMPATIBLE ITEM
                       </p>
 
@@ -1838,7 +1838,7 @@ export default function HomePage() {
 
                   </div>
                 ) : (
-                  <div className="mt-2 grid max-h-[104px] grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-4">
+                  <div className="mt-2 grid max-h-[132px] grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-4">
 
                     {compatibleItems.map(
                       (
@@ -1870,12 +1870,12 @@ export default function HomePage() {
                             }
                             className={`
                               relative
-                              min-h-[94px]
+                              min-h-[118px]
                               overflow-hidden
                               rounded-lg
                               border
-                              px-2
-                              py-1.5
+                              px-2.5
+                              py-2
                               text-left
                               transition
                               ${
@@ -1892,7 +1892,7 @@ export default function HomePage() {
                             `}
                           >
 
-                            <div className="relative h-[34px]">
+                            <div className="relative h-[46px]">
 
                               <ItemImage
                                 item={
@@ -1906,10 +1906,10 @@ export default function HomePage() {
 
                             </div>
 
-                            <div className="mt-1 flex items-center justify-between gap-1">
+                            <div className="mt-1.5 flex items-center justify-between gap-1">
 
                               <p
-                                className={`text-[6px] font-black ${gradeText[item.grade]}`}
+                                className={`text-[8px] font-black ${gradeText[item.grade]}`}
                               >
                                 {
                                   item.grade
@@ -1920,8 +1920,8 @@ export default function HomePage() {
                                 className={
                                   item.upgrade_level >
                                   0
-                                    ? "text-[6px] font-black text-lime-400"
-                                    : "text-[6px] font-black text-zinc-600"
+                                    ? "text-[8px] font-black text-lime-400"
+                                    : "text-[8px] font-black text-zinc-500"
                                 }
                               >
                                 +
@@ -1933,20 +1933,20 @@ export default function HomePage() {
 
                             </div>
 
-                            <p className="mt-0.5 truncate text-[8px] font-black text-white">
+                            <p className="mt-0.5 truncate text-[9px] font-black text-white">
                               {
                                 item.product
                               }
                             </p>
 
-                            <p className="mt-0.5 truncate font-mono text-[6px] text-cyan-400">
+                            <p className="mt-0.5 truncate font-mono text-[7px] text-cyan-400">
                               {
                                 item.serial
                               }
                             </p>
 
                             {isEquipped && (
-                              <div className="absolute right-1.5 top-1.5 rounded-md bg-lime-400 px-1.5 py-0.5 text-[5px] font-black text-black">
+                              <div className="absolute right-1.5 top-1.5 rounded-md bg-lime-400 px-1.5 py-0.5 text-[6px] font-black text-black">
                                 EQUIPPED
                               </div>
                             )}
@@ -1954,7 +1954,7 @@ export default function HomePage() {
                             {updating && (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/80">
 
-                                <p className="text-[7px] font-black text-cyan-400 animate-pulse">
+                                <p className="text-[8px] font-black text-cyan-400 animate-pulse">
                                   EQUIPPING...
                                 </p>
 
@@ -1974,9 +1974,9 @@ export default function HomePage() {
               <div className="mt-3">
 
                 {selectedSlotItem ? (
-                  <div className="grid items-center gap-3 rounded-xl border border-zinc-800 bg-black/45 p-2.5 sm:grid-cols-[72px_1fr_auto]">
+                  <div className="grid items-center gap-3 rounded-xl border border-zinc-800 bg-black/45 p-3 sm:grid-cols-[92px_1fr_auto]">
 
-                    <div className="flex h-[72px] items-center justify-center rounded-lg border border-zinc-800 bg-black/50">
+                    <div className="flex h-[92px] items-center justify-center rounded-lg border border-zinc-800 bg-black/50">
 
                       <ItemImage
                         item={
@@ -1995,7 +1995,7 @@ export default function HomePage() {
                       <div className="flex items-center gap-2">
 
                         <p
-                          className={`text-base font-black ${gradeText[selectedSlotItem.grade]}`}
+                          className={`text-lg font-black ${gradeText[selectedSlotItem.grade]}`}
                         >
                           {
                             selectedSlotItem
@@ -2003,7 +2003,7 @@ export default function HomePage() {
                           }
                         </p>
 
-                        <span className="rounded-md border border-zinc-700 bg-black/50 px-1.5 py-0.5 text-[6px] font-black text-zinc-500">
+                        <span className="rounded-md border border-zinc-700 bg-black/50 px-1.5 py-0.5 text-[8px] font-black text-zinc-400">
                           {
                             selectedEquipmentSlot
                           }
@@ -2011,21 +2011,21 @@ export default function HomePage() {
 
                       </div>
 
-                      <p className="mt-0.5 truncate text-[11px] font-black text-white">
+                      <p className="mt-0.5 truncate text-[13px] font-black text-white">
                         {
                           selectedSlotItem
                             .product
                         }
                       </p>
 
-                      <p className="mt-0.5 truncate font-mono text-[7px] text-cyan-400">
+                      <p className="mt-0.5 truncate font-mono text-[9px] text-cyan-400">
                         {
                           selectedSlotItem
                             .serial
                         }
                       </p>
 
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
 
                         <MiniBadge
                           label="SIZE"
@@ -2053,13 +2053,13 @@ export default function HomePage() {
 
                     </div>
 
-                    <div className="min-w-[92px] rounded-xl border border-lime-400/20 bg-lime-400/[0.04] px-3 py-2 text-center">
+                    <div className="min-w-[100px] rounded-xl border border-lime-400/20 bg-lime-400/[0.04] px-3 py-2.5 text-center">
 
-                      <p className="text-[6px] tracking-[0.12em] text-zinc-600">
+                      <p className="text-[8px] tracking-[0.12em] text-zinc-500">
                         UPGRADE
                       </p>
 
-                      <p className="mt-1 text-xl font-black text-lime-400">
+                      <p className="mt-1 text-2xl font-black text-lime-400">
                         +
                         {Number(
                           selectedSlotItem
@@ -2076,8 +2076,8 @@ export default function HomePage() {
                               0
                           ) >
                           0
-                            ? "mt-0.5 text-[6px] font-black text-lime-400"
-                            : "mt-0.5 text-[6px] font-black text-zinc-600"
+                            ? "mt-0.5 text-[8px] font-black text-lime-400"
+                            : "mt-0.5 text-[8px] font-black text-zinc-500"
                         }
                       >
                         {Number(
@@ -2571,13 +2571,13 @@ function CharacterEquipmentSlot({
         group
         relative
         w-full
-        min-h-[98px]
+        min-h-[124px]
         overflow-hidden
         rounded-xl
         border
         bg-black/80
-        px-2.5
-        py-2
+        px-3
+        py-2.5
         text-left
         backdrop-blur-xl
         transition
@@ -2598,8 +2598,8 @@ function CharacterEquipmentSlot({
           <p
             className={
               selected
-                ? "text-[7px] font-black tracking-[0.12em] text-cyan-400"
-                : "text-[7px] font-black tracking-[0.12em] text-zinc-500"
+                ? "text-[9px] font-black tracking-[0.12em] text-cyan-400"
+                : "text-[9px] font-black tracking-[0.12em] text-zinc-400"
             }
           >
             {
@@ -2607,7 +2607,7 @@ function CharacterEquipmentSlot({
             }
           </p>
 
-          <p className="mt-0.5 text-[5px] text-zinc-700">
+          <p className="mt-0.5 text-[7px] text-zinc-500">
             {
               slotSubLabel[
                 slot
@@ -2622,8 +2622,8 @@ function CharacterEquipmentSlot({
             className={
               upgradeLevel >
               0
-                ? "text-[7px] font-black text-lime-400"
-                : "text-[7px] font-black text-zinc-600"
+                ? "text-[8px] font-black text-lime-400"
+                : "text-[8px] font-black text-zinc-500"
             }
           >
             +
@@ -2638,7 +2638,7 @@ function CharacterEquipmentSlot({
       {item ? (
         <>
 
-          <div className="mt-1 flex h-[42px] items-center justify-center">
+          <div className="mt-1.5 flex h-[58px] items-center justify-center">
 
             <ItemImage
               item={
@@ -2647,31 +2647,20 @@ function CharacterEquipmentSlot({
               alt={
                 item.product
               }
-              className="h-full w-full scale-[1.08] object-contain"
+              className="h-full w-full scale-[1.1] object-contain"
             />
 
           </div>
 
-          <div className="mt-1 flex items-center justify-between gap-1">
+          <p
+            className={`mt-1 truncate text-[8px] font-black ${gradeText[item.grade]}`}
+          >
+            {
+              item.grade
+            }
+          </p>
 
-            <p
-              className={`truncate text-[6px] font-black ${gradeText[item.grade]}`}
-            >
-              {
-                item.grade
-              }
-            </p>
-
-            <p className="text-[5px] font-black text-zinc-600">
-              +
-              {
-                upgradeLevel
-              }
-            </p>
-
-          </div>
-
-          <p className="mt-0.5 truncate text-[6px] font-black text-white">
+          <p className="mt-0.5 truncate text-[8px] font-black text-white">
             {
               item.product
             }
@@ -2679,13 +2668,13 @@ function CharacterEquipmentSlot({
 
         </>
       ) : (
-        <div className="flex min-h-[66px] flex-col items-center justify-center">
+        <div className="flex min-h-[80px] flex-col items-center justify-center">
 
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[13px] font-black text-zinc-700 transition group-hover:border-zinc-500">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[16px] font-black text-zinc-700 transition group-hover:border-zinc-500">
             +
           </div>
 
-          <p className="mt-1.5 text-[6px] font-black text-zinc-700">
+          <p className="mt-2 text-[8px] font-black text-zinc-500">
             EMPTY
           </p>
 
@@ -2760,13 +2749,13 @@ function MiniBadge({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-zinc-800 bg-black/50 px-2 py-1">
+    <div className="rounded-md border border-zinc-800 bg-black/50 px-2 py-1.5">
 
-      <p className="text-[5px] text-zinc-600">
+      <p className="text-[7px] text-zinc-500">
         {label}
       </p>
 
-      <p className="mt-0.5 text-[7px] font-black text-white">
+      <p className="mt-0.5 text-[9px] font-black text-white">
         {value}
       </p>
 

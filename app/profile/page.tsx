@@ -1347,11 +1347,11 @@ export default function ProfilePage() {
                         }
                         className={`
                           relative
-                          min-h-[132px]
+                          min-h-[168px]
                           overflow-hidden
                           rounded-xl
                           border
-                          p-2.5
+                          p-3
                           text-left
                           transition
                           ${
@@ -1370,7 +1370,7 @@ export default function ProfilePage() {
 
                             <p
                               className={`
-                                text-[8px]
+                                text-[10px]
                                 font-black
                                 tracking-[0.18em]
                                 ${
@@ -1383,7 +1383,7 @@ export default function ProfilePage() {
                               {slot}
                             </p>
 
-                            <p className="mt-0.5 text-[6px] text-zinc-700">
+                            <p className="mt-0.5 text-[8px] text-zinc-500">
                               {
                                 slotSubLabel[
                                   slot
@@ -1400,13 +1400,13 @@ export default function ProfilePage() {
                                 border
                                 px-1.5
                                 py-0.5
-                                text-[6px]
+                                text-[7px]
                                 font-black
                                 ${
                                   upgradeLevel >
                                   0
                                     ? "border-lime-400/30 bg-lime-400/[0.08] text-lime-400"
-                                    : "border-zinc-700 bg-black/50 text-zinc-500"
+                                    : "border-zinc-700 bg-black/50 text-zinc-400"
                                 }
                               `}
                             >
@@ -1419,49 +1419,49 @@ export default function ProfilePage() {
                         {item ? (
                           <>
 
-                            <div className="mt-2 flex h-[58px] items-center justify-center">
+                            <div className="mt-2 flex h-[76px] items-center justify-center">
 
                               <ItemImage
                                 item={item}
                                 alt={
                                   item.product
                                 }
-                                className="h-full w-full scale-[1.12] object-contain"
+                                className="h-full w-full scale-[1.15] object-contain"
                               />
 
                             </div>
 
                             <p
-                              className={`mt-1 truncate text-[7px] font-black ${gradeText[item.grade]}`}
+                              className={`mt-1.5 truncate text-[9px] font-black ${gradeText[item.grade]}`}
                             >
                               {item.grade}
                             </p>
 
-                            <p className="mt-0.5 truncate text-[8px] font-black text-white">
+                            <p className="mt-0.5 truncate text-[10px] font-black text-white">
                               {item.product}
                             </p>
 
                             {upgradeLevel >
                             0 ? (
-                              <p className="mt-0.5 text-[6px] font-black text-lime-400">
+                              <p className="mt-0.5 text-[8px] font-black text-lime-400">
                                 UPGRADED +
                                 {upgradeLevel}
                               </p>
                             ) : (
-                              <p className="mt-0.5 text-[6px] font-black text-zinc-600">
+                              <p className="mt-0.5 text-[8px] font-black text-zinc-500">
                                 BASE +0
                               </p>
                             )}
 
                           </>
                         ) : (
-                          <div className="mt-4 flex min-h-[74px] flex-col items-center justify-center">
+                          <div className="mt-4 flex min-h-[92px] flex-col items-center justify-center">
 
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[14px] font-black text-zinc-700">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-zinc-700 text-[16px] font-black text-zinc-700">
                               +
                             </div>
 
-                            <p className="mt-2 text-[7px] font-black text-zinc-600">
+                            <p className="mt-2 text-[9px] font-black text-zinc-500">
                               EMPTY SLOT
                             </p>
 
@@ -1485,11 +1485,11 @@ export default function ProfilePage() {
 
                   <div>
 
-                    <p className="text-zinc-600 text-[6px] tracking-[0.18em]">
+                    <p className="text-zinc-500 text-[8px] tracking-[0.18em]">
                       INVENTORY
                     </p>
 
-                    <p className="mt-0.5 text-[10px] font-black text-white">
+                    <p className="mt-0.5 text-[11px] font-black text-white">
                       SELECT ITEM FOR{" "}
 
                       <span className="text-cyan-400">
@@ -1501,7 +1501,7 @@ export default function ProfilePage() {
 
                   </div>
 
-                  <p className="text-[7px] text-zinc-600">
+                  <p className="text-[8px] text-zinc-500">
                     {
                       compatibleItems.length
                     }{" "}
@@ -1512,11 +1512,11 @@ export default function ProfilePage() {
 
                 {compatibleItems.length ===
                 0 ? (
-                  <div className="mt-3 flex min-h-[72px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
+                  <div className="mt-3 flex min-h-[80px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
 
                     <div className="text-center">
 
-                      <p className="text-[9px] font-black text-zinc-600">
+                      <p className="text-[10px] font-black text-zinc-500">
                         NO{" "}
                         {
                           selectedEquipmentSlot
@@ -1524,7 +1524,7 @@ export default function ProfilePage() {
                         ITEM
                       </p>
 
-                      <p className="mt-1 text-[6px] text-zinc-700">
+                      <p className="mt-1 text-[8px] text-zinc-600">
                         CRAFT OR COLLECT A COMPATIBLE ITEM
                       </p>
 
@@ -1532,7 +1532,7 @@ export default function ProfilePage() {
 
                   </div>
                 ) : (
-                  <div className="mt-3 grid max-h-[140px] grid-cols-3 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-4">
+                  <div className="mt-3 grid max-h-[168px] grid-cols-3 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-4">
 
                     {compatibleItems.map(
                       (item) => {
@@ -1560,12 +1560,12 @@ export default function ProfilePage() {
                             }
                             className={`
                               relative
-                              min-h-[94px]
+                              min-h-[118px]
                               overflow-hidden
                               rounded-lg
                               border
-                              px-2
-                              py-1.5
+                              px-2.5
+                              py-2
                               text-left
                               transition
                               ${
@@ -1582,7 +1582,7 @@ export default function ProfilePage() {
                             `}
                           >
 
-                            <div className="relative h-[34px]">
+                            <div className="relative h-[46px]">
 
                               <ItemImage
                                 item={item}
@@ -1594,10 +1594,10 @@ export default function ProfilePage() {
 
                             </div>
 
-                            <div className="mt-1 flex items-center justify-between gap-1">
+                            <div className="mt-1.5 flex items-center justify-between gap-1">
 
                               <p
-                                className={`text-[6px] font-black ${gradeText[item.grade]}`}
+                                className={`text-[8px] font-black ${gradeText[item.grade]}`}
                               >
                                 {item.grade}
                               </p>
@@ -1606,8 +1606,8 @@ export default function ProfilePage() {
                                 className={
                                   item.upgrade_level >
                                   0
-                                    ? "text-[6px] font-black text-lime-400"
-                                    : "text-[6px] font-black text-zinc-600"
+                                    ? "text-[8px] font-black text-lime-400"
+                                    : "text-[8px] font-black text-zinc-500"
                                 }
                               >
                                 +
@@ -1619,16 +1619,16 @@ export default function ProfilePage() {
 
                             </div>
 
-                            <p className="mt-0.5 truncate text-[8px] font-black text-white">
+                            <p className="mt-0.5 truncate text-[9px] font-black text-white">
                               {item.product}
                             </p>
 
-                            <p className="mt-0.5 truncate font-mono text-[6px] text-cyan-400">
+                            <p className="mt-0.5 truncate font-mono text-[7px] text-cyan-400">
                               {item.serial}
                             </p>
 
                             {isEquipped && (
-                              <div className="absolute right-1.5 top-1.5 rounded-md bg-lime-400 px-1.5 py-0.5 text-[5px] font-black text-black">
+                              <div className="absolute right-1.5 top-1.5 rounded-md bg-lime-400 px-1.5 py-0.5 text-[6px] font-black text-black">
                                 EQUIPPED
                               </div>
                             )}
@@ -1636,7 +1636,7 @@ export default function ProfilePage() {
                             {updating && (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/80">
 
-                                <p className="text-[7px] font-black text-cyan-400 animate-pulse">
+                                <p className="text-[8px] font-black text-cyan-400 animate-pulse">
                                   EQUIPPING...
                                 </p>
 
@@ -1656,9 +1656,9 @@ export default function ProfilePage() {
               <div className="mt-4">
 
                 {selectedSlotItem ? (
-                  <div className="grid items-center gap-3 rounded-xl border border-zinc-800 bg-black/45 p-3 sm:grid-cols-[80px_1fr_auto]">
+                  <div className="grid items-center gap-3 rounded-xl border border-zinc-800 bg-black/45 p-3 sm:grid-cols-[92px_1fr_auto]">
 
-                    <div className="flex h-[80px] items-center justify-center rounded-lg border border-zinc-800 bg-black/50">
+                    <div className="flex h-[92px] items-center justify-center rounded-lg border border-zinc-800 bg-black/50">
 
                       <ItemImage
                         item={
@@ -1677,14 +1677,14 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-2">
 
                         <p
-                          className={`text-base font-black ${gradeText[selectedSlotItem.grade]}`}
+                          className={`text-lg font-black ${gradeText[selectedSlotItem.grade]}`}
                         >
                           {
                             selectedSlotItem.grade
                           }
                         </p>
 
-                        <span className="rounded-md border border-zinc-700 bg-black/50 px-1.5 py-0.5 text-[6px] font-black text-zinc-500">
+                        <span className="rounded-md border border-zinc-700 bg-black/50 px-1.5 py-0.5 text-[8px] font-black text-zinc-400">
                           {
                             selectedEquipmentSlot
                           }
@@ -1692,19 +1692,19 @@ export default function ProfilePage() {
 
                       </div>
 
-                      <p className="mt-0.5 truncate text-[11px] font-black text-white">
+                      <p className="mt-0.5 truncate text-[13px] font-black text-white">
                         {
                           selectedSlotItem.product
                         }
                       </p>
 
-                      <p className="mt-0.5 truncate font-mono text-[7px] text-cyan-400">
+                      <p className="mt-0.5 truncate font-mono text-[9px] text-cyan-400">
                         {
                           selectedSlotItem.serial
                         }
                       </p>
 
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <div className="mt-2 flex flex-wrap gap-1.5">
 
                         <MiniInfo
                           label="SIZE"
@@ -1730,13 +1730,13 @@ export default function ProfilePage() {
 
                     </div>
 
-                    <div className="min-w-[92px] rounded-xl border border-lime-400/20 bg-lime-400/[0.04] px-3 py-2 text-center">
+                    <div className="min-w-[100px] rounded-xl border border-lime-400/20 bg-lime-400/[0.04] px-3 py-2.5 text-center">
 
-                      <p className="text-[6px] tracking-[0.12em] text-zinc-600">
+                      <p className="text-[8px] tracking-[0.12em] text-zinc-500">
                         UPGRADE
                       </p>
 
-                      <p className="mt-1 text-xl font-black text-lime-400">
+                      <p className="mt-1 text-2xl font-black text-lime-400">
                         +
                         {Number(
                           selectedSlotItem.upgrade_level ??
@@ -1750,8 +1750,8 @@ export default function ProfilePage() {
                             selectedSlotItem.upgrade_level ??
                               0
                           ) > 0
-                            ? "mt-0.5 text-[6px] font-black text-lime-400"
-                            : "mt-0.5 text-[6px] font-black text-zinc-600"
+                            ? "mt-0.5 text-[8px] font-black text-lime-400"
+                            : "mt-0.5 text-[8px] font-black text-zinc-500"
                         }
                       >
                         {Number(
