@@ -114,6 +114,7 @@ export async function GET(
           status,
           payment_method,
           provider_reference,
+          reject_reason,
           environment_mode,
           created_at,
           paid_at,
