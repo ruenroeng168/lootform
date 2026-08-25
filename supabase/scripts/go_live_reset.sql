@@ -26,17 +26,19 @@
 --      serials again.
 --   7. Restarts the general item serial sequence back to 1, so the
 --      next non-TEE item crafted gets serial 0001 again.
---   8. Switches the system into LIVE mode. /api/wallet/topup/test
+--   8. Resets every player's Level/EXP/Title back to a fresh account's
+--      defaults (LV.1, 0 EXP, "ROOKIE"), matching what a brand-new
+--      signup gets.
+--   9. Switches the system into LIVE mode. /api/wallet/topup/test
 --      immediately starts rejecting requests (TEST_TOPUP_DISABLED)
 --      once this runs, and the "TEST TOP-UP" button on the player
 --      page hides itself automatically on next load.
 --
 -- NOT touched by this script (on purpose):
 --   - auth.users (player accounts / login)
---   - player_profiles (level, exp, title, avatar) — reset these
---     yourself first if you also want a fresh player progression
---     state; not included here since that wasn't part of the request
---     this script was written for.
+--   - display_name, avatar_key, character_model_id on player_profiles
+--     — only level/exp/title are reset, since that's what was asked
+--     for; these other fields are cosmetic choices, not progression.
 --   - topup_settings / topup_packages (your configured bank/QR/rate
 --     and packages) — these are real Admin configuration, not demo
 --     data, so they're left as you set them up.
@@ -68,7 +70,11 @@ SET is_used = false, item_id = NULL, used_at = NULL;
 -- 7. Restart the general item serial sequence back to 1.
 ALTER SEQUENCE public.lootform_item_serial_seq RESTART WITH 1;
 
--- 8. Switch the system into LIVE mode.
+-- 8. Reset every player's Level/EXP/Title to a fresh account's defaults.
+UPDATE public.player_profiles
+SET level = 1, exp = 0, title = 'ROOKIE', updated_at = now();
+
+-- 9. Switch the system into LIVE mode.
 UPDATE public.system_settings
 SET environment_mode = 'LIVE', updated_at = now()
 WHERE id = 1;
