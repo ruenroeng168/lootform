@@ -130,6 +130,43 @@ const gradeTheme: Record<
 };
 
 /* =========================================================
+   GRADE MODEL TINT
+
+   Whole-model color tint applied to every material on the
+   loaded GLB, multiplied against its existing base color
+   texture. COMMON is left untouched (0 strength) so the
+   model's real colors show as-is; higher grades get a
+   progressively stronger wash of the grade color plus a
+   faint emissive glow on LEGENDARY.
+
+   This is a deliberate fallback: most GLBs here (including
+   AI-generated ones) are a single merged mesh/material, so
+   there is no separate "shirt" part to recolor in isolation
+   — tinting the whole model is the only fully-automatic
+   option without manual re-authoring in a 3D tool.
+========================================================= */
+
+const gradeTintStrength: Record<
+  Grade,
+  number
+> = {
+  COMMON: 0,
+  RARE: 0.22,
+  EPIC: 0.3,
+  LEGENDARY: 0.38,
+};
+
+const gradeEmissiveIntensity: Record<
+  Grade,
+  number
+> = {
+  COMMON: 0,
+  RARE: 0,
+  EPIC: 0,
+  LEGENDARY: 0.16,
+};
+
+/* =========================================================
    NORMALIZE GRADE
 ========================================================= */
 
@@ -251,8 +288,10 @@ function ModelUnavailable({
 
 function PlayerModel({
   modelUrl,
+  grade,
 }: {
   modelUrl: string;
+  grade: Grade;
 }) {
   const rootRef =
     useRef<THREE.Group>(
@@ -335,6 +374,48 @@ function PlayerModel({
                     material.envMapIntensity =
                       0.55;
 
+                    const tintStrength =
+                      gradeTintStrength[
+                        grade
+                      ];
+
+                    if (
+                      tintStrength >
+                      0
+                    ) {
+                      material.color =
+                        material.color
+                          .clone()
+                          .lerp(
+                            new THREE.Color(
+                              gradeTheme[
+                                grade
+                              ].color
+                            ),
+                            tintStrength
+                          );
+                    }
+
+                    const emissiveIntensity =
+                      gradeEmissiveIntensity[
+                        grade
+                      ];
+
+                    if (
+                      emissiveIntensity >
+                      0
+                    ) {
+                      material.emissive =
+                        new THREE.Color(
+                          gradeTheme[
+                            grade
+                          ].color
+                        );
+
+                      material.emissiveIntensity =
+                        emissiveIntensity;
+                    }
+
                     material.needsUpdate =
                       true;
                   }
@@ -406,6 +487,7 @@ function PlayerModel({
       },
       [
         scene,
+        grade,
       ]
     );
 
@@ -631,6 +713,9 @@ function CharacterScene({
       <PlayerModel
         modelUrl={
           modelUrl
+        }
+        grade={
+          grade
         }
       />
 
