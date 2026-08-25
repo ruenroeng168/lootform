@@ -67,6 +67,7 @@ export default function WalletTopupPage() {
 
   const [testToppingUp, setTestToppingUp] = useState(false);
   const [testSuccess, setTestSuccess] = useState<TopupSuccess | null>(null);
+  const [isTestMode, setIsTestMode] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -110,6 +111,7 @@ export default function WalletTopupPage() {
 
       setPackages(packagesResult.packages as TopupPackage[]);
       setSettings(packagesResult.settings as TopupSettings | null);
+      setIsTestMode(packagesResult.environment_mode === "TEST");
     } catch (error) {
       console.error("LOAD TOPUP ERROR:", error);
       setErrorMessage(error instanceof Error ? error.message : "Unable to load top-up");
@@ -412,33 +414,40 @@ export default function WalletTopupPage() {
 
         {/* =====================================
             DEV TEST TOP-UP
+
+            Only rendered when the system is in TEST mode. The API
+            already rejects this outside TEST mode, but hiding it
+            here too means players never see a dead button once the
+            system switches to LIVE at go-live.
         ===================================== */}
 
-        <section className="mt-10 border border-yellow-300/20 bg-yellow-300/[0.02] rounded-2xl p-6">
-          <div className="inline-flex items-center gap-2 border border-yellow-300/20 bg-yellow-300/5 rounded-full px-4 py-2">
-            <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" />
-            <span className="text-yellow-300 text-[9px] tracking-[0.3em]">DEV / TEST ONLY</span>
-          </div>
+        {isTestMode && (
+          <section className="mt-10 border border-yellow-300/20 bg-yellow-300/[0.02] rounded-2xl p-6">
+            <div className="inline-flex items-center gap-2 border border-yellow-300/20 bg-yellow-300/5 rounded-full px-4 py-2">
+              <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" />
+              <span className="text-yellow-300 text-[9px] tracking-[0.3em]">DEV / TEST ONLY</span>
+            </div>
 
-          <p className="text-zinc-500 text-xs mt-4">
-            ปุ่มนี้ใช้ทดสอบระบบเท่านั้น — เติม 100 LT ทันทีโดยไม่ต้องโอนเงินจริง
-            ใช้ได้เฉพาะตอนระบบอยู่ใน TEST mode เท่านั้น
-          </p>
-
-          {testSuccess && (
-            <p className="text-lime-400 text-sm font-black mt-3">
-              +{testSuccess.token_amount} LT (Ref: {testSuccess.reference})
+            <p className="text-zinc-500 text-xs mt-4">
+              ปุ่มนี้ใช้ทดสอบระบบเท่านั้น — เติม 100 LT ทันทีโดยไม่ต้องโอนเงินจริง
+              ใช้ได้เฉพาะตอนระบบอยู่ใน TEST mode เท่านั้น
             </p>
-          )}
 
-          <button
-            disabled={testToppingUp}
-            onClick={testTopup}
-            className="mt-4 border border-yellow-300/30 bg-yellow-300/[0.05] text-yellow-300 py-3 px-6 rounded-xl text-xs font-black hover:bg-yellow-300/10 disabled:opacity-50 transition"
-          >
-            {testToppingUp ? "PROCESSING..." : "TEST TOP-UP +100 LT"}
-          </button>
-        </section>
+            {testSuccess && (
+              <p className="text-lime-400 text-sm font-black mt-3">
+                +{testSuccess.token_amount} LT (Ref: {testSuccess.reference})
+              </p>
+            )}
+
+            <button
+              disabled={testToppingUp}
+              onClick={testTopup}
+              className="mt-4 border border-yellow-300/30 bg-yellow-300/[0.05] text-yellow-300 py-3 px-6 rounded-xl text-xs font-black hover:bg-yellow-300/10 disabled:opacity-50 transition"
+            >
+              {testToppingUp ? "PROCESSING..." : "TEST TOP-UP +100 LT"}
+            </button>
+          </section>
+        )}
       </div>
     </main>
   );

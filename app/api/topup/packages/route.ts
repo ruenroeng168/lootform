@@ -29,22 +29,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const [{ data: settings, error: settingsError }, { data: packages, error: packagesError }] =
-    await Promise.all([
-      supabaseAdmin
-        .from("topup_settings")
-        .select(
-          "bank_name, bank_account_name, bank_account_number, qr_image_url, rate_lt_per_thb"
-        )
-        .eq("id", 1)
-        .maybeSingle(),
-      supabaseAdmin
-        .from("topup_packages")
-        .select("id, amount_thb, label, sort_order")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true })
-        .order("amount_thb", { ascending: true }),
-    ]);
+  const [
+    { data: settings, error: settingsError },
+    { data: packages, error: packagesError },
+    { data: systemSettings },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("topup_settings")
+      .select(
+        "bank_name, bank_account_name, bank_account_number, qr_image_url, rate_lt_per_thb"
+      )
+      .eq("id", 1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("topup_packages")
+      .select("id, amount_thb, label, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("amount_thb", { ascending: true }),
+    supabaseAdmin.from("system_settings").select("environment_mode").eq("id", 1).maybeSingle(),
+  ]);
 
   if (settingsError) {
     console.error("TOPUP PACKAGES SETTINGS ERROR:", settingsError);
@@ -66,5 +70,6 @@ export async function GET(request: NextRequest) {
     success: true,
     settings: settings ?? null,
     packages: packages ?? [],
+    environment_mode: systemSettings?.environment_mode ?? "LIVE",
   });
 }
