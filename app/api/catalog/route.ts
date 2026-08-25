@@ -46,6 +46,15 @@ type ActiveSeason = {
   legendary_rate: number;
 
   is_active: boolean;
+
+  start_at: string | null;
+  end_at: string | null;
+};
+
+type RecentPullRow = {
+  grade: Grade;
+  product: string;
+  created_at: string;
 };
 
 type CatalogProductRow = {
@@ -345,7 +354,9 @@ export async function GET() {
           rare_rate,
           epic_rate,
           legendary_rate,
-          is_active
+          is_active,
+          start_at,
+          end_at
           `
         )
         .eq(
@@ -443,6 +454,40 @@ export async function GET() {
       );
 
     /* =====================================================
+       3B. RECENT PULLS
+
+       Guest-facing activity ticker. Intentionally excludes
+       owner_id / serial so no player identity or exact print
+       number is exposed to unauthenticated visitors.
+    ===================================================== */
+
+    const {
+      data:
+        recentPullData,
+    } =
+      await supabaseAdmin
+        .from(
+          "items"
+        )
+        .select(
+          "grade, product, created_at"
+        )
+        .order(
+          "id",
+          {
+            ascending:
+              false,
+          }
+        )
+        .limit(8);
+
+    const recentPulls =
+      (
+        recentPullData ??
+        []
+      ) as RecentPullRow[];
+
+    /* =====================================================
        4. ACTIVE PRODUCTS IN CURRENT SEASON
     ===================================================== */
 
@@ -535,6 +580,12 @@ export async function GET() {
               season.season_name,
 
             odds,
+
+            start_at:
+              season.start_at,
+
+            end_at:
+              season.end_at,
           },
 
           required_grades:
@@ -542,6 +593,9 @@ export async function GET() {
 
           catalog:
             [],
+
+          recent_pulls:
+            recentPulls,
         },
         {
           headers: {
@@ -1072,6 +1126,12 @@ export async function GET() {
             season.season_name,
 
           odds,
+
+          start_at:
+            season.start_at,
+
+          end_at:
+            season.end_at,
         },
 
         /*
@@ -1082,6 +1142,9 @@ export async function GET() {
           requiredGrades,
 
         catalog,
+
+        recent_pulls:
+          recentPulls,
       },
       {
         headers: {
