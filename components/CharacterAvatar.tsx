@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  Component,
   Suspense,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 
 import {
@@ -166,6 +168,79 @@ function Loading3D() {
 
       </div>
 
+    </div>
+  );
+}
+
+
+/* =========================================================
+   MODEL ERROR BOUNDARY
+========================================================= */
+
+class ModelErrorBoundary extends Component<
+  {
+    children: ReactNode;
+    fallback: ReactNode;
+  },
+  {
+    hasError: boolean;
+  }
+> {
+  state = {
+    hasError: false,
+  };
+
+  static getDerivedStateFromError() {
+    return {
+      hasError: true,
+    };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(
+      "LOOTFORM CHARACTER MODEL LOAD ERROR:",
+      error
+    );
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
+
+function ModelUnavailable({
+  color,
+  glow,
+  message,
+}: {
+  color: string;
+  glow: string;
+  message: string;
+}) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-[#05070a]">
+      <div className="max-w-[300px] px-6 text-center">
+        <div
+          className="mx-auto h-12 w-12 rounded-full border"
+          style={{
+            borderColor: color,
+            boxShadow: `0 0 30px ${glow}`,
+          }}
+        />
+        <p
+          className="mt-5 text-[10px] font-black tracking-[0.22em]"
+          style={{ color }}
+        >
+          CHARACTER MODEL UNAVAILABLE
+        </p>
+        <p className="mt-2 text-[9px] leading-5 text-zinc-600">
+          {message}
+        </p>
+      </div>
     </div>
   );
 }
@@ -758,8 +833,12 @@ export default function CharacterAvatar({
 
   const activeModelUrl =
     modelUrl
-      ?.trim() ||
-    "/models/lootform-character.glb";
+      ?.trim() ??
+    "";
+
+  const hasModel =
+    activeModelUrl.length >
+    0;
 
   const [
     contextLost,
@@ -996,34 +1075,51 @@ export default function CharacterAvatar({
         "
       >
 
-        {!contextLost ? (
-          <Suspense
+        {!hasModel ? (
+          <ModelUnavailable
+            color={theme.color}
+            glow={theme.glow}
+            message="No active Character GLB is assigned to this player."
+          />
+        ) : !contextLost ? (
+          <ModelErrorBoundary
+            key={`${activeModelUrl}-boundary-${rendererKey}`}
             fallback={
-              <Loading3D />
+              <ModelUnavailable
+                color={theme.color}
+                glow={theme.glow}
+                message="The assigned Character GLB could not be loaded. Check the model URL or Storage object."
+              />
             }
           >
+            <Suspense
+              fallback={
+                <Loading3D />
+              }
+            >
 
-            <CharacterCanvas
-              key={
-                `${activeModelUrl}-${rendererKey}`
-              }
-              grade={
-                activeGrade
-              }
-              modelUrl={
-                activeModelUrl
-              }
-              onContextLost={() =>
-                setContextLost(
-                  true
-                )
-              }
-              onContextRestored={
-                restoreRenderer
-              }
-            />
+              <CharacterCanvas
+                key={
+                  `${activeModelUrl}-${rendererKey}`
+                }
+                grade={
+                  activeGrade
+                }
+                modelUrl={
+                  activeModelUrl
+                }
+                onContextLost={() =>
+                  setContextLost(
+                    true
+                  )
+                }
+                onContextRestored={
+                  restoreRenderer
+                }
+              />
 
-          </Suspense>
+            </Suspense>
+          </ModelErrorBoundary>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center bg-[#05070a]">
 

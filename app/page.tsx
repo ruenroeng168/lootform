@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 import Navbar from "@/components/Navbar";
 import CharacterAvatar from "@/components/CharacterAvatar";
+import PublicHome from "@/components/PublicHome";
 
 type Grade =
   | "COMMON"
@@ -180,32 +181,46 @@ const productImages: Record<Grade, string> = {
   LEGENDARY: "/products/legendary.png",
 };
 
+/*
+  Grade color source of truth. These read from the shared
+  design tokens in globals.css (--grade-common / rare / epic /
+  legendary) so the brand palette and the in-app rarity colors
+  can never drift apart again.
+*/
+
+const gradeCssVar: Record<Grade, string> = {
+  COMMON: "var(--grade-common)",
+  RARE: "var(--grade-rare)",
+  EPIC: "var(--grade-epic)",
+  LEGENDARY: "var(--grade-legendary)",
+};
+
 const gradeText: Record<Grade, string> = {
-  COMMON: "text-zinc-200",
-  RARE: "text-cyan-400",
-  EPIC: "text-purple-400",
-  LEGENDARY: "text-orange-400",
+  COMMON: "text-[var(--grade-common)]",
+  RARE: "text-[var(--grade-rare)]",
+  EPIC: "text-[var(--grade-epic)]",
+  LEGENDARY: "text-[var(--grade-legendary)]",
 };
 
 const gradeBorder: Record<Grade, string> = {
-  COMMON: "border-zinc-700",
-  RARE: "border-cyan-400/40",
-  EPIC: "border-purple-400/45",
-  LEGENDARY: "border-orange-400/45",
+  COMMON: "border-[var(--grade-common)]/40",
+  RARE: "border-[var(--grade-rare)]/40",
+  EPIC: "border-[var(--grade-epic)]/45",
+  LEGENDARY: "border-[var(--grade-legendary)]/45",
 };
 
 const gradeGlow: Record<Grade, string> = {
   COMMON:
-    "shadow-[0_0_80px_rgba(161,161,170,0.10)]",
+    "shadow-[0_0_80px_rgba(168,173,187,0.10)]",
 
   RARE:
-    "shadow-[0_0_100px_rgba(34,211,238,0.16)]",
+    "shadow-[0_0_100px_rgba(56,198,244,0.16)]",
 
   EPIC:
-    "shadow-[0_0_120px_rgba(192,132,252,0.20)]",
+    "shadow-[0_0_120px_rgba(181,101,247,0.20)]",
 
   LEGENDARY:
-    "shadow-[0_0_140px_rgba(251,146,60,0.24)]",
+    "shadow-[0_0_140px_rgba(240,169,59,0.24)]",
 };
 
 const EMPTY_EQUIPMENT_SLOTS: EquipmentSlots = {
@@ -240,6 +255,12 @@ export default function HomePage() {
     setLoading,
   ] =
     useState(true);
+
+  const [
+    isGuest,
+    setIsGuest,
+  ] =
+    useState(false);
 
   const [
     userEmail,
@@ -500,12 +521,20 @@ export default function HomePage() {
           userError ||
           !user
         ) {
-          router.push(
-            "/login"
-          );
+          if (!user) {
+            setIsGuest(
+              true
+            );
 
-          return;
+            return;
+          }
+
+          throw userError;
         }
+
+        setIsGuest(
+          false
+        );
 
         setUserEmail(
           user.email ??
@@ -530,8 +559,8 @@ export default function HomePage() {
         }
 
         if (!session) {
-          router.push(
-            "/login"
+          setIsGuest(
+            true
           );
 
           return;
@@ -1090,18 +1119,26 @@ export default function HomePage() {
     );
   }
 
+  if (
+    isGuest
+  ) {
+    return (
+      <PublicHome />
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-black text-white relative overflow-hidden">
+    <main className="min-h-screen bg-[var(--bg)] text-[var(--foreground)] relative overflow-hidden">
 
       <Navbar />
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
 
-        <div className="absolute top-[-320px] left-1/2 -translate-x-1/2 w-[1100px] h-[900px] rounded-full bg-cyan-500/[0.08] blur-[190px]" />
+        <div className="absolute top-[-320px] left-1/2 -translate-x-1/2 w-[1100px] h-[900px] rounded-full bg-[var(--grade-rare)]/[0.08] blur-[190px]" />
 
-        <div className="absolute bottom-[-360px] left-[-280px] w-[760px] h-[760px] rounded-full bg-purple-500/[0.10] blur-[190px]" />
+        <div className="absolute bottom-[-360px] left-[-280px] w-[760px] h-[760px] rounded-full bg-[var(--grade-epic)]/[0.10] blur-[190px]" />
 
-        <div className="absolute bottom-[-360px] right-[-280px] w-[760px] h-[760px] rounded-full bg-lime-400/[0.05] blur-[190px]" />
+        <div className="absolute bottom-[-360px] right-[-280px] w-[760px] h-[760px] rounded-full bg-[var(--grade-legendary)]/[0.05] blur-[190px]" />
 
       </div>
 
@@ -1117,19 +1154,19 @@ export default function HomePage() {
 
           <div>
 
-            <p className="text-cyan-400 text-[8px] tracking-[0.32em]">
+            <p className="font-mono text-[var(--grade-rare)] text-[8px] tracking-[0.32em]">
               LOOTFORM PLAYER SYSTEM
             </p>
 
-            <h1 className="mt-2 text-[38px] font-black leading-none sm:text-[46px] lg:text-[50px]">
+            <h1 className="font-display mt-2 text-[38px] font-bold leading-none sm:text-[46px] lg:text-[50px]">
               MY{" "}
 
-              <span className="text-cyan-400">
+              <span className="text-[var(--grade-rare)]">
                 CHARACTER
               </span>
             </h1>
 
-            <p className="mt-2 text-[10px] font-bold tracking-[0.08em] text-zinc-600">
+            <p className="mt-2 text-[10px] font-semibold tracking-[0.08em] text-[var(--muted)]">
               DIGITAL IDENTITY // PHYSICAL COLLECTION
             </p>
 
@@ -1177,7 +1214,11 @@ export default function HomePage() {
         <section className="mt-5 grid items-start gap-5 xl:grid-cols-[1fr_1fr]">
 
           <article
+            style={{
+              "--grade-color": gradeCssVar[activeGrade],
+            } as CSSProperties}
             className={`
+              hud-frame
               relative
               overflow-hidden
               min-h-[650px]
@@ -1201,29 +1242,18 @@ export default function HomePage() {
             <div className="absolute inset-0 character-grid opacity-[0.05] pointer-events-none" />
 
             <div
-              className={`
-                absolute
-                left-[44%]
-                top-[50%]
-                -translate-x-1/2
-                -translate-y-1/2
-                w-[440px]
-                h-[440px]
-                rounded-full
-                blur-[95px]
-                ${
-                  activeGrade ===
-                  "COMMON"
-                    ? "bg-zinc-400/10"
-                    : activeGrade ===
-                      "RARE"
-                    ? "bg-cyan-400/18"
-                    : activeGrade ===
-                      "EPIC"
-                    ? "bg-purple-400/22"
-                    : "bg-orange-400/28"
-                }
-              `}
+              className="absolute left-[44%] top-[50%] -translate-x-1/2 -translate-y-1/2 w-[440px] h-[440px] rounded-full blur-[95px]"
+              style={{
+                backgroundColor: gradeCssVar[activeGrade],
+                opacity:
+                  activeGrade === "COMMON"
+                    ? 0.1
+                    : activeGrade === "RARE"
+                    ? 0.18
+                    : activeGrade === "EPIC"
+                    ? 0.22
+                    : 0.28,
+              }}
             />
 
             <div className="relative z-10 flex items-start justify-between gap-5">

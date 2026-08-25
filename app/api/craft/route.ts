@@ -3,6 +3,11 @@ import {
 } from "next/server";
 
 import {
+  randomInt,
+  randomUUID,
+} from "node:crypto";
+
+import {
   supabaseAdmin,
 } from "@/lib/supabase-admin";
 
@@ -109,6 +114,31 @@ type GradeAsset = {
   model_path:
     | string
     | null;
+};
+
+type AtomicCraftItem =
+  Record<
+    string,
+    unknown
+  > & {
+    grade?: unknown;
+    thumbnail_url_snapshot?: unknown;
+    model_url_snapshot?: unknown;
+  };
+
+type AtomicCraftWallet =
+  Record<
+    string,
+    unknown
+  > & {
+    balance?: unknown;
+  };
+
+type AtomicCraftRpcResult = {
+  item?: AtomicCraftItem;
+  wallet?: AtomicCraftWallet;
+  request_id?: string;
+  idempotent_replay?: boolean;
 };
 
 /* =========================================================
@@ -238,6 +268,14 @@ function normalizeOptionalId(
   }
 
   return number;
+}
+
+function isUuid(
+  value: string
+) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
 }
 
 /* =========================================================
@@ -415,8 +453,11 @@ function rollGrade(
     );
 
   const roll =
-    Math.random() *
-    100;
+    randomInt(
+      0,
+      1_000_000
+    ) /
+    10_000;
 
   let cursor =
     odds.COMMON;
@@ -449,22 +490,6 @@ function rollGrade(
   }
 
   return "LEGENDARY";
-}
-
-/* =========================================================
-   SERIAL
-========================================================= */
-
-function createSerial(
-  seasonCode: string,
-  number: number
-) {
-  return `LF-${seasonCode}-${String(
-    number
-  ).padStart(
-    4,
-    "0"
-  )}`;
 }
 
 /* =========================================================
@@ -588,6 +613,30 @@ export async function POST(
       normalizeOptionalId(
         body?.design_id
       );
+
+    const rawRequestId =
+      typeof body?.request_id ===
+      "string"
+        ? body.request_id
+            .trim()
+        : "";
+
+    if (
+      rawRequestId &&
+      !isUuid(
+        rawRequestId
+      )
+    ) {
+      return jsonError(
+        "request_id ไม่ถูกต้อง",
+        400,
+        "INVALID_REQUEST_ID"
+      );
+    }
+
+    const requestId =
+      rawRequestId ||
+      randomUUID();
 
     if (
       Number.isNaN(
@@ -1384,394 +1433,193 @@ export async function POST(
     }
 
     /* =====================================================
-       16. GENERATE SERIAL
+       16. ATOMIC CRAFT TRANSACTION
 
-       Existing MVP allocator.
+       PostgreSQL RPC is the authority for:
+       - idempotency
+       - wallet row lock / balance deduction
+       - serial allocation
+       - item insert
+       - wallet ledger insert
 
-       TODO before high-concurrency LIVE:
-       move serial allocation into atomic Postgres RPC.
+       No unsafe application-level rollback fallback is used.
     ===================================================== */
 
     const {
       data:
-        latestItem,
+        atomicDataRaw,
 
       error:
-        latestItemError,
+        atomicError,
     } =
       await supabaseAdmin
-        .from(
-          "items"
-        )
-        .select(
-          "id"
-        )
-        .order(
-          "id",
+        .rpc(
+          "lootform_craft_atomic",
           {
-            ascending:
-              false,
+            p_request_id:
+              requestId,
+
+            p_user_id:
+              user.id,
+
+            p_product_id:
+              product.id,
+
+            p_design_id:
+              design.id,
+
+            p_product_code:
+              product.code,
+
+            p_product_name:
+              product.name,
+
+            p_design_code:
+              design.design_code,
+
+            p_design_name:
+              design.name,
+
+            p_season_code:
+              season.season_code,
+
+            p_category:
+              product.category,
+
+            p_equip_slot:
+              product.equip_slot,
+
+            p_size:
+              size,
+
+            p_craft_cost:
+              craftCost,
+
+            p_grade:
+              grade,
+
+            p_thumbnail_url:
+              gradeAsset.thumbnail_url,
+
+            p_model_url:
+              gradeAsset.model_url ??
+              null,
+
+            p_environment_mode:
+              environmentMode,
           }
-        )
-        .limit(1)
-        .maybeSingle();
+        );
 
     if (
-      latestItemError
+      atomicError
     ) {
+      const atomicMessage =
+        String(
+          atomicError.message ??
+          ""
+        );
+
       console.error(
-        "CRAFT LATEST ITEM ERROR:",
-        latestItemError
+        "CRAFT ATOMIC RPC ERROR:",
+        atomicError
       );
-
-      return jsonError(
-        "ไม่สามารถสร้าง Item ID ได้",
-        500,
-        "SERIAL_GENERATION_FAILED"
-      );
-    }
-
-    const nextNumber =
-      Number(
-        latestItem?.id ??
-        0
-      ) + 1;
-
-    const serial =
-      createSerial(
-        season.season_code,
-        nextNumber
-      );
-
-    const snapshotAt =
-      new Date()
-        .toISOString();
-
-    /* =====================================================
-       17. CREATE ITEM
-
-       IMPORTANT:
-
-       Design Preview:
-         design.thumbnail_url
-         design.model_url
-
-       ARE NOT used for result snapshots anymore.
-
-       Result Snapshot:
-         gradeAsset.thumbnail_url
-         gradeAsset.model_url
-    ===================================================== */
-
-    const {
-      data:
-        newItem,
-
-      error:
-        itemError,
-    } =
-      await supabaseAdmin
-        .from(
-          "items"
-        )
-        .insert({
-          /* -----------------------------------------------
-             LEGACY / CORE IDENTITY
-          ----------------------------------------------- */
-
-          serial,
-
-          product:
-            product.name,
-
-          season:
-            season.season_code,
-
-          product_id:
-            product.id,
-
-          design_id:
-            design.id,
-
-          grade,
-
-          level:
-            0,
-
-          size,
-
-          owner_id:
-            user.id,
-
-          /* -----------------------------------------------
-             PRODUCTION
-          ----------------------------------------------- */
-
-          production_status:
-            "CRAFTED",
-
-          production_updated_at:
-            snapshotAt,
-
-          /* -----------------------------------------------
-             ENVIRONMENT
-          ----------------------------------------------- */
-
-          environment_mode:
-            environmentMode,
-
-          /* -----------------------------------------------
-             CATALOG SNAPSHOT
-          ----------------------------------------------- */
-
-          product_code_snapshot:
-            product.code,
-
-          product_name_snapshot:
-            product.name,
-
-          design_code_snapshot:
-            design.design_code,
-
-          design_name_snapshot:
-            design.name,
-
-          season_snapshot:
-            season.season_code,
-
-          category_snapshot:
-            product.category,
-
-          equip_slot_snapshot:
-            product.equip_slot,
-
-          craft_cost_lt_snapshot:
-            craftCost,
-
-          /*
-            NEW BEHAVIOR:
-
-            These are now Grade-specific Assets.
-          */
-
-          thumbnail_url_snapshot:
-            gradeAsset.thumbnail_url,
-
-          model_url_snapshot:
-            gradeAsset.model_url ??
-            null,
-
-          catalog_snapshot_at:
-            snapshotAt,
-        })
-        .select(
-          `
-          id,
-          serial,
-          product,
-          season,
-
-          product_id,
-          design_id,
-
-          grade,
-          level,
-          size,
-
-          owner_id,
-
-          production_status,
-          tracking_number,
-          production_updated_at,
-
-          environment_mode,
-
-          product_code_snapshot,
-          product_name_snapshot,
-          design_code_snapshot,
-          design_name_snapshot,
-          season_snapshot,
-          category_snapshot,
-          equip_slot_snapshot,
-          craft_cost_lt_snapshot,
-          thumbnail_url_snapshot,
-          model_url_snapshot,
-          catalog_snapshot_at,
-
-          created_at
-          `
-        )
-        .single();
-
-    if (
-      itemError ||
-      !newItem
-    ) {
-      console.error(
-        "CRAFT ITEM ERROR:",
-        itemError
-      );
-
-      return jsonError(
-        "สร้าง Item ไม่สำเร็จ",
-        500,
-        "ITEM_CREATE_FAILED"
-      );
-    }
-
-    /* =====================================================
-       18. UPDATE WALLET
-    ===================================================== */
-
-    const newBalance =
-      currentBalance -
-      craftCost;
-
-    const {
-      data:
-        updatedWallet,
-
-      error:
-        walletUpdateError,
-    } =
-      await supabaseAdmin
-        .from(
-          "wallets"
-        )
-        .update({
-          balance:
-            newBalance,
-
-          updated_at:
-            new Date()
-              .toISOString(),
-        })
-        .eq(
-          "user_id",
-          user.id
-        )
-        .select(
-          `
-          id,
-          user_id,
-          balance,
-          updated_at
-          `
-        )
-        .single();
-
-    if (
-      walletUpdateError ||
-      !updatedWallet
-    ) {
-      console.error(
-        "CRAFT WALLET UPDATE ERROR:",
-        walletUpdateError
-      );
-
-      /*
-        Current compatibility rollback.
-
-        Before LIVE at scale this should become ONE atomic
-        Postgres RPC transaction.
-      */
-
-      const {
-        error:
-          rollbackError,
-      } =
-        await supabaseAdmin
-          .from(
-            "items"
-          )
-          .delete()
-          .eq(
-            "id",
-            newItem.id
-          )
-          .eq(
-            "owner_id",
-            user.id
-          );
 
       if (
-        rollbackError
+        atomicMessage.includes(
+          "LOOTFORM_INSUFFICIENT_BALANCE"
+        )
       ) {
-        console.error(
-          "CRAFT ITEM ROLLBACK ERROR:",
-          rollbackError
+        return jsonError(
+          `Loot Token ไม่พอ ต้องใช้ ${craftCost} LT`,
+          400,
+          "INSUFFICIENT_BALANCE",
+          {
+            required:
+              craftCost,
+
+            balance:
+              currentBalance,
+          }
+        );
+      }
+
+      if (
+        atomicMessage.includes(
+          "LOOTFORM_WALLET_NOT_FOUND"
+        )
+      ) {
+        return jsonError(
+          "ไม่พบ Wallet ของ Player",
+          404,
+          "WALLET_NOT_FOUND"
+        );
+      }
+
+      if (
+        atomicMessage.includes(
+          "LOOTFORM_REQUEST_ID_CONFLICT"
+        ) ||
+        atomicMessage.includes(
+          "LOOTFORM_REQUEST_ID_PAYLOAD_MISMATCH"
+        )
+      ) {
+        return jsonError(
+          "Craft request ซ้ำแต่ข้อมูลไม่ตรงกัน กรุณาเริ่ม Craft ใหม่",
+          409,
+          "CRAFT_REQUEST_CONFLICT"
         );
       }
 
       return jsonError(
-        "เกิดข้อผิดพลาดในการหัก Token กรุณาติดต่อ Admin",
-        500,
-        "WALLET_UPDATE_FAILED"
+        "Atomic Craft transaction ไม่พร้อม กรุณาตรวจ Supabase migration ก่อน Deploy",
+        503,
+        "ATOMIC_CRAFT_NOT_READY"
       );
     }
 
-    /* =====================================================
-       19. WALLET LEDGER
-    ===================================================== */
+    const atomicData =
+      atomicDataRaw as
+        | AtomicCraftRpcResult
+        | null;
 
-    const {
-      error:
-        transactionError,
-    } =
-      await supabaseAdmin
-        .from(
-          "wallet_transactions"
-        )
-        .insert({
-          user_id:
-            user.id,
+    const newItem =
+      atomicData?.item;
 
-          type:
-            "CRAFT",
-
-          amount:
-            -craftCost,
-
-          description:
-            [
-              "CRAFT",
-              product.name,
-              design.design_code,
-              season.season_code,
-              grade,
-              size,
-              serial,
-            ].join(
-              " / "
-            ),
-
-          item_id:
-            newItem.id,
-
-          environment_mode:
-            environmentMode,
-        });
+    const updatedWallet =
+      atomicData?.wallet;
 
     if (
-      transactionError
+      !newItem ||
+      !updatedWallet
     ) {
-      /*
-        Current legacy behavior:
-        Item + wallet remain successful.
-
-        Before LIVE, move:
-        Item creation
-        + wallet deduction
-        + ledger
-
-        into one Postgres transaction/RPC.
-      */
-
-      console.error(
-        "CRAFT WALLET TRANSACTION ERROR:",
-        transactionError
+      return jsonError(
+        "Atomic Craft transaction ส่งผลลัพธ์ไม่ครบ",
+        500,
+        "ATOMIC_CRAFT_INVALID_RESPONSE"
       );
     }
+
+    const committedGradeRaw =
+      String(
+        newItem.grade ??
+        grade
+      )
+        .trim()
+        .toUpperCase();
+
+    const committedGrade =
+      GRADES.includes(
+        committedGradeRaw as
+          Grade
+      )
+        ? committedGradeRaw as
+            Grade
+        : grade;
+
+    const committedGradeAsset =
+      assetMap.get(
+        committedGrade
+      );
 
     /* =====================================================
        20. SUCCESS
@@ -1795,7 +1643,8 @@ export async function POST(
           cost:
             craftCost,
 
-          grade,
+          grade:
+            committedGrade,
 
           size,
 
@@ -1833,19 +1682,33 @@ export async function POST(
 
           grade_asset: {
             id:
-              gradeAsset.id,
+              committedGradeAsset?.id ??
+              null,
 
             grade:
-              gradeAsset.grade,
+              committedGrade,
 
             thumbnail_url:
-              gradeAsset.thumbnail_url,
+              String(
+                newItem.thumbnail_url_snapshot ??
+                committedGradeAsset?.thumbnail_url ??
+                ""
+              ),
 
             model_url:
-              gradeAsset.model_url ??
+              newItem.model_url_snapshot ??
+              committedGradeAsset?.model_url ??
               null,
           },
         },
+
+        request_id:
+          atomicData?.request_id ??
+          requestId,
+
+        idempotent_replay:
+          atomicData?.idempotent_replay ===
+          true,
 
         odds:
           getSeasonOdds(

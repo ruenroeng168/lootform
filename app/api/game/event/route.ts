@@ -1548,6 +1548,35 @@ export async function POST(
        14. UPDATE SESSION HEARTBEAT
     ===================================================== */
 
+    const terminalStatus =
+      eventType === "COMPLETE"
+        ? "COMPLETED"
+        : eventType === "FAIL"
+        ? "FAILED"
+        : null;
+
+    const sessionUpdate: {
+      last_event_at: string;
+      status?: "COMPLETED" | "FAILED";
+      completed_at?: string;
+      final_score?: number | null;
+    } = {
+      last_event_at:
+        now,
+    };
+
+    if (terminalStatus) {
+      sessionUpdate.status =
+        terminalStatus;
+
+      sessionUpdate.completed_at =
+        now;
+
+      sessionUpdate.final_score =
+        numericValue ??
+        gameSession.final_score;
+    }
+
     const {
       error:
         heartbeatError,
@@ -1556,10 +1585,9 @@ export async function POST(
         .from(
           "game_sessions"
         )
-        .update({
-          last_event_at:
-            now,
-        })
+        .update(
+          sessionUpdate
+        )
         .eq(
           "id",
           gameSession.id
@@ -1567,6 +1595,10 @@ export async function POST(
         .eq(
           "user_id",
           userId
+        )
+        .eq(
+          "status",
+          "ACTIVE"
         );
 
     if (
@@ -1695,10 +1727,22 @@ export async function POST(
             gameSession.id,
 
           status:
+            terminalStatus ??
             gameSession.status,
 
           last_event_at:
             now,
+
+          completed_at:
+            terminalStatus
+              ? now
+              : gameSession.completed_at,
+
+          final_score:
+            terminalStatus
+              ? numericValue ??
+                gameSession.final_score
+              : gameSession.final_score,
         },
 
         game: {
