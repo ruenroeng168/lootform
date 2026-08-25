@@ -130,40 +130,54 @@ const gradeTheme: Record<
 };
 
 /* =========================================================
-   GRADE MODEL TINT
+   GRADE AURA
 
-   Whole-model color tint applied to every material on the
-   loaded GLB, multiplied against its existing base color
-   texture. COMMON is left untouched (0 strength) so the
-   model's real colors show as-is; higher grades get a
-   progressively stronger wash of the grade color plus a
-   faint emissive glow on LEGENDARY.
+   The model itself is never recolored — most GLBs here
+   (including AI-generated ones) are a single merged
+   mesh/material with one baked texture, so there is no
+   separate "shirt" part to isolate and tint without manual
+   re-authoring in a 3D tool.
 
-   This is a deliberate fallback: most GLBs here (including
-   AI-generated ones) are a single merged mesh/material, so
-   there is no separate "shirt" part to recolor in isolation
-   — tinting the whole model is the only fully-automatic
-   option without manual re-authoring in a 3D tool.
+   Instead, grade is shown as a glowing ring aura on the
+   ground beneath the character. COMMON has no entry, so it
+   renders no aura at all — same "no special effect on the
+   base grade" convention already used for the Legendary-only
+   CSS streak effects below.
 ========================================================= */
 
-const gradeTintStrength: Record<
-  Grade,
-  number
-> = {
-  COMMON: 0,
-  RARE: 0.22,
-  EPIC: 0.3,
-  LEGENDARY: 0.38,
+type GradeAuraConfig = {
+  color: string;
+  ringRadii: number[];
+  opacity: number;
+  spinSpeed: number;
 };
 
-const gradeEmissiveIntensity: Record<
-  Grade,
-  number
+const gradeAuraConfig: Partial<
+  Record<
+    Grade,
+    GradeAuraConfig
+  >
 > = {
-  COMMON: 0,
-  RARE: 0,
-  EPIC: 0,
-  LEGENDARY: 0.16,
+  RARE: {
+    color: "#22d3ee",
+    ringRadii: [1.55, 1.8, 2.05],
+    opacity: 0.5,
+    spinSpeed: 0.18,
+  },
+
+  EPIC: {
+    color: "#c084fc",
+    ringRadii: [1.65, 1.95, 2.25],
+    opacity: 0.6,
+    spinSpeed: 0.25,
+  },
+
+  LEGENDARY: {
+    color: "#fb923c",
+    ringRadii: [1.75, 2.1, 2.45],
+    opacity: 0.72,
+    spinSpeed: 0.34,
+  },
 };
 
 /* =========================================================
@@ -288,10 +302,8 @@ function ModelUnavailable({
 
 function PlayerModel({
   modelUrl,
-  grade,
 }: {
   modelUrl: string;
-  grade: Grade;
 }) {
   const rootRef =
     useRef<THREE.Group>(
@@ -374,48 +386,6 @@ function PlayerModel({
                     material.envMapIntensity =
                       0.55;
 
-                    const tintStrength =
-                      gradeTintStrength[
-                        grade
-                      ];
-
-                    if (
-                      tintStrength >
-                      0
-                    ) {
-                      material.color =
-                        material.color
-                          .clone()
-                          .lerp(
-                            new THREE.Color(
-                              gradeTheme[
-                                grade
-                              ].color
-                            ),
-                            tintStrength
-                          );
-                    }
-
-                    const emissiveIntensity =
-                      gradeEmissiveIntensity[
-                        grade
-                      ];
-
-                    if (
-                      emissiveIntensity >
-                      0
-                    ) {
-                      material.emissive =
-                        new THREE.Color(
-                          gradeTheme[
-                            grade
-                          ].color
-                        );
-
-                      material.emissiveIntensity =
-                        emissiveIntensity;
-                    }
-
                     material.needsUpdate =
                       true;
                   }
@@ -487,7 +457,6 @@ function PlayerModel({
       },
       [
         scene,
-        grade,
       ]
     );
 
@@ -677,6 +646,121 @@ function SafeLighting({
 }
 
 /* =========================================================
+   GRADE AURA RING
+
+   A set of concentric glowing rings on the ground beneath
+   the character, colored by grade. Additive blending stacks
+   the rings into a soft glow without needing a generated
+   gradient texture. Slowly spins around the character.
+
+   Renders nothing for COMMON (see gradeAuraConfig above).
+========================================================= */
+
+function CharacterAura({
+  grade,
+}: {
+  grade: Grade;
+}) {
+  const groupRef =
+    useRef<THREE.Group>(
+      null
+    );
+
+  const config =
+    gradeAuraConfig[
+      grade
+    ];
+
+  useFrame(
+    (
+      _state,
+      delta
+    ) => {
+      if (
+        !groupRef.current ||
+        !config
+      ) {
+        return;
+      }
+
+      groupRef.current.rotation.y +=
+        delta *
+        config.spinSpeed;
+    }
+  );
+
+  if (!config) {
+    return null;
+  }
+
+  return (
+    <group
+      ref={
+        groupRef
+      }
+      position={[
+        0,
+        -1.0,
+        0,
+      ]}
+    >
+
+      {config.ringRadii.map(
+        (
+          radius,
+          index
+        ) => (
+          <mesh
+            key={
+              radius
+            }
+            rotation={[
+              -Math.PI /
+                2,
+              0,
+              0,
+            ]}
+          >
+
+            <ringGeometry
+              args={[
+                radius -
+                  0.035,
+                radius,
+                64,
+              ]}
+            />
+
+            <meshBasicMaterial
+              color={
+                config.color
+              }
+              transparent
+              opacity={
+                config.opacity -
+                index *
+                  0.14
+              }
+              blending={
+                THREE.AdditiveBlending
+              }
+              depthWrite={
+                false
+              }
+              side={
+                THREE.DoubleSide
+              }
+            />
+
+          </mesh>
+        )
+      )}
+
+    </group>
+  );
+}
+
+/* =========================================================
    SCENE
 ========================================================= */
 
@@ -714,6 +798,9 @@ function CharacterScene({
         modelUrl={
           modelUrl
         }
+      />
+
+      <CharacterAura
         grade={
           grade
         }
