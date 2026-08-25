@@ -1,8 +1,18 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+**LOOTFORM** is a [Next.js](https://nextjs.org) app for a loot-crafting game: players craft items, collect gear by grade (Common/Rare/Epic/Legendary), equip a 3D character, and track their collection score and global rank. It uses [Supabase](https://supabase.com) for auth, database, and storage.
 
 ## Getting Started
 
-First, run the development server:
+### Environment variables
+
+Create a `.env.local` file in the project root with:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+SUPABASE_SECRET_KEY=your-supabase-secret-key
+```
+
+### Run the dev server
 
 ```bash
 npm run dev
