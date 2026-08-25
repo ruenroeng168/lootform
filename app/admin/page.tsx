@@ -611,6 +611,22 @@ export default function AdminDashboardPage() {
                 />
 
                 {/* ===========================================
+                    TOP-UP
+                =========================================== */}
+
+                <ControlCard
+                  title="TOP-UP"
+                  description="Bank/QR settings, packages, and pending slip review."
+                  button="OPEN TOP-UP"
+                  accent="lime"
+                  onClick={() =>
+                    router.push(
+                      "/admin/topup"
+                    )
+                  }
+                />
+
+                {/* ===========================================
                     SEASON
                 =========================================== */}
 

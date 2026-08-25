@@ -1,685 +1,454 @@
 "use client";
 
-import {
-  useEffect,
-  useState,
-} from "react";
-
-import {
-  useRouter,
-} from "next/navigation";
-
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-
-import {
-  supabase,
-} from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 // =====================================
 // TYPES
 // =====================================
 
+type TopupPackage = {
+  id: number;
+  amount_thb: number;
+  label: string | null;
+};
+
+type TopupSettings = {
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
+  qr_image_url: string | null;
+  rate_lt_per_thb: number;
+};
+
+type SubmittedOrder = {
+  id: number;
+  reference: string;
+  amount_thb: number;
+  token_amount: number;
+  status: string;
+};
+
 type TopupSuccess = {
   reference: string;
   order_id: number;
   token_amount: number;
-  previous_balance?: number;
   balance: number;
-  already_paid?: boolean;
 };
 
-type TopupPackage = {
-  code: string;
-  tokenAmount: number;
-  priceTHB: number;
-};
+const MAX_SLIP_SIZE = 5 * 1024 * 1024;
 
-// =====================================
-// TEST PACKAGE
-// =====================================
-
-const TOPUP_PACKAGE: TopupPackage = {
-  code: "LT100",
-  tokenAmount: 100,
-  priceTHB: 999,
-};
+function validateSlipFile(file: File) {
+  const allowed = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowed.includes(file.type)) return "รองรับเฉพาะไฟล์ JPEG, PNG และ WEBP";
+  if (file.size > MAX_SLIP_SIZE) return "สลิปต้องมีขนาดไม่เกิน 5 MB";
+  return "";
+}
 
 // =====================================
 // PAGE
 // =====================================
 
 export default function WalletTopupPage() {
-  const router =
-    useRouter();
+  const router = useRouter();
 
-  const [
-    loading,
-    setLoading,
-  ] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
+  const [balance, setBalance] = useState(0);
 
-  const [
-    toppingUp,
-    setToppingUp,
-  ] =
-    useState(false);
+  const [packages, setPackages] = useState<TopupPackage[]>([]);
+  const [settings, setSettings] = useState<TopupSettings | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submittedOrder, setSubmittedOrder] = useState<SubmittedOrder | null>(null);
 
-  const [
-    userEmail,
-    setUserEmail,
-  ] =
-    useState("");
+  const [testToppingUp, setTestToppingUp] = useState(false);
+  const [testSuccess, setTestSuccess] = useState<TopupSuccess | null>(null);
+  const [isTestMode, setIsTestMode] = useState(false);
 
-  const [
-    balance,
-    setBalance,
-  ] =
-    useState(0);
-
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] =
-    useState("");
-
-  const [
-    success,
-    setSuccess,
-  ] =
-    useState<
-      TopupSuccess | null
-    >(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // =====================================
-  // LOAD WALLET
+  // LOAD
   // =====================================
 
-  async function loadWallet() {
+  async function loadAll() {
     setLoading(true);
     setErrorMessage("");
 
     try {
       const {
-        data: {
-          session,
-        },
-      } =
-        await supabase.auth.getSession();
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
-        router.push(
-          "/login"
-        );
-
+        router.push("/login");
         return;
       }
 
-      const user =
-        session.user;
+      setUserEmail(session.user.email ?? "PLAYER");
 
-      setUserEmail(
-        user.email ??
-          "PLAYER"
-      );
+      const [{ data: wallet, error: walletError }, packagesResponse] = await Promise.all([
+        supabase.from("wallets").select("balance").eq("user_id", session.user.id).maybeSingle(),
+        fetch("/api/topup/packages", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          cache: "no-store",
+        }),
+      ]);
 
-      const {
-        data:
-          wallet,
+      if (walletError) throw walletError;
 
-        error:
-          walletError,
-      } =
-        await supabase
-          .from(
-            "wallets"
-          )
-          .select(`
-            balance
-          `)
-          .eq(
-            "user_id",
-            user.id
-          )
-          .maybeSingle();
+      setBalance(Number(wallet?.balance ?? 0));
 
-      if (
-        walletError
-      ) {
-        throw walletError;
+      const packagesResult = await packagesResponse.json();
+
+      if (!packagesResponse.ok || !packagesResult.success) {
+        throw new Error(packagesResult.message || "Unable to load top-up options");
       }
 
-      setBalance(
-        Number(
-          wallet?.balance ??
-            0
-        )
-      );
+      setPackages(packagesResult.packages as TopupPackage[]);
+      setSettings(packagesResult.settings as TopupSettings | null);
+      setIsTestMode(packagesResult.environment_mode === "TEST");
     } catch (error) {
-      console.error(
-        "LOAD TOPUP WALLET ERROR:",
-        error
-      );
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to load wallet"
-      );
+      console.error("LOAD TOPUP ERROR:", error);
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load top-up");
     } finally {
       setLoading(false);
     }
   }
 
-  // =====================================
-  // FIRST LOAD
-  // =====================================
-
   useEffect(() => {
-    loadWallet();
+    loadAll();
   }, []);
 
   // =====================================
-  // TEST TOP-UP
+  // SUBMIT REAL TOP-UP REQUEST
   // =====================================
 
-  async function testTopup() {
-    setToppingUp(true);
+  async function submitTopupRequest() {
+    if (!selectedPackageId) {
+      setErrorMessage("กรุณาเลือกแพ็คเกจก่อน");
+      return;
+    }
+
+    if (!slipFile) {
+      setErrorMessage("กรุณาแนบสลิปการโอนเงิน");
+      return;
+    }
+
+    const validationError = validateSlipFile(slipFile);
+    if (validationError) {
+      setErrorMessage(validationError);
+      return;
+    }
+
+    setSubmitting(true);
     setErrorMessage("");
-    setSuccess(null);
 
     try {
       const {
-        data: {
-          session,
-        },
-      } =
-        await supabase.auth.getSession();
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
-        router.push(
-          "/login"
-        );
-
+        router.push("/login");
         return;
       }
 
-      const response =
-        await fetch(
-          "/api/wallet/topup/test",
-          {
-            method:
-              "POST",
+      const formData = new FormData();
+      formData.append("package_id", String(selectedPackageId));
+      formData.append("file", slipFile);
 
-            headers: {
-              "Content-Type":
-                "application/json",
+      const response = await fetch("/api/wallet/topup/request", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
 
-              Authorization:
-                `Bearer ${session.access_token}`,
-            },
+      const result = await response.json();
 
-            body:
-              JSON.stringify({
-                packageCode:
-                  TOPUP_PACKAGE.code,
-              }),
-          }
-        );
-
-      const text =
-        await response.text();
-
-      let result:
-        any = null;
-
-      if (text) {
-        try {
-          result =
-            JSON.parse(
-              text
-            );
-        } catch {
-          throw new Error(
-            "Top-up API ตอบกลับข้อมูลไม่ถูกต้อง"
-          );
-        }
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "ไม่สามารถส่งคำขอเติมเงินได้");
       }
 
-      if (
-        !response.ok
-      ) {
-        throw new Error(
-          result?.message ||
-            "ไม่สามารถเติม LT ได้"
-        );
-      }
-
-      if (
-        !result?.topup
-      ) {
-        throw new Error(
-          "ไม่พบข้อมูล Top-up Result"
-        );
-      }
-
-      const topup =
-        result.topup as
-          TopupSuccess;
-
-      setSuccess(
-        topup
-      );
-
-      setBalance(
-        Number(
-          topup.balance ??
-            0
-        )
-      );
+      setSubmittedOrder(result.order as SubmittedOrder);
+      setSelectedPackageId(null);
+      setSlipFile(null);
     } catch (error) {
-      console.error(
-        "TEST TOPUP ERROR:",
-        error
-      );
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "ไม่สามารถเติม LT ได้"
-      );
+      console.error("TOPUP REQUEST ERROR:", error);
+      setErrorMessage(error instanceof Error ? error.message : "ไม่สามารถส่งคำขอเติมเงินได้");
     } finally {
-      setToppingUp(false);
+      setSubmitting(false);
     }
   }
 
   // =====================================
-  // LOADING
+  // TEST TOP-UP (dev convenience, server rejects outside TEST mode)
   // =====================================
+
+  async function testTopup() {
+    setTestToppingUp(true);
+    setErrorMessage("");
+    setTestSuccess(null);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch("/api/wallet/topup/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ packageCode: "LT100" }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.message || "ไม่สามารถเติม LT ได้");
+      }
+
+      const topup = result.topup as TopupSuccess;
+      setTestSuccess(topup);
+      setBalance(Number(topup.balance ?? 0));
+    } catch (error) {
+      console.error("TEST TOPUP ERROR:", error);
+      setErrorMessage(error instanceof Error ? error.message : "ไม่สามารถเติม LT ได้");
+    } finally {
+      setTestToppingUp(false);
+    }
+  }
+
+  const selectedPackage = packages.find((pkg) => pkg.id === selectedPackageId) ?? null;
+  const selectedTokenAmount =
+    selectedPackage && settings ? Math.round(selectedPackage.amount_thb * settings.rate_lt_per_thb) : 0;
 
   if (loading) {
     return (
       <main className="min-h-screen bg-black text-white">
-
         <Navbar />
-
         <div className="min-h-[80vh] flex items-center justify-center">
-
-          <p className="text-lime-400 tracking-[0.35em] animate-pulse">
-            LOADING TOP-UP...
-          </p>
-
+          <p className="text-lime-400 tracking-[0.35em] animate-pulse">LOADING TOP-UP...</p>
         </div>
-
       </main>
     );
   }
 
-  // =====================================
-  // PAGE
-  // =====================================
-
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
-
       <Navbar />
 
-      {/* BACKGROUND */}
-
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-
         <div className="absolute top-[-300px] left-1/2 -translate-x-1/2 w-[1000px] h-[800px] rounded-full bg-lime-400/8 blur-[180px]" />
-
         <div className="absolute bottom-[-300px] left-[-250px] w-[700px] h-[700px] rounded-full bg-cyan-500/8 blur-[180px]" />
-
-        <div className="absolute bottom-[-300px] right-[-250px] w-[700px] h-[700px] rounded-full bg-purple-500/8 blur-[180px]" />
-
       </div>
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-10">
-
-        {/* =====================================
-            PLAYER
-        ===================================== */}
-
         <section className="flex items-center justify-between gap-5 flex-wrap">
-
           <div className="flex items-center gap-3">
-
             <div className="w-11 h-11 rounded-xl border border-cyan-400/30 bg-cyan-400/5 flex items-center justify-center text-cyan-400 font-black">
               P1
             </div>
-
             <div>
-
-              <p className="text-zinc-600 text-[9px] tracking-[0.25em]">
-                PLAYER
-              </p>
-
-              <p className="text-cyan-400 text-sm mt-1">
-                {userEmail}
-              </p>
-
+              <p className="text-zinc-600 text-[9px] tracking-[0.25em]">PLAYER</p>
+              <p className="text-cyan-400 text-sm mt-1">{userEmail}</p>
             </div>
-
           </div>
 
           <button
-            onClick={() =>
-              router.push(
-                "/wallet"
-              )
-            }
-            className="
-              border
-              border-zinc-800
-              bg-black/40
-              text-zinc-300
-              px-5
-              py-3
-              rounded-xl
-              text-xs
-              font-black
-              hover:border-lime-400
-              hover:text-lime-400
-              transition
-            "
+            onClick={() => router.push("/wallet")}
+            className="border border-zinc-800 bg-black/40 text-zinc-300 px-5 py-3 rounded-xl text-xs font-black hover:border-lime-400 hover:text-lime-400 transition"
           >
             ← WALLET
           </button>
-
         </section>
-
-        {/* =====================================
-            HEADER
-        ===================================== */}
 
         <section className="mt-10">
-
-          <div className="inline-flex items-center gap-2 border border-yellow-300/20 bg-yellow-300/5 rounded-full px-4 py-2">
-
-            <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" />
-
-            <span className="text-yellow-300 text-[9px] tracking-[0.3em]">
-              TEST MODE
-            </span>
-
-          </div>
-
-          <h1 className="text-5xl sm:text-7xl font-black mt-5">
-            TOP UP{" "}
-
-            <span className="text-lime-400">
-              TOKEN
-            </span>
+          <h1 className="text-5xl sm:text-7xl font-black">
+            TOP UP <span className="text-lime-400">TOKEN</span>
           </h1>
-
           <p className="text-zinc-500 mt-4 max-w-xl">
-            เติม Loot Token สำหรับทดสอบระบบ LOOTFORM
-            โดยยังไม่มีการเรียกเก็บเงินจริง
+            เลือกแพ็คเกจ โอนเงินตามบัญชี/QR ที่แสดง แล้วแนบสลิป — แอดมินจะตรวจสอบและเติม LT
+            ให้เมื่ออนุมัติ
           </p>
-
         </section>
-
-        {/* =====================================
-            ERROR
-        ===================================== */}
 
         {errorMessage && (
           <div className="mt-6 border border-red-400/30 bg-red-400/[0.07] text-red-400 rounded-xl p-5">
-
             ⚠ {errorMessage}
-
           </div>
         )}
 
+        {submittedOrder && (
+          <section className="mt-6 border border-cyan-400/30 bg-cyan-400/[0.05] rounded-2xl p-6">
+            <p className="text-cyan-400 text-[9px] tracking-[0.25em]">คำขอส่งสำเร็จ</p>
+            <p className="text-white text-2xl font-black mt-3">รอการตรวจสอบจากแอดมิน</p>
+            <div className="grid sm:grid-cols-3 gap-3 mt-5">
+              <Info label="REFERENCE" value={submittedOrder.reference} />
+              <Info label="จำนวนเงิน" value={`฿${submittedOrder.amount_thb.toLocaleString()}`} />
+              <Info label="LT ที่จะได้รับ" value={`${submittedOrder.token_amount} LT`} />
+            </div>
+          </section>
+        )}
+
+        <section className="mt-8 border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6 sm:p-8">
+          <p className="text-zinc-600 text-[9px] tracking-[0.25em]">CURRENT BALANCE</p>
+          <div className="flex items-end gap-3 mt-4">
+            <p className="text-lime-400 text-6xl sm:text-8xl font-black">
+              {balance.toLocaleString()}
+            </p>
+            <p className="text-zinc-500 text-xl font-black mb-2">LT</p>
+          </div>
+        </section>
+
         {/* =====================================
-            SUCCESS
+            1. SELECT PACKAGE
         ===================================== */}
 
-        {success && (
-          <section className="mt-6 border border-lime-400/30 bg-lime-400/[0.05] rounded-2xl p-6">
+        <section className="mt-6">
+          <p className="text-cyan-400 text-[9px] tracking-[0.25em]">STEP 1</p>
+          <h2 className="text-2xl sm:text-3xl font-black mt-2">เลือกแพ็คเกจ</h2>
 
-            <p className="text-lime-400 text-[9px] tracking-[0.25em]">
-              TOP-UP SUCCESS
-            </p>
+          {packages.length === 0 ? (
+            <p className="text-zinc-600 text-sm mt-4">ยังไม่มีแพ็คเกจให้เลือกในขณะนี้</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              {packages.map((pkg) => {
+                const tokenAmount = settings
+                  ? Math.round(pkg.amount_thb * settings.rate_lt_per_thb)
+                  : 0;
+                const selected = selectedPackageId === pkg.id;
 
-            <div className="flex items-end justify-between gap-5 flex-wrap mt-4">
+                return (
+                  <button
+                    key={pkg.id}
+                    onClick={() => setSelectedPackageId(pkg.id)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      selected
+                        ? "border-lime-400 bg-lime-400/[0.08]"
+                        : "border-zinc-800 bg-black/40 hover:border-zinc-600"
+                    }`}
+                  >
+                    <p className="text-white text-2xl font-black">฿{pkg.amount_thb.toLocaleString()}</p>
+                    <p className="text-lime-400 text-sm font-black mt-1">{tokenAmount} LT</p>
+                    {pkg.label && <p className="text-zinc-600 text-[10px] mt-1">{pkg.label}</p>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-              <div>
+        {/* =====================================
+            2. PAY + 3. ATTACH SLIP
+        ===================================== */}
 
-                <p className="text-white text-4xl font-black">
-                  +{success.token_amount} LT
-                </p>
+        {selectedPackage && (
+          <section className="mt-6 border border-lime-400/30 bg-gradient-to-br from-lime-400/[0.06] to-black rounded-[28px] overflow-hidden">
+            <div className="p-6 sm:p-8">
+              <p className="text-cyan-400 text-[9px] tracking-[0.25em]">STEP 2</p>
+              <h2 className="text-2xl font-black mt-2">โอนเงินตามรายละเอียดนี้</h2>
 
-                <p className="text-zinc-500 text-sm mt-2">
-                  Loot Token added successfully.
-                </p>
+              <div className="grid sm:grid-cols-[auto_1fr] gap-6 mt-5">
+                <div className="flex items-center justify-center rounded-xl border border-zinc-800 bg-black/50 p-4 h-[200px] w-[200px] mx-auto sm:mx-0">
+                  {settings?.qr_image_url ? (
+                    <img
+                      src={settings.qr_image_url}
+                      alt="Payment QR"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <p className="text-zinc-600 text-[10px] text-center">ยังไม่มี QR</p>
+                  )}
+                </div>
 
+                <div className="space-y-3">
+                  <Info label="ธนาคาร" value={settings?.bank_name || "-"} />
+                  <Info label="ชื่อบัญชี" value={settings?.bank_account_name || "-"} />
+                  <Info label="เลขบัญชี" value={settings?.bank_account_number || "-"} />
+                  <Info
+                    label="ยอดที่ต้องโอน"
+                    value={`฿${selectedPackage.amount_thb.toLocaleString()} → ${selectedTokenAmount} LT`}
+                  />
+                </div>
               </div>
-
-              <div className="border border-lime-400/25 bg-black/40 rounded-xl px-5 py-4">
-
-                <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
-                  NEW BALANCE
-                </p>
-
-                <p className="text-lime-400 text-2xl font-black mt-1">
-                  {success.balance.toLocaleString()} LT
-                </p>
-
-              </div>
-
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-3 mt-5">
+            <div className="border-t border-zinc-800 p-6 sm:p-8">
+              <p className="text-cyan-400 text-[9px] tracking-[0.25em]">STEP 3</p>
+              <h2 className="text-2xl font-black mt-2">แนบสลิปการโอนเงิน</h2>
 
-              <Info
-                label="REFERENCE"
-                value={
-                  success.reference
-                }
-              />
+              <label className="mt-4 block">
+                <span className="inline-block w-full text-center border border-dashed border-zinc-700 rounded-xl py-8 text-zinc-400 text-xs font-black cursor-pointer hover:border-lime-400 hover:text-lime-400 transition">
+                  {slipFile ? slipFile.name : "แตะเพื่อเลือกไฟล์สลิป (JPEG/PNG/WEBP, ≤5MB)"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(event) => setSlipFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
 
-              <Info
-                label="ORDER ID"
-                value={
-                  `#${success.order_id}`
-                }
-              />
-
+              <button
+                onClick={submitTopupRequest}
+                disabled={submitting}
+                className="w-full mt-5 bg-lime-400 text-black py-5 rounded-xl text-sm font-black hover:bg-lime-300 disabled:bg-zinc-800 disabled:text-zinc-600 transition"
+              >
+                {submitting ? "กำลังส่งคำขอ..." : "ส่งคำขอเติมเงิน"}
+              </button>
             </div>
-
           </section>
         )}
 
         {/* =====================================
-            WALLET BALANCE
+            DEV TEST TOP-UP
+
+            Only rendered when the system is in TEST mode. The API
+            already rejects this outside TEST mode, but hiding it
+            here too means players never see a dead button once the
+            system switches to LIVE at go-live.
         ===================================== */}
 
-        <section className="mt-8 border border-zinc-800 bg-zinc-950/75 rounded-[28px] p-6 sm:p-8">
+        {isTestMode && (
+          <section className="mt-10 border border-yellow-300/20 bg-yellow-300/[0.02] rounded-2xl p-6">
+            <div className="inline-flex items-center gap-2 border border-yellow-300/20 bg-yellow-300/5 rounded-full px-4 py-2">
+              <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" />
+              <span className="text-yellow-300 text-[9px] tracking-[0.3em]">DEV / TEST ONLY</span>
+            </div>
 
-          <p className="text-zinc-600 text-[9px] tracking-[0.25em]">
-            CURRENT BALANCE
-          </p>
-
-          <div className="flex items-end gap-3 mt-4">
-
-            <p className="text-lime-400 text-6xl sm:text-8xl font-black">
-              {balance.toLocaleString()}
+            <p className="text-zinc-500 text-xs mt-4">
+              ปุ่มนี้ใช้ทดสอบระบบเท่านั้น — เติม 100 LT ทันทีโดยไม่ต้องโอนเงินจริง
+              ใช้ได้เฉพาะตอนระบบอยู่ใน TEST mode เท่านั้น
             </p>
 
-            <p className="text-zinc-500 text-xl font-black mb-2">
-              LT
-            </p>
-
-          </div>
-
-        </section>
-
-        {/* =====================================
-            PACKAGE
-        ===================================== */}
-
-        <section className="mt-6">
-
-          <p className="text-cyan-400 text-[9px] tracking-[0.25em]">
-            TOKEN PACKAGE
-          </p>
-
-          <h2 className="text-2xl sm:text-3xl font-black mt-2">
-            SELECT PACKAGE
-          </h2>
-
-          <div className="mt-5 border border-lime-400/30 bg-gradient-to-br from-lime-400/[0.08] to-black rounded-[28px] overflow-hidden">
-
-            <div className="p-6 sm:p-8">
-
-              <div className="flex items-start justify-between gap-5 flex-wrap">
-
-                <div>
-
-                  <p className="text-lime-400 text-[9px] tracking-[0.3em]">
-                    LOOT TOKEN
-                  </p>
-
-                  <div className="flex items-end gap-3 mt-3">
-
-                    <p className="text-white text-5xl sm:text-6xl font-black">
-                      100
-                    </p>
-
-                    <p className="text-lime-400 text-xl font-black mb-1">
-                      LT
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <div className="text-right">
-
-                  <p className="text-zinc-600 text-[8px] tracking-[0.2em]">
-                    PRICE
-                  </p>
-
-                  <p className="text-orange-400 text-3xl font-black mt-2">
-                    ฿999
-                  </p>
-
-                </div>
-
-              </div>
-
-              <div className="grid sm:grid-cols-3 gap-3 mt-7">
-
-                <Info
-                  label="PACKAGE"
-                  value="LT100"
-                />
-
-                <Info
-                  label="TOKEN"
-                  value="100 LT"
-                />
-
-                <Info
-                  label="PRICE"
-                  value="999 THB"
-                />
-
-              </div>
-
-            </div>
-
-            {/* TEST WARNING */}
-
-            <div className="border-t border-yellow-300/20 bg-yellow-300/[0.03] p-5">
-
-              <p className="text-yellow-300 text-[9px] tracking-[0.2em] font-black">
-                ⚠ TEST PAYMENT
+            {testSuccess && (
+              <p className="text-lime-400 text-sm font-black mt-3">
+                +{testSuccess.token_amount} LT (Ref: {testSuccess.reference})
               </p>
+            )}
 
-              <p className="text-zinc-500 text-xs leading-5 mt-2">
-                ไม่มีการตัดเงินจริงในขั้นตอนนี้
-                ระบบจะจำลองการชำระเงินสำเร็จและเพิ่ม 100 LT
-                เข้า Wallet เพื่อทดสอบระบบ
-              </p>
-
-            </div>
-
-            {/* BUTTON */}
-
-            <div className="p-5 sm:p-6 border-t border-zinc-800">
-
-              <button
-                disabled={
-                  toppingUp
-                }
-                onClick={
-                  testTopup
-                }
-                className="
-                  w-full
-                  bg-lime-400
-                  text-black
-                  py-5
-                  rounded-xl
-                  text-sm
-                  font-black
-                  hover:bg-lime-300
-                  disabled:bg-zinc-800
-                  disabled:text-zinc-600
-                  disabled:cursor-not-allowed
-                  transition
-                "
-              >
-                {toppingUp
-                  ? "PROCESSING TEST TOP-UP..."
-                  : "TEST TOP-UP +100 LT"}
-              </button>
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* =====================================
-            FLOW
-        ===================================== */}
-
-        <section className="mt-6 border border-zinc-800 bg-zinc-950/60 rounded-2xl p-6">
-
-          <p className="text-purple-400 text-[9px] tracking-[0.25em]">
-            TEST FLOW
-          </p>
-
-          <div className="grid sm:grid-cols-3 gap-3 mt-5">
-
-            <Step
-              number="01"
-              title="TOP UP"
-              text="กดเติม 100 LT"
-            />
-
-            <Step
-              number="02"
-              title="SERVER"
-              text="สร้าง Order + Ledger"
-            />
-
-            <Step
-              number="03"
-              title="WALLET"
-              text="Balance เพิ่ม +100 LT"
-            />
-
-          </div>
-
-        </section>
-
+            <button
+              disabled={testToppingUp}
+              onClick={testTopup}
+              className="mt-4 border border-yellow-300/30 bg-yellow-300/[0.05] text-yellow-300 py-3 px-6 rounded-xl text-xs font-black hover:bg-yellow-300/10 disabled:opacity-50 transition"
+            >
+              {testToppingUp ? "PROCESSING..." : "TEST TOP-UP +100 LT"}
+            </button>
+          </section>
+        )}
       </div>
-
     </main>
   );
 }
@@ -688,64 +457,11 @@ export default function WalletTopupPage() {
 // INFO
 // =====================================
 
-function Info({
-  label,
-  value,
-}: {
-  label:
-    string;
-
-  value:
-    string;
-}) {
+function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="border border-zinc-800 bg-black/40 rounded-xl p-4">
-
-      <p className="text-zinc-600 text-[8px] tracking-[0.18em]">
-        {label}
-      </p>
-
-      <p className="text-white text-sm font-black mt-2 break-all">
-        {value}
-      </p>
-
-    </div>
-  );
-}
-
-// =====================================
-// STEP
-// =====================================
-
-function Step({
-  number,
-  title,
-  text,
-}: {
-  number:
-    string;
-
-  title:
-    string;
-
-  text:
-    string;
-}) {
-  return (
-    <div className="border border-zinc-800 bg-black/40 rounded-xl p-4">
-
-      <p className="text-cyan-400 text-[8px] font-black">
-        {number}
-      </p>
-
-      <p className="text-white font-black mt-2">
-        {title}
-      </p>
-
-      <p className="text-zinc-600 text-xs mt-2">
-        {text}
-      </p>
-
+      <p className="text-zinc-600 text-[8px] tracking-[0.18em]">{label}</p>
+      <p className="text-white text-sm font-black mt-2 break-all">{value}</p>
     </div>
   );
 }

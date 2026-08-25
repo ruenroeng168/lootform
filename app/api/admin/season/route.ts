@@ -22,6 +22,11 @@ type SeasonSettings = {
   start_at: string | null;
   end_at: string | null;
 
+  hero_image_url: string | null;
+  hero_image_path: string | null;
+  hero_model_url: string | null;
+  hero_model_path: string | null;
+
   created_at: string;
   updated_at: string;
 };
@@ -167,6 +172,10 @@ export async function GET(
         is_active,
         start_at,
         end_at,
+        hero_image_url,
+        hero_image_path,
+        hero_model_url,
+        hero_model_path,
         created_at,
         updated_at
       `)
@@ -213,6 +222,10 @@ export async function GET(
         is_active,
         start_at,
         end_at,
+        hero_image_url,
+        hero_image_path,
+        hero_model_url,
+        hero_model_path,
         created_at,
         updated_at
       `)
@@ -596,6 +609,10 @@ export async function PATCH(
         is_active,
         start_at,
         end_at,
+        hero_image_url,
+        hero_image_path,
+        hero_model_url,
+        hero_model_path,
         created_at,
         updated_at
       `)

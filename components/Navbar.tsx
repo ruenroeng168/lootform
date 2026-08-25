@@ -77,6 +77,11 @@ export default function Navbar() {
     },
 
     {
+      label: "CATALOG",
+      path: "/catalog",
+    },
+
+    {
       label: "GAME",
       path: "/game",
       symbol: "✦",
@@ -292,7 +297,8 @@ export default function Navbar() {
     if (
       !isAuthenticated &&
       path !== "/" &&
-      path !== "/login"
+      path !== "/login" &&
+      path !== "/catalog"
     ) {
       setMenuOpen(
         false
