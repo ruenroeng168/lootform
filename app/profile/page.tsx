@@ -13,6 +13,7 @@ import {
 import Image from "next/image";
 
 import Navbar from "@/components/Navbar";
+import CharacterAvatar from "@/components/CharacterAvatar";
 
 import {
   supabase,
@@ -48,6 +49,10 @@ type PlayerProfile = {
   created_at: string;
 
   updated_at: string;
+};
+
+type PlayerCharacterModel = {
+  model_url: string | null;
 };
 
 type EquippedItem = {
@@ -187,6 +192,14 @@ export default function ProfilePage() {
     useState(0);
 
   const [
+    playerCharacter,
+    setPlayerCharacter,
+  ] =
+    useState<
+      PlayerCharacterModel | null
+    >(null);
+
+  const [
     errorMessage,
     setErrorMessage,
   ] =
@@ -231,6 +244,54 @@ export default function ProfilePage() {
         user.email ??
           "PLAYER"
       );
+
+      // =====================================
+      // PLAYER CHARACTER (3D MODEL)
+      // =====================================
+
+      const {
+        data: {
+          session,
+        },
+      } =
+        await supabase.auth.getSession();
+
+      if (session) {
+        try {
+          const characterResponse =
+            await fetch(
+              "/api/profile/character",
+              {
+                method: "GET",
+
+                headers: {
+                  Authorization:
+                    `Bearer ${session.access_token}`,
+                },
+
+                cache: "no-store",
+              }
+            );
+
+          const characterResult =
+            await characterResponse.json();
+
+          if (
+            characterResponse.ok &&
+            characterResult?.ok
+          ) {
+            setPlayerCharacter(
+              characterResult.character ??
+                null
+            );
+          }
+        } catch (characterError) {
+          console.error(
+            "PROFILE CHARACTER ERROR:",
+            characterError
+          );
+        }
+      }
 
       // =====================================
       // PROFILE
@@ -693,59 +754,16 @@ export default function ProfilePage() {
                 CHARACTER
             ===================================== */}
 
-            <div className="relative z-10 h-[480px] mt-6 flex items-center justify-center">
+            <div className="relative z-10 h-[480px] mt-6">
 
-              {/* RINGS */}
-
-              <div className="absolute w-[420px] h-[420px] rounded-full border border-dashed border-zinc-700/40 character-ring" />
-
-              <div className="absolute w-[340px] h-[340px] rounded-full border border-cyan-400/10 character-ring-reverse" />
-
-              {/* CHARACTER BASE */}
-
-              <div className="relative z-10 w-[300px] h-[440px] flex flex-col items-center justify-end character-float">
-
-                {/* HEAD */}
-
-                <div className="relative w-[110px] h-[110px] rounded-full border border-zinc-700 bg-gradient-to-b from-zinc-700 to-zinc-900 shadow-[0_0_45px_rgba(255,255,255,0.04)]">
-
-                  <div className="absolute left-[28px] top-[46px] w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
-
-                  <div className="absolute right-[28px] top-[46px] w-2 h-2 bg-cyan-400 rounded-full shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
-
-                </div>
-
-                {/* BODY */}
-
-                <div className="relative -mt-1 w-[260px] h-[300px]">
-
-                  <div className="absolute inset-x-[30px] top-0 bottom-0 bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-950 border border-zinc-700 character-body" />
-
-                  {/* EQUIPPED SHIRT IMAGE */}
-
-                  {equippedItem && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center">
-
-                      <Image
-                        src={
-                          productImages[
-                            equippedItem.grade
-                          ]
-                        }
-                        alt={
-                          equippedItem.product
-                        }
-                        width={500}
-                        height={550}
-                        className="w-full h-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
-                      />
-
-                    </div>
-                  )}
-
-                </div>
-
-              </div>
+              <CharacterAvatar
+                grade={
+                  activeGrade
+                }
+                modelUrl={
+                  playerCharacter?.model_url
+                }
+              />
 
             </div>
 
@@ -1073,71 +1091,6 @@ export default function ProfilePage() {
 
           background-size:
             38px 38px;
-        }
-
-        @keyframes characterRing {
-          from {
-            transform:
-              rotate(0deg);
-          }
-
-          to {
-            transform:
-              rotate(360deg);
-          }
-        }
-
-        .character-ring {
-          animation:
-            characterRing
-            18s
-            linear
-            infinite;
-        }
-
-        .character-ring-reverse {
-          animation:
-            characterRing
-            11s
-            linear
-            infinite
-            reverse;
-        }
-
-        @keyframes characterFloat {
-          0%,
-          100% {
-            transform:
-              translateY(0);
-          }
-
-          50% {
-            transform:
-              translateY(-10px);
-          }
-        }
-
-        .character-float {
-          animation:
-            characterFloat
-            4s
-            ease-in-out
-            infinite;
-        }
-
-        .character-body {
-          clip-path:
-            polygon(
-              22% 0%,
-              78% 0%,
-              100% 17%,
-              88% 100%,
-              12% 100%,
-              0% 17%
-            );
-
-          border-radius:
-            28px 28px 22px 22px;
         }
 
       `}</style>
