@@ -174,7 +174,7 @@ export default function PublicHome() {
           no player identity exposed.
       ============================================================ */}
       {tickerEntries.length > 0 && (
-        <div className="relative z-10 overflow-hidden border-b border-[var(--border)] bg-black/40 py-2">
+        <div className="ticker-fade relative z-10 overflow-hidden border-b border-[var(--border)] bg-black/40 py-2">
           <div className="ticker-track flex w-max items-center gap-8">
             {tickerEntries.map((pull, index) => (
               <span
@@ -219,10 +219,21 @@ export default function PublicHome() {
               <button
                 type="button"
                 onClick={() => router.push("/login")}
-                className="rounded-xl bg-[var(--grade-rare)] px-8 py-4 text-sm font-black tracking-[0.04em] text-black transition hover:brightness-110"
+                className="rounded-xl bg-[var(--grade-rare)] px-8 py-4 text-sm font-black tracking-[0.04em] text-black shadow-[0_8px_30px_-8px_var(--grade-rare)] transition hover:brightness-110 hover:shadow-[0_10px_40px_-6px_var(--grade-rare)]"
               >
                 OPEN THE BOX NOW
               </button>
+
+              <p className="mt-3 text-xs text-[var(--muted-dim)]">
+                Free to join · Already have a player?{" "}
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="font-bold text-[var(--grade-rare)] hover:underline"
+                >
+                  Sign in
+                </button>
+              </p>
             </div>
 
             {countdown && !countdown.expired && (
@@ -239,11 +250,21 @@ export default function PublicHome() {
               </div>
             )}
 
-            <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3 font-mono text-[9px] tracking-[0.2em] text-[var(--muted-dim)]">
-              <span>PHYSICAL PRODUCT</span>
-              <span>UNIQUE ITEM ID</span>
-              <span>GRADE SYSTEM</span>
-              <span>PLAYER COLLECTION</span>
+            <div className="mt-8 flex flex-wrap gap-2">
+              {[
+                ["🔒", "SECURE ACCOUNT"],
+                ["🎲", "SERVER-VERIFIED ODDS"],
+                ["📦", "REAL SHIPPING"],
+                ["🏷️", "UNIQUE ITEM ID"],
+              ].map(([icon, label]) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-black/30 px-3 py-1.5 font-mono text-[9px] tracking-[0.14em] text-[var(--muted)]"
+                >
+                  <span aria-hidden="true">{icon}</span>
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -405,9 +426,60 @@ export default function PublicHome() {
             </article>
           ))}
         </section>
+
+        {/* ============================================================
+            CLOSING CTA — repeat the ask for anyone who scrolled this far
+        ============================================================ */}
+        <section className="hud-frame relative mt-16 overflow-hidden p-8 text-center sm:p-12">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-40"
+            style={{
+              background:
+                "radial-gradient(60% 100% at 50% 0%, var(--grade-rare) 0%, transparent 70%)",
+            }}
+          />
+
+          <div className="relative">
+            <p className="font-mono text-[9px] tracking-[0.28em] text-[var(--grade-rare)]">
+              READY WHEN YOU ARE
+            </p>
+            <h2 className="font-display mt-3 text-2xl font-black sm:text-4xl">
+              CREATE YOUR PLAYER. CRAFT YOUR FIRST DROP.
+            </h2>
+            <p className="mx-auto mt-3 max-w-[520px] text-sm text-[var(--muted)]">
+              Free account, server-rolled odds, and a real physical item on the way the moment
+              you Craft.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="mt-7 rounded-xl bg-[var(--grade-rare)] px-10 py-4 text-sm font-black tracking-[0.04em] text-black transition hover:brightness-110"
+            >
+              OPEN THE BOX NOW
+            </button>
+          </div>
+        </section>
       </div>
 
       <style jsx>{`
+        .ticker-fade {
+          mask-image: linear-gradient(
+            90deg,
+            transparent 0,
+            black 48px,
+            black calc(100% - 48px),
+            transparent 100%
+          );
+          -webkit-mask-image: linear-gradient(
+            90deg,
+            transparent 0,
+            black 48px,
+            black calc(100% - 48px),
+            transparent 100%
+          );
+        }
+
         @keyframes lootformTicker {
           from {
             transform: translateX(0);
