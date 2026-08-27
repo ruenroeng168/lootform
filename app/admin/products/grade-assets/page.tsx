@@ -3,6 +3,7 @@
 import {
   ChangeEvent,
   ReactNode,
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -182,9 +183,31 @@ const gradeBackground: Record<
 
 /* =========================================================
    PAGE
+
+   useSearchParams() requires a Suspense boundary above it for
+   static export/prerendering (Next.js "missing-suspense-with-csr-
+   bailout") -- the default export below wraps the actual page in
+   one; this inner component is unchanged otherwise.
 ========================================================= */
 
 export default function AdminGradeAssetsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-black text-white">
+          <Navbar />
+          <div className="flex min-h-[80vh] items-center justify-center text-sm font-black tracking-[0.3em] text-cyan-400">
+            LOADING...
+          </div>
+        </main>
+      }
+    >
+      <AdminGradeAssetsContent />
+    </Suspense>
+  );
+}
+
+function AdminGradeAssetsContent() {
   const router =
     useRouter();
 
