@@ -10,6 +10,9 @@ import {
 /*
   Temporary Phase 2 rollout gate for the Game section (/game,
   /game/play). Presentation-only -- grants no gameplay authority.
+  (build marker: force a fresh, uncached Vercel build so a newly
+  saved NEXT_PUBLIC_GAME_COMING_SOON value is guaranteed to be
+  re-inlined into the client bundle.)
 
   When NEXT_PUBLIC_GAME_COMING_SOON is not "true", this resolves to
   allowed=true immediately with no network round trip -- flipping
