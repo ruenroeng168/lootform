@@ -57,6 +57,42 @@ type ItemRow = {
   model_url_snapshot:
     | string
     | null;
+
+  hp_bonus_snapshot:
+    | number
+    | null;
+
+  attack_bonus_snapshot:
+    | number
+    | null;
+
+  defense_bonus_snapshot:
+    | number
+    | null;
+
+  luck_bonus_snapshot:
+    | number
+    | null;
+
+  heal_bonus_snapshot:
+    | number
+    | null;
+
+  vision_bonus_snapshot:
+    | number
+    | null;
+
+  power_score_snapshot:
+    | number
+    | null;
+
+  ability_code_snapshot:
+    | string
+    | null;
+
+  ability_config_snapshot:
+    | Record<string, unknown>
+    | null;
 };
 
 const VALID_SLOTS:
@@ -255,7 +291,16 @@ async function getItem(
         upgrade_level,
         upgrade_exp,
         thumbnail_url_snapshot,
-        model_url_snapshot
+        model_url_snapshot,
+        hp_bonus_snapshot,
+        attack_bonus_snapshot,
+        defense_bonus_snapshot,
+        luck_bonus_snapshot,
+        heal_bonus_snapshot,
+        vision_bonus_snapshot,
+        power_score_snapshot,
+        ability_code_snapshot,
+        ability_config_snapshot
       `)
       .eq(
         "id",
@@ -443,7 +488,16 @@ export async function GET(
             upgrade_level,
             upgrade_exp,
             thumbnail_url_snapshot,
-            model_url_snapshot
+            model_url_snapshot,
+            hp_bonus_snapshot,
+            attack_bonus_snapshot,
+            defense_bonus_snapshot,
+            luck_bonus_snapshot,
+            heal_bonus_snapshot,
+            vision_bonus_snapshot,
+            power_score_snapshot,
+            ability_code_snapshot,
+            ability_config_snapshot
           `)
           .in(
             "id",

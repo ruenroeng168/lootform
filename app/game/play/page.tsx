@@ -12,12 +12,24 @@ import {
   useRouter,
 } from "next/navigation";
 
+import {
+  Press_Start_2P,
+} from "next/font/google";
+
 import Navbar from "@/components/Navbar";
 
 import LootformHeroSprite, {
   type HeroDirection,
   type HeroGrade,
 } from "@/components/game/LootformHeroSprite";
+
+import MobileDpad from "@/components/game/MobileDpad";
+import StageIntroOverlay from "@/components/game/StageIntroOverlay";
+import GameComingSoonScreen from "@/components/game/GameComingSoonScreen";
+
+import {
+  useGameAccessGate,
+} from "@/lib/game-access";
 
 import CombatScene, {
   type BattleRound,
@@ -26,18 +38,40 @@ import CombatScene, {
 import {
   GameSessionError,
   startGameSession,
+  finalizeGameSession,
+  moveGameSession,
+  getActiveGameSession,
+  resolveCombat,
+  getGameCoinBalance,
+  type RunLootEntry,
+  type ExtractionSettlement,
+  type SessionStatsSnapshot,
+  type GameResultRow,
+  type GameSessionStateRow,
+  type GameEncounterRow,
 } from "@/lib/game-session";
 
 import {
   GameEventError,
   sendGameStartEvent,
-  sendMonsterDefeatedEvent,
   sendTreasureFoundEvent,
 } from "@/lib/game-event";
 
 import {
   supabase,
 } from "@/lib/supabase";
+
+// =========================================================
+// PIXEL DISPLAY FONT (handheld-era HUD chrome only -- generic 8-bit
+// typeface, not a Pokemon/Nintendo asset. Reserved for short UI
+// chrome: HUD labels, Stage identity, result headlines. Never used
+// for body copy/logs -- illegible at that size in a chunky font).
+// =========================================================
+
+const pixelFont = Press_Start_2P({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 // =========================================================
 // TYPES
@@ -125,9 +159,46 @@ type PlayerStats = {
   power: number;
 };
 
+// =========================================================
+// SESSION RUNTIME STATS
+//
+// Authoritative for one Expedition once STARTED: frozen from
+// game_sessions.stats_snapshot at Session Start (server-computed
+// from real equipped item snapshots). Equipment is never re-read
+// during PLAYING -- changing gear in another tab cannot affect a
+// Session already in progress.
+//
+// Stamina has no equivalent in the Crafted Shirt Game Stats spec,
+// so it intentionally keeps using the existing equipment-preview
+// PlayerStats (unchanged, unread again after mount).
+// =========================================================
+
+type SessionRuntimeStats = {
+  maxHp: number;
+
+  atk: number;
+
+  def: number;
+
+  vision: number;
+
+  luck: number;
+
+  heal: number;
+
+  power: number;
+
+  abilityCode:
+    string | null;
+
+  abilityConfig:
+    Record<string, unknown> | null;
+};
+
 type GameStatus =
   | "READY"
   | "PLAYING"
+  | "FINALIZING"
   | "STAMINA_OUT"
   | "DEFEATED"
   | "COMPLETE";
@@ -160,6 +231,14 @@ type MonsterEntity = {
 
   tier:
     MonsterTier;
+
+  // AUTHORITATIVE (STEP 2.7): the server-owned game_encounters.id
+  // this visual monster represents. Combat is triggered from the
+  // server's resolve_game_move() response, never from finding this
+  // entity in the local array -- this field is render/reporting
+  // only.
+  encounterId:
+    number;
 };
 
 type Entity =
@@ -200,6 +279,9 @@ type BattleResult = {
 
   rounds:
     BattleRound[];
+
+  drops?:
+    RunLootEntry[];
 };
 
 type ActiveBattle = {
@@ -242,7 +324,7 @@ const GAME_CODE =
   "LF-GRID-EXPEDITION";
 
 const MAP_SIZE =
-  12;
+  15;
 
 const START_X =
   0;
@@ -360,67 +442,6 @@ const SLOT_FACTORS:
   };
 
 // =========================================================
-// MONSTERS
-// =========================================================
-
-const MONSTER_STATS:
-  Record<
-    MonsterTier,
-    MonsterDefinition
-  > = {
-    SCOUT: {
-      name:
-        "VOID SCOUT",
-
-      hp:
-        38,
-
-      atk:
-        9,
-
-      def:
-        5,
-
-      score:
-        80,
-    },
-
-    GUARD: {
-      name:
-        "GRID GUARD",
-
-      hp:
-        65,
-
-      atk:
-        15,
-
-      def:
-        11,
-
-      score:
-        150,
-    },
-
-    ELITE: {
-      name:
-        "VOID ELITE",
-
-      hp:
-        95,
-
-      atk:
-        22,
-
-      def:
-        17,
-
-      score:
-        280,
-    },
-  };
-
-// =========================================================
 // WALLS
 // =========================================================
 
@@ -470,6 +491,76 @@ const WALLS =
   ]);
 
 // =========================================================
+// STAGE IDENTITY (STEP 4A)
+//
+// A client-only presentation seam -- the authoritative map itself
+// (size/walls/start/exit) is still entirely server-driven via
+// grid_expedition_map_size()/grid_expedition_walls() and is only
+// mirrored here for rendering. This object exists so a future
+// STAGE 1-2 can be added by defining a second config + swapping
+// which one is active, without rewriting the renderer below.
+// Naming/labels only -- never a second source of collision truth.
+// =========================================================
+
+type StageConfig = {
+  id: string;
+  zoneId: string;
+  zoneName: string;
+  stageLabel: string;
+  stageName: string;
+};
+
+const STAGE_1_1: StageConfig = {
+  id: "1-1",
+  zoneId: "ZONE 01",
+  zoneName: "NEON OUTSKIRTS",
+  stageLabel: "STAGE 1-1",
+  stageName: "BACK ALLEY",
+};
+
+// How many tiles the camera shows on each side of the Player --
+// this only changes which tiles get drawn, never posX/posY itself.
+// VIEW_RADIUS 5 -> an 11x11 viewport (STEP 4A.1).
+const VIEW_RADIUS = 5;
+
+// Deterministic decorative prop per non-walkable/floor tile --
+// presentation only, never affects collision (walls remain
+// server-mirrored via WALLS above). Re-derives the same prop for the
+// same tile on every render/refresh instead of re-rolling randomly.
+const FLOOR_PROPS = [
+  "PIPE",
+  "VENT",
+  "CRATE",
+  "NEON_SIGN",
+  "PANEL",
+] as const;
+
+function floorPropAt(
+  x: number,
+  y: number
+): (typeof FLOOR_PROPS)[number] | null {
+  const hash =
+    (x * 928371 +
+      y * 137549 +
+      17) %
+    47;
+
+  if (
+    hash % 11 !==
+    0
+  ) {
+    return null;
+  }
+
+  return FLOOR_PROPS[
+    Math.abs(
+      hash
+    ) %
+      FLOOR_PROPS.length
+  ];
+}
+
+// =========================================================
 // BASIC HELPERS
 // =========================================================
 
@@ -494,6 +585,96 @@ function isInsideMap(
     y <
       MAP_SIZE
   );
+}
+
+// GAME MATERIAL RUN LOOT (STEP 4B). Purely additive display merge --
+// the server already decided every quantity; this only combines
+// same-item drops into one line for the HUD/reveal.
+function mergeRunLoot(
+  current: RunLootEntry[],
+  incoming: RunLootEntry[] | undefined
+): RunLootEntry[] {
+  if (
+    !incoming ||
+    incoming.length === 0
+  ) {
+    return current;
+  }
+
+  const next =
+    new Map(
+      current.map(
+        (entry) => [
+          entry.item_code,
+          entry,
+        ]
+      )
+    );
+
+  for (const drop of incoming) {
+    const existing =
+      next.get(
+        drop.item_code
+      );
+
+    next.set(drop.item_code, {
+      item_code:
+        drop.item_code,
+
+      item_name:
+        drop.item_name,
+
+      rarity:
+        drop.rarity,
+
+      quantity:
+        (existing?.quantity ??
+          0) +
+        drop.quantity,
+    });
+  }
+
+  return Array.from(
+    next.values()
+  );
+}
+
+function rarityTextClass(
+  rarity: string
+): string {
+  switch (
+    rarity
+  ) {
+    case "LEGENDARY":
+      return "text-orange-400";
+    case "EPIC":
+      return "text-purple-400";
+    case "RARE":
+      return "text-cyan-400";
+    case "UNCOMMON":
+      return "text-lime-400";
+    default:
+      return "text-zinc-400";
+  }
+}
+
+function rarityBorderClass(
+  rarity: string
+): string {
+  switch (
+    rarity
+  ) {
+    case "LEGENDARY":
+      return "border-orange-400/40 bg-orange-400/[0.06]";
+    case "EPIC":
+      return "border-purple-400/40 bg-purple-400/[0.06]";
+    case "RARE":
+      return "border-cyan-400/40 bg-cyan-400/[0.06]";
+    case "UNCOMMON":
+      return "border-lime-400/40 bg-lime-400/[0.06]";
+    default:
+      return "border-zinc-700 bg-zinc-900";
+  }
 }
 
 function isWall(
@@ -560,6 +741,52 @@ function shortSessionId(
     8
   )}...${value.slice(
     -4
+  )}`;
+}
+
+// =========================================================
+// FORMAT DURATION
+// =========================================================
+
+function formatDuration(
+  totalSeconds:
+    number | null
+) {
+  if (
+    totalSeconds === null ||
+    !Number.isFinite(
+      totalSeconds
+    )
+  ) {
+    return "-";
+  }
+
+  const clamped =
+    Math.max(
+      0,
+      Math.round(
+        totalSeconds
+      )
+    );
+
+  const minutes =
+    Math.floor(
+      clamped / 60
+    );
+
+  const seconds =
+    clamped % 60;
+
+  return `${String(
+    minutes
+  ).padStart(
+    2,
+    "0"
+  )}:${String(
+    seconds
+  ).padStart(
+    2,
+    "0"
   )}`;
 }
 
@@ -741,6 +968,99 @@ function calculatePlayerStats(
 }
 
 // =========================================================
+// SESSION RUNTIME STATS FROM SNAPSHOT
+//
+// The only source used for HP / ATK / DEF / VISION once an
+// Expedition has started. LUCK and HEAL are loaded but not
+// consumed yet (Drop / Potion are later phases). Ability is
+// read from the TOP slot's frozen snapshot -- Expedition Mode
+// treats the equipped shirt as the ability carrier.
+// =========================================================
+
+function buildSessionRuntimeStats(
+  snapshot:
+    SessionStatsSnapshot | null
+): SessionRuntimeStats {
+  const effective =
+    snapshot?.effective ?? {
+      hp: BASE_STATS.hp,
+      attack: BASE_STATS.atk,
+      defense: BASE_STATS.def,
+      luck: 0,
+      heal: 0,
+      vision: BASE_STATS.sight,
+    };
+
+  const topEntry =
+    snapshot?.equipment?.find(
+      (entry) =>
+        entry.slot ===
+        "TOP"
+    ) ??
+    null;
+
+  const atk =
+    Math.round(
+      effective.attack
+    );
+
+  const def =
+    Math.round(
+      effective.defense
+    );
+
+  return {
+    maxHp:
+      Math.round(
+        effective.hp
+      ),
+
+    atk,
+
+    def,
+
+    vision:
+      Math.max(
+        2,
+        Math.min(
+          5,
+          Math.round(
+            effective.vision
+          )
+        )
+      ),
+
+    luck:
+      Number(
+        effective.luck
+      ),
+
+    heal:
+      Number(
+        effective.heal
+      ),
+
+    power:
+      Math.round(
+        atk *
+          1.5 +
+        def *
+          1.2
+      ),
+
+    abilityCode:
+      topEntry
+        ?.ability_code ??
+      null,
+
+    abilityConfig:
+      topEntry
+        ?.ability_config ??
+      null,
+  };
+}
+
+// =========================================================
 // FOG OF WAR
 // =========================================================
 
@@ -915,37 +1235,20 @@ function calculateVisibleTiles(
 }
 
 // =========================================================
-// RANDOM MONSTER
+// CREATE TREASURE ENTITIES
+//
+// STEP 2.7: Monster/Elite placement moved server-side
+// (generate_game_encounters) -- this function only ever creates
+// TREASURE now (Treasure stays out of this STEP's scope; it is
+// still client-only telemetry, unchanged). reservedTiles excludes
+// whatever tiles the server already placed a Monster/Elite on, so
+// treasure and monsters never overlap.
 // =========================================================
 
-function randomMonsterTier():
-  MonsterTier {
-  const roll =
-    Math.random();
-
-  if (
-    roll <
-    0.5
-  ) {
-    return "SCOUT";
-  }
-
-  if (
-    roll <
-    0.85
-  ) {
-    return "GUARD";
-  }
-
-  return "ELITE";
-}
-
-// =========================================================
-// CREATE ENTITIES
-// =========================================================
-
-function createEntities():
-  Entity[] {
+function createTreasureEntities(
+  reservedTiles:
+    Set<string>
+): TreasureEntity[] {
   const available: {
     x: number;
     y: number;
@@ -992,6 +1295,17 @@ function createEntities():
         continue;
       }
 
+      if (
+        reservedTiles.has(
+          tileKey(
+            x,
+            y
+          )
+        )
+      ) {
+        continue;
+      }
+
       available.push({
         x,
         y,
@@ -1034,10 +1348,7 @@ function createEntities():
   }
 
   const result:
-    Entity[] = [];
-
-  let cursor =
-    0;
+    TreasureEntity[] = [];
 
   for (
     let i =
@@ -1048,7 +1359,7 @@ function createEntities():
   ) {
     const tile =
       available[
-        cursor++
+        i
       ];
 
     if (
@@ -1072,178 +1383,74 @@ function createEntities():
     });
   }
 
-  for (
-    let i =
-      0;
-    i <
-      5;
-    i++
-  ) {
-    const tile =
-      available[
-        cursor++
-      ];
-
-    if (
-      !tile
-    ) {
-      break;
-    }
-
-    result.push({
-      id:
-        `MONSTER-${Date.now()}-${i}`,
-
-      x:
-        tile.x,
-
-      y:
-        tile.y,
-
-      type:
-        "MONSTER",
-
-      tier:
-        randomMonsterTier(),
-    });
-  }
-
   return result;
 }
 
 // =========================================================
-// AUTO BATTLE
+// ENCOUNTERS -> MONSTER ENTITIES (RENDER ONLY)
+//
+// Converts server-owned game_encounters rows into the visual
+// MonsterEntity shape the grid already knows how to draw. This is
+// display data only -- resolve_game_move()'s response, not a
+// lookup into this array, is what actually triggers combat
+// (STEP 2.7 trust classification).
 // =========================================================
 
-function resolveAutoBattle(
-  player:
-    PlayerStats,
+function encountersToMonsterEntities(
+  encounters:
+    GameEncounterRow[]
+): MonsterEntity[] {
+  return encounters
+    .filter(
+      (
+        encounter
+      ) =>
+        encounter.status ===
+          "AVAILABLE" ||
+        encounter.status ===
+          "ACTIVE"
+    )
+    .map(
+      (
+        encounter
+      ) => ({
+        id:
+          `ENCOUNTER-${encounter.id}`,
 
-  currentPlayerHp:
-    number,
+        x:
+          encounter.x,
 
-  monsterTier:
-    MonsterTier
-): BattleResult {
-  const monster =
-    MONSTER_STATS[
-      monsterTier
-    ];
+        y:
+          encounter.y,
 
-  let playerHp =
-    currentPlayerHp;
+        type:
+          "MONSTER" as const,
 
-  let monsterHp =
-    monster.hp;
+        tier:
+          encounter.tier,
 
-  let round =
-    0;
-
-  const rounds:
-    BattleRound[] = [];
-
-  const MAX_ROUNDS =
-    60;
-
-  while (
-    playerHp >
-      0 &&
-    monsterHp >
-      0 &&
-    round <
-      MAX_ROUNDS
-  ) {
-    round +=
-      1;
-
-    const heroDamage =
-      Math.max(
-        1,
-        Math.round(
-          player.atk *
-            100 /
-          (
-            100 +
-            monster.def
-          )
-        )
-      );
-
-    monsterHp =
-      Math.max(
-        0,
-        monsterHp -
-          heroDamage
-      );
-
-    let monsterDamage =
-      0;
-
-    if (
-      monsterHp >
-      0
-    ) {
-      monsterDamage =
-        Math.max(
-          1,
-          Math.round(
-            monster.atk *
-              100 /
-            (
-              100 +
-              player.def
-            )
-          )
-        );
-
-      playerHp =
-        Math.max(
-          0,
-          playerHp -
-            monsterDamage
-        );
-    }
-
-    rounds.push({
-      round,
-
-      heroDamage,
-
-      monsterDamage,
-
-      heroHpAfter:
-        playerHp,
-
-      monsterHpAfter:
-        monsterHp,
-    });
-  }
-
-  return {
-    won:
-      monsterHp <=
-      0,
-
-    roundCount:
-      round,
-
-    playerHp,
-
-    monsterHp,
-
-    monster,
-
-    rounds,
-  };
+        encounterId:
+          encounter.id,
+      })
+    );
 }
 
 // =========================================================
 // PAGE
 // =========================================================
 
-export default function GameTestPage() {
+export default function GameExpeditionPage() {
   const router =
     useRouter();
+
+  const {
+    checked:
+      gameAccessChecked,
+
+    allowed:
+      gameAccessAllowed,
+  } =
+    useGameAccessGate();
 
   const movementLock =
     useRef(
@@ -1295,6 +1502,113 @@ export default function GameTestPage() {
     useState(
       ""
     );
+
+  const [
+    finalizeError,
+    setFinalizeError,
+  ] =
+    useState(
+      ""
+    );
+
+  const [
+    gameResult,
+    setGameResult,
+  ] =
+    useState<GameResultRow | null>(
+      null
+    );
+
+  // GAME_COIN (STEP 3). coinBalance is the AUTHORITATIVE current
+  // wallet total (server-reported); runCoinEarned only accumulates
+  // the coin_earned amounts the server already returned this run --
+  // it never invents or predicts a reward client-side.
+  const [
+    coinBalance,
+    setCoinBalance,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+  // PLAYER LV (STEP 4A.1) -- see the loadPlayerLevel effect below
+  // for why EXP is intentionally not tracked here.
+  const [
+    playerLevel,
+    setPlayerLevel,
+  ] =
+    useState<number | null>(
+      null
+    );
+
+  const [
+    runCoinEarned,
+    setRunCoinEarned,
+  ] =
+    useState(0);
+
+  // UNEXTRACTED RUN LOOT (STEP 4B). AUTHORITATIVE -- every entry
+  // came from a resolveCombat() response or the resume endpoint's
+  // run_loot. Not permanent inventory; STEP 4C decides EXTRACTED
+  // vs LOST.
+  const [
+    runLoot,
+    setRunLoot,
+  ] =
+    useState<RunLootEntry[]>(
+      []
+    );
+
+  // Brief post-victory reveal. null = hidden, [] = "no material
+  // found", non-empty = itemized drop(s) just granted.
+  const [
+    dropReveal,
+    setDropReveal,
+  ] =
+    useState<
+      RunLootEntry[] | null
+    >(
+      null
+    );
+
+  // Mobile-only collapse for the BUILD/RUN LOOT/LOADOUT column so
+  // the game viewport stays the visual priority on small screens
+  // (xl and above always show it regardless of this flag).
+  const [
+    buildPanelOpen,
+    setBuildPanelOpen,
+  ] =
+    useState(false);
+
+  // EXTRACTION SETTLEMENT (STEP 4C). AUTHORITATIVE -- comes straight
+  // from finalizeGameSession()'s response, never computed here.
+  const [
+    extractionSettlement,
+    setExtractionSettlement,
+  ] =
+    useState<
+      ExtractionSettlement | null
+    >(
+      null
+    );
+
+  // STAGE IDENTITY intro card (STEP 4A). Presentation only -- shown
+  // once on a fresh START EXPEDITION, never on refresh/resume, and
+  // never gates any authoritative call.
+  const [
+    showStageIntro,
+    setShowStageIntro,
+  ] =
+    useState(false);
+
+  // Short glitch/scanline transition played while switching from
+  // Map View into the existing CombatScene. Purely cosmetic --
+  // activeBattle (the real state) is set at the same time as this.
+  const [
+    combatEnterGlitch,
+    setCombatEnterGlitch,
+  ] =
+    useState(false);
 
   const [
     liveSession,
@@ -1349,6 +1663,30 @@ export default function GameTestPage() {
       power:
         22,
     });
+
+  const [
+    sessionStats,
+    setSessionStats,
+  ] =
+    useState<SessionRuntimeStats | null>(
+      null
+    );
+
+  const [
+    sessionState,
+    setSessionState,
+  ] =
+    useState<GameSessionStateRow | null>(
+      null
+    );
+
+  const [
+    resolvingCombat,
+    setResolvingCombat,
+  ] =
+    useState(
+      false
+    );
 
   const [
     posX,
@@ -1494,6 +1832,91 @@ export default function GameTestPage() {
     );
 
   // =====================================================
+  // ACTIVE STATS
+  //
+  // Before a Session exists: live equipment preview (same
+  // numbers the pre-game HERO STATS panel always showed).
+  //
+  // Once a Session is live: the frozen Session Runtime Stats
+  // from stats_snapshot -- authoritative for HP / ATK / DEF /
+  // VISION for the rest of this Expedition, regardless of any
+  // equipment change made anywhere else while playing.
+  // =====================================================
+
+  const activeStats =
+    useMemo(
+      (): SessionRuntimeStats =>
+        sessionStats ?? {
+          maxHp:
+            playerStats.maxHp,
+
+          atk:
+            playerStats.atk,
+
+          def:
+            playerStats.def,
+
+          vision:
+            playerStats.sightRange,
+
+          luck:
+            0,
+
+          heal:
+            0,
+
+          power:
+            playerStats.power,
+
+          abilityCode:
+            null,
+
+          abilityConfig:
+            null,
+        },
+      [
+        sessionStats,
+        playerStats,
+      ]
+    );
+
+  // =====================================================
+  // CAMERA (STEP 4A)
+  //
+  // Presentation only -- windows which tiles get drawn around the
+  // AUTHORITATIVE posX/posY instead of rendering the whole map at
+  // once. Clamped to map edges so the window never shows outside
+  // MAP_SIZE. Never creates its own position state.
+  // =====================================================
+
+  const cameraViewSize =
+    VIEW_RADIUS *
+      2 +
+    1;
+
+  const cameraMinX =
+    Math.max(
+      0,
+      Math.min(
+        posX -
+          VIEW_RADIUS,
+        MAP_SIZE -
+          cameraViewSize
+      )
+    );
+
+  const cameraMinY =
+    Math.max(
+      0,
+      Math.min(
+        posY -
+          VIEW_RADIUS,
+        MAP_SIZE -
+          cameraViewSize
+      )
+    );
+
+  // =====================================================
   // LOG
   // =====================================================
 
@@ -1632,6 +2055,242 @@ export default function GameTestPage() {
         setPlayerHp(
           stats.maxHp
         );
+
+        /*
+          REFRESH RECOVERY (STEP 2.6)
+
+          If the server already has an ACTIVE session for this game,
+          resume into it instead of assuming none exists. A refresh
+          must never quietly reset the player back to Player Start
+          just because local React state was lost.
+
+          entities (monsters/treasure) and runScore/log are NOT
+          restored -- they were never server-tracked (see report).
+          Position, turn count and exit_reached are.
+        */
+        try {
+          const active =
+            await getActiveGameSession(
+              GAME_CODE
+            );
+
+          if (
+            active.session &&
+            active.state
+          ) {
+            const resumedStats =
+              buildSessionRuntimeStats(
+                active.session
+                  .stats_snapshot
+              );
+
+            setSessionStats(
+              resumedStats
+            );
+
+            setSessionState(
+              active.state
+            );
+
+            setLiveSession({
+              id:
+                active.session
+                  .id,
+
+              status:
+                active.session
+                  .status,
+
+              startedAt:
+                active.session
+                  .started_at,
+
+              gameVersion:
+                "1.0",
+
+              engine:
+                "INTERNAL",
+            });
+
+            setPosX(
+              active.state
+                .current_x
+            );
+
+            setPosY(
+              active.state
+                .current_y
+            );
+
+            setStamina(
+              Math.max(
+                0,
+                stats.maxStamina -
+                  active.state
+                    .turn_count
+              )
+            );
+
+            setPlayerHp(
+              active.state
+                .player_current_hp ??
+                resumedStats.maxHp
+            );
+
+            setStepCount(
+              active.state
+                .turn_count
+            );
+
+            setRunLoot(
+              active.runLoot
+            );
+
+            /*
+              STEP 2.7: rebuild Monster/Elite entities from the
+              server's own game_encounters rows -- no longer
+              re-randomized on refresh. Treasure remains client-only
+              telemetry (out of this STEP's scope) and still
+              re-randomizes, but now avoids tiles the server already
+              reserved for a real encounter.
+            */
+            const resumedMonsterEntities =
+              encountersToMonsterEntities(
+                active.encounters
+              );
+
+            const resumedReservedTiles =
+              new Set(
+                resumedMonsterEntities.map(
+                  (
+                    monster
+                  ) =>
+                    tileKey(
+                      monster.x,
+                      monster.y
+                    )
+                )
+              );
+
+            setEntities([
+              ...resumedMonsterEntities,
+              ...createTreasureEntities(
+                resumedReservedTiles
+              ),
+            ]);
+
+            setGameStatus(
+              "PLAYING"
+            );
+
+            setLog([
+              "SYSTEM: Resumed expedition from server state.",
+              `SESSION: ${active.session.id}`,
+              `POSITION: ${active.state.current_x}, ${active.state.current_y}`,
+            ]);
+
+            /*
+              An ACTIVE encounter means the player refreshed
+              mid-fight. As of STEP 2.8, combat is resolved
+              server-side (resolve_combat) -- call it fresh using
+              the restored, authoritative session, same as walking
+              onto the encounter for the first time.
+            */
+            const resumedActiveEncounter =
+              active.encounters.find(
+                (
+                  encounter
+                ) =>
+                  encounter.status ===
+                  "ACTIVE"
+              );
+
+            if (
+              resumedActiveEncounter
+            ) {
+              setResolvingCombat(
+                true
+              );
+
+              try {
+                const result =
+                  await resolveCombat(
+                    active.session.id,
+                    resumedActiveEncounter.id
+                  );
+
+                setRunCoinEarned(
+                  (prev) =>
+                    prev +
+                    result.coinEarned
+                );
+
+                setCoinBalance(
+                  result.coinBalance
+                );
+
+                setActiveBattle({
+                  entity: {
+                    id: `ENCOUNTER-${resumedActiveEncounter.id}`,
+
+                    x:
+                      resumedActiveEncounter.x,
+
+                    y:
+                      resumedActiveEncounter.y,
+
+                    type:
+                      "MONSTER",
+
+                    tier:
+                      resumedActiveEncounter.tier,
+
+                    encounterId:
+                      resumedActiveEncounter.id,
+                  },
+
+                  targetX:
+                    resumedActiveEncounter.x,
+
+                  targetY:
+                    resumedActiveEncounter.y,
+
+                  nextStamina:
+                    Math.max(
+                      0,
+                      stats.maxStamina -
+                        active.state
+                          .turn_count
+                    ),
+
+                  nextStep:
+                    active.state
+                      .turn_count,
+
+                  result,
+                });
+              } catch (
+                resumeCombatError
+              ) {
+                console.error(
+                  "RESUME COMBAT ERROR:",
+                  resumeCombatError
+                );
+              } finally {
+                setResolvingCombat(
+                  false
+                );
+              }
+            }
+          }
+        } catch (
+          resumeError
+        ) {
+          console.error(
+            "GAME RESUME ERROR:",
+            resumeError
+          );
+        }
       } catch (
         error
       ) {
@@ -1657,6 +2316,139 @@ export default function GameTestPage() {
     router,
   ]);
 
+  // GAME_COIN (STEP 3). Read-only display refresh -- never gates
+  // gameplay, so a failure here is swallowed rather than surfaced.
+  useEffect(() => {
+    async function loadCoinBalance() {
+      try {
+        const wallet =
+          await getGameCoinBalance(
+            GAME_CODE
+          );
+
+        setCoinBalance(
+          wallet.balance
+        );
+      } catch (
+        coinError
+      ) {
+        console.error(
+          "GAME COIN BALANCE LOAD ERROR:",
+          coinError
+        );
+      }
+    }
+
+    void loadCoinBalance();
+  }, []);
+
+  // PLAYER LV (STEP 4A.1). Reads public.player_profiles.level -- the
+  // same table/column Member Home already displays, via the same
+  // RLS-gated own-row SELECT pattern (app/page.tsx). Not a new
+  // backend feature. EXP is intentionally NOT read/shown here: this
+  // column has an UPDATE RLS policy with no column restriction (any
+  // authenticated user can write their own row) and Member Home's
+  // EXP bar uses a hardcoded formula, not the real level_rules
+  // table -- reported as CHARACTER_PROGRESSION_AUTHORITY_PENDING
+  // rather than fabricating a progress bar from an unsafe source.
+  useEffect(() => {
+    async function loadPlayerLevel() {
+      try {
+        const {
+          data: {
+            user,
+          },
+        } =
+          await supabase
+            .auth
+            .getUser();
+
+        if (!user) {
+          return;
+        }
+
+        const {
+          data,
+        } =
+          await supabase
+            .from(
+              "player_profiles"
+            )
+            .select(
+              "level"
+            )
+            .eq(
+              "user_id",
+              user.id
+            )
+            .maybeSingle();
+
+        setPlayerLevel(
+          data?.level ??
+            1
+        );
+      } catch (
+        levelError
+      ) {
+        console.error(
+          "PLAYER LEVEL LOAD ERROR:",
+          levelError
+        );
+      }
+    }
+
+    void loadPlayerLevel();
+  }, []);
+
+  // STAGE IDENTITY intro auto-dismiss (STEP 4A). Presentation only.
+  useEffect(() => {
+    if (
+      !showStageIntro
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(() => {
+        setShowStageIntro(
+          false
+        );
+      }, 2200);
+
+    return () => {
+      window.clearTimeout(
+        timer
+      );
+    };
+  }, [
+    showStageIntro,
+  ]);
+
+  // DROP REVEAL auto-dismiss (STEP 4B). Presentation only.
+  useEffect(() => {
+    if (
+      dropReveal ===
+      null
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(() => {
+        setDropReveal(
+          null
+        );
+      }, 1200);
+
+    return () => {
+      window.clearTimeout(
+        timer
+      );
+    };
+  }, [
+    dropReveal,
+  ]);
+
   // =====================================================
   // FOG
   // =====================================================
@@ -1667,12 +2459,12 @@ export default function GameTestPage() {
         calculateVisibleTiles(
           posX,
           posY,
-          playerStats.sightRange
+          activeStats.vision
         ),
       [
         posX,
         posY,
-        playerStats.sightRange,
+        activeStats.vision,
       ]
     );
 
@@ -1789,6 +2581,39 @@ export default function GameTestPage() {
               GAME_CODE
             );
 
+          /*
+            Session Runtime Stats: frozen from the Session's own
+            stats_snapshot, not recomputed from live equipment.
+            This is what HP / ATK / DEF / VISION use for the rest
+            of this Expedition (spec section 12/13).
+          */
+          const nextSessionStats =
+            buildSessionRuntimeStats(
+              created.session
+                .stats_snapshot
+            );
+
+          /*
+            AUTHORITATIVE EXPEDITION STATE (STEP 2.6)
+            Without this row, every move call fails server-side --
+            fail the start clearly rather than entering a broken
+            PLAYING state.
+          */
+          if (
+            !created.session
+              .state
+          ) {
+            throw new GameSessionError(
+              "Expedition state was not created for this session.",
+              "SESSION_STATE_MISSING",
+              500
+            );
+          }
+
+          const startState =
+            created.session
+              .state;
+
           await sendGameStartEvent(
             created.session.id,
             {
@@ -1805,20 +2630,31 @@ export default function GameTestPage() {
                 playerStats.maxStamina,
 
               max_hp:
-                playerStats.maxHp,
+                nextSessionStats.maxHp,
 
               sight_range:
-                playerStats.sightRange,
+                nextSessionStats.vision,
 
               power:
-                playerStats.power,
+                nextSessionStats.power,
 
               atk:
-                playerStats.atk,
+                nextSessionStats.atk,
 
               def:
-                playerStats.def,
+                nextSessionStats.def,
+
+              ability_code:
+                nextSessionStats.abilityCode,
             }
+          );
+
+          setSessionStats(
+            nextSessionStats
+          );
+
+          setSessionState(
+            startState
           );
 
           setLiveSession({
@@ -1842,11 +2678,11 @@ export default function GameTestPage() {
             false;
 
           setPosX(
-            START_X
+            startState.current_x
           );
 
           setPosY(
-            START_Y
+            startState.current_y
           );
 
           setHeroDirection(
@@ -1862,7 +2698,7 @@ export default function GameTestPage() {
           );
 
           setPlayerHp(
-            playerStats.maxHp
+            nextSessionStats.maxHp
           );
 
           setRunScore(
@@ -1877,9 +2713,52 @@ export default function GameTestPage() {
             0
           );
 
-          setEntities(
-            createEntities()
+          setRunLoot(
+            []
           );
+
+          setDropReveal(
+            null
+          );
+
+          setExtractionSettlement(
+            null
+          );
+
+          /*
+            STEP 2.7: Monster/Elite entities come from the server's
+            own game_encounters rows created by Session Start --
+            the client no longer generates them. Treasure remains
+            client-only telemetry (out of this STEP's scope) but
+            avoids whatever tiles the server reserved for a real
+            encounter.
+          */
+          const startMonsterEntities =
+            encountersToMonsterEntities(
+              created.session
+                .encounters ??
+                []
+            );
+
+          const startReservedTiles =
+            new Set(
+              startMonsterEntities.map(
+                (
+                  monster
+                ) =>
+                  tileKey(
+                    monster.x,
+                    monster.y
+                  )
+              )
+            );
+
+          setEntities([
+            ...startMonsterEntities,
+            ...createTreasureEntities(
+              startReservedTiles
+            ),
+          ]);
 
           setExploredTiles(
             new Set()
@@ -1891,6 +2770,18 @@ export default function GameTestPage() {
 
           setActiveBattle(
             null
+          );
+
+          setGameResult(
+            null
+          );
+
+          setFinalizeError(
+            ""
+          );
+
+          setShowStageIntro(
+            true
           );
 
           setGameStatus(
@@ -2042,100 +2933,141 @@ export default function GameTestPage() {
 
   // =====================================================
   // MONSTER DEFEATED SERVER EVENT
+  //
+  // Removed in STEP 2.8: resolve_combat() now records
+  // MONSTER_DEFEATED atomically as part of resolving the fight
+  // server-side. Calling the generic event API again here would
+  // double-count every kill.
   // =====================================================
 
-  const recordMonsterDefeatedEvent =
+  // =====================================================
+  // FINALIZE EXPEDITION
+  //
+  // Single choke point for every way a run can end (reach EXIT,
+  // HP depleted, Stamina depleted). Movement/combat is already
+  // blocked the instant gameStatus leaves "PLAYING" -- this runs
+  // FINALIZING -> server call -> the same terminal status the
+  // caller asked for, now carrying the server's Game Result.
+  //
+  // On a network/server error we still land on the terminal status
+  // (never leave the player stuck on FINALIZING); the Result Screen
+  // shows a "could not confirm result" fallback instead of stats.
+  // =====================================================
+
+  const finalizeExpedition =
     useCallback(
       async (
-        sessionId:
-          string,
-
-        entity:
-          MonsterEntity,
-
-        result:
-          BattleResult,
-
-        targetX:
-          number,
-
-        targetY:
-          number,
-
-        nextStep:
-          number,
-
-        scoreAfter:
-          number
+        outcome:
+          | "COMPLETE"
+          | "DEFEATED"
+          | "STAMINA_OUT"
       ) => {
+        setGameStatus(
+          "FINALIZING"
+        );
+
+        setFinalizeError(
+          ""
+        );
+
+        if (
+          !liveSession
+        ) {
+          addLog(
+            "⚠ FINALIZE SKIPPED: NO LIVE SESSION"
+          );
+
+          setGameStatus(
+            outcome
+          );
+
+          return;
+        }
+
         try {
-          const response =
-            await sendMonsterDefeatedEvent(
-              sessionId,
-              result.monster.score,
+          const finalized =
+            await finalizeGameSession(
               {
-                source:
-                  "GRID_EXPEDITION",
+                sessionId:
+                  liveSession.id,
 
-                map:
-                  "SECTOR_A_01",
+                result:
+                  outcome ===
+                  "COMPLETE"
+                    ? "COMPLETE"
+                    : "FAIL",
 
-                monster:
-                  result.monster.name,
+                exploredTiles:
+                  exploredTiles.size,
 
-                tier:
-                  entity.tier,
+                mapTotalTiles:
+                  MAP_SIZE *
+                  MAP_SIZE,
 
-                x:
-                  targetX,
-
-                y:
-                  targetY,
-
-                step:
-                  nextStep,
-
-                rounds:
-                  result.roundCount,
-
-                hp_left:
-                  result.playerHp,
-
-                score_gain:
-                  result.monster.score,
-
-                run_score:
-                  scoreAfter,
+                failReason:
+                  outcome ===
+                  "DEFEATED"
+                    ? "PLAYER_HP_DEPLETED"
+                    : outcome ===
+                      "STAMINA_OUT"
+                    ? "STAMINA_DEPLETED"
+                    : null,
               }
             );
 
+          setGameResult(
+            finalized.result
+          );
+
+          setRunCoinEarned(
+            (prev) =>
+              prev +
+              finalized.coinEarned
+          );
+
+          setCoinBalance(
+            finalized.coinBalance
+          );
+
+          setExtractionSettlement(
+            finalized.extraction
+          );
+
           addLog(
-            `SERVER: MONSTER_DEFEATED EVENT #${response.event.id} ✓`
+            finalized.idempotentReplay
+              ? "SERVER: RESULT ALREADY FINALIZED ✓"
+              : `SERVER: ${outcome === "COMPLETE" ? "COMPLETE" : "FAIL"} RECORDED ✓`
           );
         } catch (
           error
         ) {
           console.error(
-            "MONSTER EVENT ERROR:",
+            "FINALIZE EXPEDITION ERROR:",
             error
           );
 
-          if (
+          setGameResult(
+            null
+          );
+
+          setFinalizeError(
             error instanceof
-            GameEventError
-          ) {
-            addLog(
-              `⚠ SERVER EVENT FAILED: ${error.code}`
-            );
-          } else {
-            addLog(
-              "⚠ SERVER EVENT FAILED: MONSTER_DEFEATED"
-            );
-          }
+            GameSessionError
+              ? `GAME RESULT ${error.code}: ${error.message}`
+              : error instanceof Error
+              ? error.message
+              : "Unable to finalize expedition."
+          );
+        } finally {
+          setGameStatus(
+            outcome
+          );
         }
       },
       [
         addLog,
+        exploredTiles,
+        liveSession,
       ]
     );
 
@@ -2172,6 +3104,19 @@ export default function GameTestPage() {
 
           setPlayerHp(
             result.playerHp
+          );
+
+          setRunLoot(
+            (current) =>
+              mergeRunLoot(
+                current,
+                result.drops
+              )
+          );
+
+          setDropReveal(
+            result.drops ??
+              []
           );
 
           setRunScore(
@@ -2211,38 +3156,26 @@ export default function GameTestPage() {
             `⚔️ ${result.monster.name} DEFEATED +${result.monster.score} SCORE`
           );
 
-          // =================================================
-          // REAL SERVER EVENT
-          // =================================================
-
-          if (
-            liveSession
-          ) {
-            void recordMonsterDefeatedEvent(
-              liveSession.id,
-              entity,
-              result,
-              targetX,
-              targetY,
-              nextStep,
-              scoreAfter
-            );
-          } else {
-            addLog(
-              "⚠ MONSTER EVENT SKIPPED: NO LIVE SESSION"
-            );
-          }
+          /*
+            STEP 2.8: resolve_combat() already computed this win and
+            recorded the server-side MONSTER_DEFEATED event
+            atomically -- calling the event API again here would
+            double-count the kill. No separate call needed.
+          */
+          addLog(
+            "SERVER: COMBAT + MONSTER_DEFEATED RECORDED ✓"
+          );
 
           if (
             nextStamina <=
             0
           ) {
-            setGameStatus(
-              "STAMINA_OUT"
-            );
-
             addLog(
               "🏕️ Stamina depleted."
+            );
+
+            void finalizeExpedition(
+              "STAMINA_OUT"
             );
           }
         } else {
@@ -2250,12 +3183,12 @@ export default function GameTestPage() {
             0
           );
 
-          setGameStatus(
-            "DEFEATED"
-          );
-
           addLog(
             `💀 DEFEATED BY ${result.monster.name}`
+          );
+
+          void finalizeExpedition(
+            "DEFEATED"
           );
         }
 
@@ -2269,8 +3202,8 @@ export default function GameTestPage() {
       [
         activeBattle,
         addLog,
+        finalizeExpedition,
         liveSession,
-        recordMonsterDefeatedEvent,
         runScore,
       ]
     );
@@ -2281,7 +3214,7 @@ export default function GameTestPage() {
 
   const moveHero =
     useCallback(
-      (
+      async (
         dx:
           number,
 
@@ -2299,64 +3232,10 @@ export default function GameTestPage() {
         }
 
         if (
-          dx >
-          0
-        ) {
-          setHeroDirection(
-            "RIGHT"
-          );
-        } else if (
-          dx <
-          0
-        ) {
-          setHeroDirection(
-            "LEFT"
-          );
-        } else if (
-          dy <
-          0
-        ) {
-          setHeroDirection(
-            "UP"
-          );
-        } else if (
-          dy >
-          0
-        ) {
-          setHeroDirection(
-            "DOWN"
-          );
-        }
-
-        const targetX =
-          posX +
-          dx;
-
-        const targetY =
-          posY +
-          dy;
-
-        if (
-          !isInsideMap(
-            targetX,
-            targetY
-          )
+          !liveSession
         ) {
           addLog(
-            "⛔ MAP EDGE"
-          );
-
-          return;
-        }
-
-        if (
-          isWall(
-            targetX,
-            targetY
-          )
-        ) {
-          addLog(
-            "▦ BLOCKED BY WALL"
+            "⚠ MOVE SKIPPED: NO LIVE SESSION"
           );
 
           return;
@@ -2366,17 +3245,106 @@ export default function GameTestPage() {
           stamina <
           MOVE_COST
         ) {
-          setGameStatus(
+          void finalizeExpedition(
             "STAMINA_OUT"
           );
 
           return;
         }
 
+        const direction:
+          | "UP"
+          | "DOWN"
+          | "LEFT"
+          | "RIGHT" =
+          dx >
+          0
+            ? "RIGHT"
+            : dx <
+              0
+            ? "LEFT"
+            : dy <
+              0
+            ? "UP"
+            : "DOWN";
+
+        setHeroDirection(
+          direction
+        );
+
         movementLock.current =
           true;
 
         playMovementAnimation();
+
+        /*
+          AUTHORITATIVE MOVEMENT (STEP 2.6)
+
+          The server is the sole authority on whether this move is
+          legal and where it lands. This client never sets
+          posX/posY from its own arithmetic -- only from the
+          server's response. No optimistic movement: the player's
+          sprite does not move until the server confirms it.
+        */
+        let moveResult;
+
+        try {
+          moveResult =
+            await moveGameSession(
+              liveSession.id,
+              direction
+            );
+        } catch (
+          error
+        ) {
+          console.error(
+            "MOVE HERO ERROR:",
+            error
+          );
+
+          addLog(
+            error instanceof
+            GameSessionError
+              ? `⚠ MOVE FAILED: ${error.code}`
+              : "⚠ MOVE FAILED"
+          );
+
+          movementLock.current =
+            false;
+
+          return;
+        }
+
+        setSessionState(
+          moveResult.state
+        );
+
+        if (
+          moveResult.blocked
+        ) {
+          addLog(
+            moveResult.blockReason ===
+            "WALL"
+              ? "▦ BLOCKED BY WALL"
+              : moveResult.blockReason ===
+                "MAP_EDGE"
+              ? "⛔ MAP EDGE"
+              : "⛔ MOVE BLOCKED"
+          );
+
+          movementLock.current =
+            false;
+
+          return;
+        }
+
+        const targetX =
+          moveResult.state
+            .current_x;
+
+        const targetY =
+          moveResult.state
+            .current_y;
 
         const nextStamina =
           stamina -
@@ -2394,44 +3362,118 @@ export default function GameTestPage() {
           nextStep
         );
 
+        /*
+          AUTHORITATIVE ENCOUNTER + COMBAT (STEP 2.7 + 2.8)
+
+          moveResult.encounter comes from resolve_game_move()'s own
+          response -- only non-null when the server itself just
+          activated a real, server-owned encounter on this tile.
+
+          The fight itself is now resolved by the server too
+          (resolve_combat): Player ATK/DEF/HP, Monster stats, damage,
+          and the win/loss outcome are all server-computed. This
+          call returns the exact round-by-round shape CombatScene
+          already animates -- only the data source changed.
+        */
+        if (
+          moveResult.encounter
+        ) {
+          const encounter =
+            moveResult.encounter;
+
+          setResolvingCombat(
+            true
+          );
+
+          try {
+            const result =
+              await resolveCombat(
+                liveSession.id,
+                encounter.id
+              );
+
+            setRunCoinEarned(
+              (prev) =>
+                prev +
+                result.coinEarned
+            );
+
+            setCoinBalance(
+              result.coinBalance
+            );
+
+            setCombatEnterGlitch(
+              true
+            );
+
+            setActiveBattle({
+              entity: {
+                id: `ENCOUNTER-${encounter.id}`,
+
+                x:
+                  encounter.x,
+
+                y:
+                  encounter.y,
+
+                type:
+                  "MONSTER",
+
+                tier:
+                  encounter.tier,
+
+                encounterId:
+                  encounter.id,
+              },
+
+              targetX,
+
+              targetY,
+
+              nextStamina,
+
+              nextStep,
+
+              result,
+            });
+          } catch (
+            error
+          ) {
+            console.error(
+              "RESOLVE COMBAT ERROR:",
+              error
+            );
+
+            addLog(
+              error instanceof
+              GameSessionError
+                ? `⚠ COMBAT FAILED: ${error.code}`
+                : "⚠ COMBAT FAILED"
+            );
+
+            movementLock.current =
+              false;
+          } finally {
+            setResolvingCombat(
+              false
+            );
+          }
+
+          return;
+        }
+
         const entity =
           entities.find(
             (
               current
             ) =>
+              current.type ===
+                "TREASURE" &&
               current.x ===
                 targetX &&
               current.y ===
                 targetY
           );
-
-        if (
-          entity?.type ===
-          "MONSTER"
-        ) {
-          const result =
-            resolveAutoBattle(
-              playerStats,
-              playerHp,
-              entity.tier
-            );
-
-          setActiveBattle({
-            entity,
-
-            targetX,
-
-            targetY,
-
-            nextStamina,
-
-            nextStep,
-
-            result,
-          });
-
-          return;
-        }
 
         if (
           entity?.type ===
@@ -2475,7 +3517,7 @@ export default function GameTestPage() {
 
           setTreasurePopup({
             title:
-              "TREASURE CHEST FOUND",
+              "DATA CACHE FOUND",
 
             sub:
               `+${gain} RUN SCORE`,
@@ -2484,37 +3526,29 @@ export default function GameTestPage() {
           });
 
           addLog(
-            `🧰 TREASURE CHEST +${gain} SCORE`
+            `🧰 DATA CACHE +${gain} SCORE`
           );
 
-          if (
-            liveSession
-          ) {
-            void recordTreasureEvent(
-              liveSession.id,
-              gain,
-              targetX,
-              targetY,
-              nextStep,
-              scoreAfter
-            );
-          } else {
-            addLog(
-              "⚠ TREASURE EVENT SKIPPED: NO LIVE SESSION"
-            );
-          }
+          void recordTreasureEvent(
+            liveSession.id,
+            gain,
+            targetX,
+            targetY,
+            nextStep,
+            scoreAfter
+          );
+
+          movementLock.current =
+            false;
 
           if (
             nextStamina <=
             0
           ) {
-            setGameStatus(
+            void finalizeExpedition(
               "STAMINA_OUT"
             );
           }
-
-          movementLock.current =
-            false;
 
           return;
         }
@@ -2528,28 +3562,26 @@ export default function GameTestPage() {
         );
 
         if (
-          targetX ===
-            EXIT_X &&
-          targetY ===
-            EXIT_Y
+          moveResult.state
+            .exit_reached
         ) {
-          setGameStatus(
-            "COMPLETE"
-          );
-
           addLog(
             "🏁 EXIT FOUND!"
+          );
+
+          void finalizeExpedition(
+            "COMPLETE"
           );
         } else if (
           nextStamina <=
           0
         ) {
-          setGameStatus(
-            "STAMINA_OUT"
-          );
-
           addLog(
             "🏕️ STAMINA EMPTY"
+          );
+
+          void finalizeExpedition(
+            "STAMINA_OUT"
           );
         }
 
@@ -2558,15 +3590,14 @@ export default function GameTestPage() {
       },
       [
         activeBattle,
+        activeStats,
         addLog,
         entities,
+        finalizeExpedition,
         gameStatus,
         liveSession,
         playMovementAnimation,
         playerHp,
-        playerStats,
-        posX,
-        posY,
         recordTreasureEvent,
         runScore,
         stamina,
@@ -2673,6 +3704,34 @@ export default function GameTestPage() {
   ]);
 
   // =====================================================
+  // GAME SECTION GATE (temporary, Phase 2 -- see lib/game-access.ts)
+  // =====================================================
+
+  if (
+    !gameAccessChecked
+  ) {
+    return (
+      <main className="min-h-screen bg-black text-white">
+
+        <Navbar />
+
+        <div className="flex min-h-[80vh] items-center justify-center text-sm font-black tracking-[0.25em] text-cyan-400">
+          LOADING GAME...
+        </div>
+
+      </main>
+    );
+  }
+
+  if (
+    !gameAccessAllowed
+  ) {
+    return (
+      <GameComingSoonScreen />
+    );
+  }
+
+  // =====================================================
   // LOADING
   // =====================================================
 
@@ -2738,6 +3797,35 @@ export default function GameTestPage() {
           >
             ← GAME HUB
           </button>
+
+        </div>
+
+        <div
+          className={`${pixelFont.className} mt-4 flex flex-wrap items-center gap-2`}
+        >
+
+          <span className="rounded-[2px] border-2 border-cyan-400/40 bg-cyan-400/[0.08] px-3 py-2 text-[8px] leading-none text-cyan-300 shadow-[2px_2px_0_rgba(34,211,238,0.15)]">
+            LV.
+            {playerLevel !==
+            null
+              ? String(
+                  playerLevel
+                ).padStart(
+                  2,
+                  "0"
+                )
+              : "--"}
+          </span>
+
+          <span className="rounded-[2px] border-2 border-purple-400/40 bg-purple-400/[0.08] px-3 py-2 text-[8px] leading-none text-purple-300 shadow-[2px_2px_0_rgba(168,85,247,0.15)]">
+            {STAGE_1_1.stageLabel}
+          </span>
+
+          <span className="rounded-[2px] border-2 border-yellow-400/40 bg-yellow-400/[0.08] px-3 py-2 text-[8px] leading-none text-yellow-400 shadow-[2px_2px_0_rgba(250,204,21,0.15)]">
+            COIN{" "}
+            {coinBalance ??
+              0}
+          </span>
 
         </div>
 
@@ -2837,7 +3925,33 @@ export default function GameTestPage() {
 
         <section className="mt-5 grid gap-5 xl:grid-cols-[1fr_340px]">
 
-          <div className="relative min-h-[680px] overflow-hidden rounded-[28px] border border-cyan-400/20 bg-zinc-950 p-5">
+          <div className="handheld-screen relative min-h-[680px] overflow-hidden rounded-[10px] border-4 border-cyan-400/25 bg-zinc-950 p-5">
+
+            <div className="handheld-scanlines pointer-events-none absolute inset-0 z-[1]" />
+
+            {gameStatus ===
+              "PLAYING" &&
+              showStageIntro && (
+                <StageIntroOverlay
+                  zoneId={
+                    STAGE_1_1.zoneId
+                  }
+                  zoneName={
+                    STAGE_1_1.zoneName
+                  }
+                  stageLabel={
+                    STAGE_1_1.stageLabel
+                  }
+                  stageName={
+                    STAGE_1_1.stageName
+                  }
+                  onDismiss={() =>
+                    setShowStageIntro(
+                      false
+                    )
+                  }
+                />
+              )}
 
             {activeBattle && (
               <CombatScene
@@ -2848,13 +3962,13 @@ export default function GameTestPage() {
                   playerHp
                 }
                 heroMaxHp={
-                  playerStats.maxHp
+                  activeStats.maxHp
                 }
                 heroAtk={
-                  playerStats.atk
+                  activeStats.atk
                 }
                 heroDef={
-                  playerStats.def
+                  activeStats.def
                 }
                 monsterName={
                   activeBattle
@@ -2901,6 +4015,92 @@ export default function GameTestPage() {
               />
             )}
 
+            {combatEnterGlitch && (
+              <div
+                className="combat-glitch pointer-events-none absolute inset-0 z-[60]"
+                onAnimationEnd={() =>
+                  setCombatEnterGlitch(
+                    false
+                  )
+                }
+              >
+                <div className="combat-glitch-scanlines absolute inset-0" />
+                <div className="combat-glitch-slice-a absolute inset-x-0 top-[30%] h-[8%] bg-cyan-400/70 mix-blend-screen" />
+                <div className="combat-glitch-slice-b absolute inset-x-0 top-[55%] h-[5%] bg-red-500/60 mix-blend-screen" />
+                <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-black tracking-[0.4em] text-cyan-300">
+                  ENGAGING
+                </p>
+              </div>
+            )}
+
+            {dropReveal !==
+              null &&
+              !activeBattle && (
+                <div
+                  className="drop-reveal absolute inset-0 z-[65] flex items-center justify-center bg-black/85 backdrop-blur-sm"
+                  onClick={() =>
+                    setDropReveal(
+                      null
+                    )
+                  }
+                >
+                  <div className="w-full max-w-xs px-6 text-center">
+
+                    {dropReveal.length ===
+                    0 ? (
+                      <>
+                        <p className="text-[8px] font-black tracking-[0.3em] text-zinc-500">
+                          CACHE SCAN
+                        </p>
+
+                        <p className="mt-3 text-sm font-black text-zinc-400">
+                          NO MATERIAL FOUND
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[8px] font-black tracking-[0.3em] text-cyan-400">
+                          DROP FOUND
+                        </p>
+
+                        <div className="mt-3 space-y-2">
+                          {dropReveal.map(
+                            (
+                              drop,
+                              index
+                            ) => (
+                              <div
+                                key={`${drop.item_code}-${index}`}
+                                className={`rounded-xl border px-4 py-3 ${rarityBorderClass(
+                                  drop.rarity
+                                )}`}
+                              >
+                                <p
+                                  className={`text-[7px] font-black tracking-[0.25em] ${rarityTextClass(
+                                    drop.rarity
+                                  )}`}
+                                >
+                                  {drop.rarity}
+                                </p>
+
+                                <p className="mt-1 text-base font-black text-white">
+                                  {drop.item_name.toUpperCase()}{" "}
+                                  ×{drop.quantity}
+                                </p>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    <p className="mt-4 text-[6px] tracking-[0.2em] text-zinc-600">
+                      UNEXTRACTED — RUN LOOT
+                    </p>
+                  </div>
+                </div>
+              )}
+
             {treasurePopup && (
               <div className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/90 backdrop-blur-sm">
 
@@ -2931,7 +4131,7 @@ export default function GameTestPage() {
                 <div className="relative z-10 w-full max-w-[520px] px-6 text-center">
 
                   <p className="text-[8px] font-black tracking-[0.35em] text-yellow-300">
-                    LOOT DISCOVERED
+                    DATA CACHE ACCESSED
                   </p>
 
                   <div className="mt-5 flex justify-center">
@@ -2951,7 +4151,7 @@ export default function GameTestPage() {
                   </h2>
 
                   <p className="mt-2 text-sm text-zinc-300">
-                    Hidden reward has been added to your run.
+                    Data recovered and added to your run score.
                   </p>
 
                   <div className="treasure-reward mt-6 inline-flex rounded-2xl border border-yellow-400/30 bg-yellow-400/10 px-6 py-4">
@@ -3053,28 +4253,81 @@ export default function GameTestPage() {
                 </div>
               )}
 
-            {gameStatus !==
-              "READY" &&
-              gameStatus !==
-                "PLAYING" &&
-              !activeBattle &&
-              !treasurePopup && (
+            {gameStatus ===
+              "FINALIZING" && (
                 <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/90 p-6 backdrop-blur">
 
-                  <div className="w-full max-w-md text-center">
+                  <div className="text-center">
+
+                    <p className="animate-pulse text-[9px] font-black tracking-[0.3em] text-cyan-400">
+                      FINALIZING EXPEDITION...
+                    </p>
+
+                    <p className="mt-2 text-[8px] text-zinc-600">
+                      Recording your result with the server.
+                    </p>
+
+                  </div>
+
+                </div>
+              )}
+
+            {resolvingCombat &&
+              !activeBattle && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/90 p-6 backdrop-blur">
+
+                  <div className="text-center">
+
+                    <p className="animate-pulse text-[9px] font-black tracking-[0.3em] text-red-400">
+                      RESOLVING COMBAT...
+                    </p>
+
+                    <p className="mt-2 text-[8px] text-zinc-600">
+                      Server is computing this fight.
+                    </p>
+
+                  </div>
+
+                </div>
+              )}
+
+            {(
+              gameStatus ===
+                "COMPLETE" ||
+              gameStatus ===
+                "DEFEATED" ||
+              gameStatus ===
+                "STAMINA_OUT"
+            ) &&
+              !activeBattle &&
+              !treasurePopup && (
+                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/90 p-6 backdrop-blur overflow-y-auto">
+
+                  <div className="w-full max-w-md py-8 text-center">
+
+                    <p
+                      className={`${pixelFont.className} text-[7px] leading-[1.8] text-zinc-600`}
+                    >
+                      LOOTFORM
+                    </p>
 
                     <p
                       className={
                         gameStatus ===
                         "COMPLETE"
-                          ? "text-[8px] font-black tracking-[0.3em] text-lime-400"
-                          : "text-[8px] font-black tracking-[0.3em] text-red-400"
+                          ? `${pixelFont.className} mt-3 text-[10px] leading-[1.8] text-lime-400`
+                          : `${pixelFont.className} mt-3 text-[10px] leading-[1.8] text-red-400`
                       }
                     >
-                      EXPEDITION RESULT
+                      {gameStatus ===
+                      "COMPLETE"
+                        ? "EXTRACTION SUCCESS"
+                        : "EXTRACTION FAILED"}
                     </p>
 
-                    <h2 className="mt-3 text-4xl font-black">
+                    <h2
+                      className={`${pixelFont.className} mt-4 text-xl leading-[1.6] text-white`}
+                    >
 
                       {gameStatus ===
                       "COMPLETE"
@@ -3086,69 +4339,245 @@ export default function GameTestPage() {
 
                     </h2>
 
-                    <div className="mt-7 grid grid-cols-2 gap-3">
+                    {finalizeError && (
+                      <div className="mt-4 rounded-xl border border-red-400/30 bg-red-400/[0.05] p-3">
+
+                        <p className="text-[7px] font-black tracking-[0.15em] text-red-400">
+                          RESULT NOT CONFIRMED
+                        </p>
+
+                        <p className="mt-1 text-[8px] text-zinc-500">
+                          {finalizeError} -- showing local estimate only.
+                        </p>
+
+                      </div>
+                    )}
+
+                    <div className="mt-6 grid grid-cols-2 gap-3">
 
                       <ResultBox
-                        label="RUN SCORE"
-                        value={
+                        label="SCORE"
+                        value={(
+                          gameResult?.score ??
                           runScore
-                        }
+                        ).toLocaleString()}
                       />
 
                       <ResultBox
-                        label="STEPS"
+                        label="TIME"
+                        value={formatDuration(
+                          gameResult?.duration_seconds ??
+                            null
+                        )}
+                      />
+
+                      <ResultBox
+                        label="EXPLORED"
                         value={
-                          stepCount
+                          gameResult?.explored_percent !=
+                          null
+                            ? `${gameResult.explored_percent}%`
+                            : "-"
                         }
                       />
 
                       <ResultBox
                         label="MONSTERS"
                         value={
+                          gameResult?.monsters_killed ??
                           monstersDefeated
                         }
                       />
 
                       <ResultBox
-                        label="HP"
-                        value={`${playerHp}/${playerStats.maxHp}`}
+                        label="ELITES"
+                        value={
+                          gameResult?.elites_killed ??
+                          0
+                        }
+                      />
+
+                      <ResultBox
+                        label="LOOT FOUND"
+                        value={
+                          gameResult?.loot_collected ??
+                          0
+                        }
+                      />
+
+                      <ResultBox
+                        label="GAME COIN"
+                        value={`+${runCoinEarned}`}
                       />
 
                     </div>
 
-                    {liveSession && (
-                      <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+                    {coinBalance !==
+                      null && (
+                      <p className="mt-3 text-[7px] tracking-[0.15em] text-zinc-500">
+                        GAME COIN BALANCE:{" "}
+                        <span className="text-yellow-400">
+                          {coinBalance.toLocaleString()}
+                        </span>
+                      </p>
+                    )}
 
-                        <p className="text-[6px] text-zinc-600">
-                          SESSION
+                    {playerLevel !==
+                      null && (
+                      <p className="mt-1 text-[7px] tracking-[0.15em] text-zinc-500">
+                        PLAYER LV:{" "}
+                        <span className="text-cyan-400">
+                          {playerLevel}
+                        </span>
+                      </p>
+                    )}
+
+                    {extractionSettlement && (
+                      <div
+                        className={`mt-5 rounded-2xl border p-4 text-left ${
+                          extractionSettlement.status ===
+                          "EXTRACTED"
+                            ? "border-lime-400/25 bg-lime-400/[0.04]"
+                            : "border-red-400/25 bg-red-400/[0.04]"
+                        }`}
+                      >
+                        <p
+                          className={`text-[7px] font-black tracking-[0.25em] ${
+                            extractionSettlement.status ===
+                            "EXTRACTED"
+                              ? "text-lime-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {extractionSettlement.status ===
+                          "EXTRACTED"
+                            ? `${extractionSettlement.items.length} ITEMS SECURED`
+                            : "UNSECURED MATERIAL LOST"}
                         </p>
 
-                        <p className="mt-1 font-mono text-[8px] text-cyan-400">
-                          {shortSessionId(
-                            liveSession.id
-                          )}
+                        {extractionSettlement.items
+                          .length ===
+                        0 ? (
+                          <p className="mt-2 text-[8px] text-zinc-600">
+                            No materials were carried this run.
+                          </p>
+                        ) : (
+                          <div className="mt-3 space-y-2">
+                            {extractionSettlement.items.map(
+                              (
+                                item,
+                                index
+                              ) => (
+                                <div
+                                  key={`${item.item_code}-${index}`}
+                                  className="flex items-center justify-between"
+                                >
+                                  <span
+                                    className={`text-[7px] font-black tracking-[0.15em] ${rarityTextClass(
+                                      item.rarity
+                                    )}`}
+                                  >
+                                    {item.rarity}
+                                  </span>
+
+                                  <span className="text-[9px] font-black text-white">
+                                    {item.item_name.toUpperCase()}{" "}
+                                    ×{item.quantity}
+                                  </span>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {gameStatus !==
+                      "COMPLETE" && (
+                      <div className="mt-4 rounded-xl border border-red-400/20 bg-red-400/[0.04] p-3 text-left">
+
+                        <p className="text-[6px] text-red-400 tracking-[0.15em]">
+                          CAUSE
+                        </p>
+
+                        <p className="mt-1 text-[9px] font-black text-white">
+                          {gameResult
+                            ?.fail_reason ===
+                          "STAMINA_DEPLETED"
+                            ? "STAMINA DEPLETED"
+                            : "PLAYER HP DEPLETED"}
                         </p>
 
                       </div>
                     )}
 
-                    <p className="mt-4 text-[7px] leading-5 text-zinc-600">
-                      GAME_START, TREASURE_FOUND and MONSTER_DEFEATED are connected. Final session completion will be connected in the next step.
-                    </p>
+                    {equipment.TOP
+                      ?.item && (
+                      <div className="mt-4 rounded-xl border border-purple-400/20 bg-purple-400/[0.04] p-4 text-left">
+
+                        <p className="text-[6px] text-purple-400 tracking-[0.15em]">
+                          SHIRT
+                        </p>
+
+                        <p className="mt-1 text-sm font-black text-white">
+                          {getItemName(
+                            equipment.TOP.item
+                          )}{" "}
+                          //{" "}
+                          {equipment.TOP
+                            .item.grade}
+                        </p>
+
+                        <div className="mt-3 flex items-center justify-between">
+
+                          <div>
+                            <p className="text-[6px] text-zinc-600">
+                              POWER
+                            </p>
+                            <p className="text-lg font-black text-lime-400">
+                              {sessionStats?.power ??
+                                "-"}
+                            </p>
+                          </div>
+
+                          {sessionStats?.abilityCode && (
+                            <div className="text-right">
+                              <p className="text-[6px] text-zinc-600">
+                                ABILITY
+                              </p>
+                              <p className="text-sm font-black text-purple-400">
+                                {sessionStats.abilityCode}
+                              </p>
+                            </div>
+                          )}
+
+                        </div>
+
+                      </div>
+                    )}
+
+                    <div className="mt-4 rounded-xl border border-zinc-800 bg-black/40 p-3">
+
+                      <p className="text-[7px] font-black tracking-[0.15em] text-zinc-600">
+                        REWARD CALCULATION
+                      </p>
+
+                      <p className="mt-1 text-[9px] font-black text-zinc-500">
+                        COMING NEXT
+                      </p>
+
+                    </div>
 
                     <button
                       type="button"
                       onClick={() => {
-                        void startExpedition();
+                        setGameStatus(
+                          "READY"
+                        );
                       }}
-                      disabled={
-                        startingSession
-                      }
-                      className="mt-7 rounded-xl bg-white px-9 py-3 text-[10px] font-black text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mt-7 rounded-xl bg-white px-9 py-3 text-[10px] font-black text-black transition hover:bg-zinc-200"
                     >
-                      {startingSession
-                        ? "CREATING SESSION + EVENT..."
-                        : "PLAY AGAIN"}
+                      CONTINUE
                     </button>
 
                   </div>
@@ -3160,12 +4589,12 @@ export default function GameTestPage() {
 
               <div>
 
-                <p className="text-[7px] tracking-[0.15em] text-zinc-600">
-                  MAP
+                <p className="text-[7px] tracking-[0.15em] text-purple-400">
+                  {STAGE_1_1.zoneId} // {STAGE_1_1.zoneName}
                 </p>
 
-                <p className="mt-1 text-sm font-black">
-                  SECTOR A-01
+                <p className="mt-1 text-sm font-black text-cyan-300">
+                  {STAGE_1_1.stageLabel} — {STAGE_1_1.stageName}
                 </p>
 
               </div>
@@ -3186,37 +4615,86 @@ export default function GameTestPage() {
                   }
                 />
 
+                <MiniStatus
+                  label="RUN LOOT"
+                  value={`${runLoot.reduce(
+                    (
+                      sum,
+                      entry
+                    ) =>
+                      sum +
+                      entry.quantity,
+                    0
+                  )} UNEXTRACTED`}
+                />
+
               </div>
 
             </div>
 
-            <div className="mt-5 flex min-h-[500px] items-start justify-center overflow-auto rounded-2xl border border-zinc-900 bg-black/50 p-5">
+            <div className="mt-3 grid grid-cols-4 gap-2">
+
+              <MiniStatus
+                label="HP"
+                value={`${playerHp}/${activeStats.maxHp}`}
+              />
+
+              <MiniStatus
+                label="POWER"
+                value={
+                  activeStats.power
+                }
+              />
+
+              <MiniStatus
+                label="COIN"
+                value={
+                  coinBalance ??
+                  0
+                }
+              />
+
+              <MiniStatus
+                label="ABILITY"
+                value={
+                  sessionStats?.abilityCode ??
+                  "—"
+                }
+              />
+
+            </div>
+
+            <div className="relative mt-5 flex min-h-[320px] items-start justify-center overflow-auto rounded-2xl border border-zinc-900 bg-black/50 p-2 sm:min-h-[500px] sm:p-5">
+
+              <div className="stage-vignette pointer-events-none absolute inset-0 rounded-2xl" />
 
               <div
-                className="grid w-max gap-[3px]"
+                className="stage-camera grid w-max gap-[3px]"
                 style={{
                   gridTemplateColumns:
-                    `repeat(${MAP_SIZE}, clamp(29px, 3.1vw, 38px))`,
+                    `repeat(${cameraViewSize}, clamp(18px, 6.2vw, 46px))`,
                 }}
               >
 
                 {Array.from({
                   length:
-                    MAP_SIZE *
-                    MAP_SIZE,
+                    cameraViewSize *
+                    cameraViewSize,
                 }).map(
                   (
                     _,
                     index
                   ) => {
                     const tileX =
-                      index %
-                      MAP_SIZE;
+                      cameraMinX +
+                      (index %
+                        cameraViewSize);
 
                     const tileY =
+                      cameraMinY +
                       Math.floor(
                         index /
-                          MAP_SIZE
+                          cameraViewSize
                       );
 
                     const key =
@@ -3264,6 +4742,14 @@ export default function GameTestPage() {
                             tileY
                       );
 
+                    const prop =
+                      wall
+                        ? floorPropAt(
+                            tileX,
+                            tileY
+                          )
+                        : null;
+
                     let tileStyle =
                       "border-black bg-black";
 
@@ -3273,8 +4759,8 @@ export default function GameTestPage() {
                     ) {
                       tileStyle =
                         wall
-                          ? "border-zinc-950 bg-zinc-950"
-                          : "border-zinc-900 bg-zinc-950";
+                          ? "tile-wall-dim border-zinc-950"
+                          : "tile-floor-dim border-zinc-900";
                     }
 
                     if (
@@ -3282,8 +4768,8 @@ export default function GameTestPage() {
                     ) {
                       tileStyle =
                         wall
-                          ? "border-zinc-600 bg-zinc-700"
-                          : "border-zinc-800 bg-zinc-900";
+                          ? "tile-wall border-zinc-600"
+                          : "tile-floor border-zinc-800";
                     }
 
                     return (
@@ -3291,28 +4777,51 @@ export default function GameTestPage() {
                         key={
                           key
                         }
-                        className={`relative flex aspect-square items-center justify-center overflow-visible rounded-[5px] border transition-all duration-200 ${tileStyle}`}
+                        className={`relative flex aspect-square items-center justify-center overflow-visible rounded-[1px] border-2 transition-colors duration-150 ${tileStyle}`}
                       >
 
                         {visible &&
                           wall && (
-                            <span className="text-xs text-zinc-500">
-                              ▦
+                            <span className="text-[10px] text-zinc-500">
+                              {prop ===
+                              "PIPE"
+                                ? "┃"
+                                : prop ===
+                                  "VENT"
+                                ? "▤"
+                                : prop ===
+                                  "CRATE"
+                                ? "▧"
+                                : prop ===
+                                  "NEON_SIGN"
+                                ? "◈"
+                                : prop ===
+                                  "PANEL"
+                                ? "▥"
+                                : "▦"}
                             </span>
                           )}
 
                         {explored &&
                           exit &&
                           !wall && (
-                            <span
-                              className={
-                                visible
-                                  ? "relative z-10 text-xl font-black text-lime-400 drop-shadow-[0_0_10px_rgba(163,230,53,1)]"
-                                  : "relative z-10 text-xl font-black text-zinc-700"
-                              }
-                            >
-                              ◇
-                            </span>
+                            <div className="relative z-10 flex items-center justify-center">
+
+                              {visible && (
+                                <div className="extraction-gate-ring absolute h-8 w-8 rounded-full border border-lime-400/70" />
+                              )}
+
+                              <span
+                                className={
+                                  visible
+                                    ? "relative text-2xl font-black text-lime-400 drop-shadow-[0_0_10px_rgba(163,230,53,1)]"
+                                    : "relative text-2xl font-black text-zinc-700"
+                                }
+                              >
+                                ◇
+                              </span>
+
+                            </div>
                           )}
 
                         {visible &&
@@ -3393,14 +4902,16 @@ export default function GameTestPage() {
 
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[7px] font-black text-zinc-600">
+            <div
+              className={`${pixelFont.className} mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[6px] leading-[1.8] text-zinc-600`}
+            >
 
               <span>
                 HERO
               </span>
 
               <span>
-                CHEST
+                CACHE
               </span>
 
               <span>
@@ -3412,7 +4923,7 @@ export default function GameTestPage() {
               </span>
 
               <span>
-                ◇ EXIT
+                ◇ EXTRACTION GATE
               </span>
 
               <span>
@@ -3421,9 +4932,60 @@ export default function GameTestPage() {
 
             </div>
 
+            <div className="mt-6 flex items-center justify-center">
+
+              <MobileDpad
+                onMove={
+                  moveHero
+                }
+                disabled={
+                  gameStatus !==
+                    "PLAYING" ||
+                  Boolean(
+                    activeBattle
+                  ) ||
+                  Boolean(
+                    treasurePopup
+                  )
+                }
+              />
+
+            </div>
+
           </div>
 
-          <aside className="space-y-4">
+          <aside>
+
+            <button
+              type="button"
+              onClick={() =>
+                setBuildPanelOpen(
+                  (
+                    current
+                  ) =>
+                    !current
+                )
+              }
+              className={`${pixelFont.className} flex w-full items-center justify-between rounded-[2px] border-2 border-zinc-800 bg-zinc-950 px-4 py-3 text-[8px] leading-none text-zinc-300 xl:hidden`}
+            >
+              <span>
+                BUILD // RUN LOOT
+              </span>
+
+              <span className="text-cyan-400">
+                {buildPanelOpen
+                  ? "▲"
+                  : "▼"}
+              </span>
+            </button>
+
+            <div
+              className={`${
+                buildPanelOpen
+                  ? "block"
+                  : "hidden"
+              } mt-3 space-y-4 xl:mt-0 xl:block`}
+            >
 
             <section className="rounded-[24px] border border-zinc-800 bg-zinc-950 p-5">
 
@@ -3483,7 +5045,7 @@ export default function GameTestPage() {
                     playerHp
                   }
                   max={
-                    playerStats.maxHp
+                    activeStats.maxHp
                   }
                   barClassName="bg-red-400"
                 />
@@ -3494,14 +5056,14 @@ export default function GameTestPage() {
 
                 <StatBox
                   label="SIGHT"
-                  value={`${playerStats.sightRange} TILES`}
+                  value={`${activeStats.vision} TILES`}
                   valueClassName="text-purple-400"
                 />
 
                 <StatBox
                   label="POWER"
                   value={
-                    playerStats.power
+                    activeStats.power
                   }
                   valueClassName="text-lime-400"
                 />
@@ -3509,7 +5071,7 @@ export default function GameTestPage() {
                 <StatBox
                   label="ATK"
                   value={
-                    playerStats.atk
+                    activeStats.atk
                   }
                   valueClassName="text-orange-400"
                 />
@@ -3517,12 +5079,62 @@ export default function GameTestPage() {
                 <StatBox
                   label="DEF"
                   value={
-                    playerStats.def
+                    activeStats.def
                   }
                   valueClassName="text-cyan-400"
                 />
 
               </div>
+
+            </section>
+
+            <section className="rounded-[24px] border border-zinc-800 bg-zinc-950 p-5">
+
+              <div className="flex items-center justify-between">
+
+                <p className="text-[8px] font-black tracking-[0.25em] text-yellow-400">
+                  RUN LOOT
+                </p>
+
+                <span className="rounded-full border border-yellow-400/30 bg-yellow-400/[0.06] px-2 py-0.5 text-[6px] font-black tracking-[0.15em] text-yellow-400">
+                  UNEXTRACTED
+                </span>
+
+              </div>
+
+              {runLoot.length ===
+              0 ? (
+                <p className="mt-3 text-[8px] text-zinc-600">
+                  No materials found yet this run.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-1.5">
+                  {runLoot.map(
+                    (
+                      entry
+                    ) => (
+                      <div
+                        key={
+                          entry.item_code
+                        }
+                        className="flex items-center justify-between text-[8px]"
+                      >
+                        <span
+                          className={rarityTextClass(
+                            entry.rarity
+                          )}
+                        >
+                          {entry.item_name}
+                        </span>
+
+                        <span className="font-black text-white">
+                          ×{entry.quantity}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
 
             </section>
 
@@ -3596,6 +5208,20 @@ export default function GameTestPage() {
                 )}
 
               </div>
+
+              {sessionStats?.abilityCode && (
+                <div className="mt-3 rounded-xl border border-purple-400/20 bg-purple-400/[0.05] px-3 py-2">
+
+                  <p className="text-[6px] tracking-[0.15em] text-purple-400">
+                    ABILITY LOADED
+                  </p>
+
+                  <p className="mt-1 text-[9px] font-black text-white">
+                    {sessionStats.abilityCode}
+                  </p>
+
+                </div>
+              )}
 
             </section>
 
@@ -3807,6 +5433,8 @@ export default function GameTestPage() {
 
             </section>
 
+            </div>
+
           </aside>
 
         </section>
@@ -3841,6 +5469,219 @@ export default function GameTestPage() {
             1.1s
             ease-in-out
             infinite;
+        }
+
+        .extraction-gate-ring {
+          animation:
+            extractionGatePulse
+            1.6s
+            ease-in-out
+            infinite;
+        }
+
+        @keyframes extractionGatePulse {
+          0%, 100% {
+            transform: scale(0.85);
+            opacity: 0.9;
+          }
+          50% {
+            transform: scale(1.25);
+            opacity: 0.25;
+          }
+        }
+
+        .drop-reveal {
+          animation:
+            dropRevealFade
+            250ms
+            ease-out
+            1;
+        }
+
+        @keyframes dropRevealFade {
+          0% {
+            opacity: 0;
+            transform: scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        .handheld-screen {
+          box-shadow:
+            0 0 0 2px rgba(0, 0, 0, 0.6),
+            0 0 40px rgba(34, 211, 238, 0.08);
+        }
+
+        .handheld-scanlines {
+          background:
+            repeating-linear-gradient(
+              0deg,
+              rgba(0, 0, 0, 0.12) 0px,
+              rgba(0, 0, 0, 0.12) 1px,
+              transparent 1px,
+              transparent 3px
+            );
+
+          mix-blend-mode: multiply;
+          opacity: 0.5;
+        }
+
+        .tile-floor {
+          background-color: #18181b;
+          background-image:
+            repeating-linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.025) 0px,
+              rgba(255, 255, 255, 0.025) 2px,
+              transparent 2px,
+              transparent 10px
+            );
+        }
+
+        .tile-floor-dim {
+          background-color: #09090b;
+          background-image:
+            repeating-linear-gradient(
+              135deg,
+              rgba(255, 255, 255, 0.012) 0px,
+              rgba(255, 255, 255, 0.012) 2px,
+              transparent 2px,
+              transparent 10px
+            );
+        }
+
+        .tile-wall {
+          background-color: #3f3f46;
+          background-image:
+            linear-gradient(
+              180deg,
+              rgba(0, 0, 0, 0.35) 0%,
+              rgba(0, 0, 0, 0) 40%
+            ),
+            repeating-linear-gradient(
+              90deg,
+              rgba(0, 0, 0, 0.25) 0px,
+              rgba(0, 0, 0, 0.25) 1px,
+              transparent 1px,
+              transparent 8px
+            );
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+        }
+
+        .tile-wall-dim {
+          background-color: #18181b;
+          background-image:
+            linear-gradient(
+              180deg,
+              rgba(0, 0, 0, 0.35) 0%,
+              rgba(0, 0, 0, 0) 40%
+            );
+        }
+
+        .stage-vignette {
+          box-shadow:
+            inset 0 0 60px rgba(0, 0, 0, 0.85),
+            inset 0 0 18px rgba(34, 211, 238, 0.12);
+        }
+
+        .combat-glitch {
+          animation:
+            combatGlitchFade
+            450ms
+            ease-out
+            1;
+        }
+
+        .combat-glitch-scanlines {
+          background:
+            repeating-linear-gradient(
+              0deg,
+              rgba(34, 211, 238, 0.1) 0px,
+              rgba(34, 211, 238, 0.1) 1px,
+              transparent 2px,
+              transparent 4px
+            );
+
+          animation:
+            combatGlitchNoise
+            450ms
+            steps(6)
+            1;
+        }
+
+        .combat-glitch-slice-a {
+          animation:
+            combatGlitchSliceA
+            450ms
+            steps(4)
+            1;
+        }
+
+        .combat-glitch-slice-b {
+          animation:
+            combatGlitchSliceB
+            450ms
+            steps(4)
+            1;
+        }
+
+        @keyframes combatGlitchFade {
+          0% {
+            opacity: 1;
+            background: #000;
+          }
+          55% {
+            opacity: 1;
+            background: transparent;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        @keyframes combatGlitchNoise {
+          0%, 100% {
+            transform: translateX(0);
+            opacity: 0.9;
+          }
+          20% {
+            transform: translateX(-6px);
+          }
+          40% {
+            transform: translateX(5px);
+          }
+          60% {
+            transform: translateX(-3px);
+          }
+          80% {
+            transform: translateX(2px);
+            opacity: 0.4;
+          }
+        }
+
+        @keyframes combatGlitchSliceA {
+          0% {
+            transform: translateX(-50px);
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(50px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes combatGlitchSliceB {
+          0% {
+            transform: translateX(40px);
+            opacity: 1;
+          }
+          100% {
+            transform: translateX(-40px);
+            opacity: 0;
+          }
         }
 
         .treasure-flash {
@@ -4334,6 +6175,15 @@ function StatBar({
 }
 
 // =========================================================
+// DIRECTION PAD (STEP 4A)
+//
+// On-screen four-direction control for mobile (and usable on
+// desktop too). Sends the exact same intent as a keyboard press --
+// onMove is moveHero(dx, dy) itself, so the server remains the only
+// authority on whether the move is valid.
+// =========================================================
+
+// =========================================================
 // MINI STATUS
 // =========================================================
 
@@ -4345,16 +6195,20 @@ function MiniStatus({
     string;
 
   value:
-    number;
+    string | number;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-black px-3 py-2">
+    <div className="rounded-[2px] border-2 border-zinc-800 bg-black px-3 py-2">
 
-      <p className="text-[5px] text-zinc-600">
+      <p
+        className={`${pixelFont.className} text-[5px] leading-[1.6] text-zinc-500`}
+      >
         {label}
       </p>
 
-      <p className="mt-1 text-[8px] font-black text-cyan-400">
+      <p
+        className={`${pixelFont.className} mt-1.5 text-[9px] leading-none text-cyan-400`}
+      >
         {value}
       </p>
 
@@ -4377,13 +6231,17 @@ function ResultBox({
     string | number;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-left">
+    <div className="rounded-[3px] border-2 border-zinc-800 bg-zinc-950 p-4 text-left">
 
-      <p className="text-[6px] text-zinc-600">
+      <p
+        className={`${pixelFont.className} text-[6px] leading-[1.8] text-zinc-500`}
+      >
         {label}
       </p>
 
-      <p className="mt-1 text-lg font-black text-white">
+      <p
+        className={`${pixelFont.className} mt-2 text-base leading-tight text-white`}
+      >
         {value}
       </p>
 

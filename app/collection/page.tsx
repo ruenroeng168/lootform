@@ -59,6 +59,37 @@ type Item = {
 
   thumbnail_url_snapshot:
     string | null;
+
+  /* ===================================
+     CRAFTED SHIRT GAME STATS SNAPSHOT
+  =================================== */
+
+  hp_bonus_snapshot:
+    number | null;
+
+  attack_bonus_snapshot:
+    number | null;
+
+  defense_bonus_snapshot:
+    number | null;
+
+  luck_bonus_snapshot:
+    number | null;
+
+  heal_bonus_snapshot:
+    number | null;
+
+  vision_bonus_snapshot:
+    number | null;
+
+  power_score_snapshot:
+    number | null;
+
+  ability_code_snapshot:
+    string | null;
+
+  ability_config_snapshot:
+    Record<string, unknown> | null;
 };
 
 type ShippingAddress = {
@@ -330,7 +361,16 @@ export default function CollectionPage() {
             tracking_number,
             production_updated_at,
             shipping_address_id,
-            thumbnail_url_snapshot
+            thumbnail_url_snapshot,
+            hp_bonus_snapshot,
+            attack_bonus_snapshot,
+            defense_bonus_snapshot,
+            luck_bonus_snapshot,
+            heal_bonus_snapshot,
+            vision_bonus_snapshot,
+            power_score_snapshot,
+            ability_code_snapshot,
+            ability_config_snapshot
           `)
           .eq(
             "owner_id",
@@ -1352,6 +1392,16 @@ export default function CollectionPage() {
 
                   </div>
 
+                  {/* =====================================
+                      CRAFTED SHIRT GAME STATS
+                  ===================================== */}
+
+                  <ItemGameStatsPanel
+                    item={
+                      item
+                    }
+                  />
+
                   {/* ITEM INFO */}
 
                   <div className="grid grid-cols-3 gap-2 mt-2">
@@ -2044,6 +2094,155 @@ function CollectionStat({
       >
         {value}
       </p>
+
+    </div>
+  );
+}
+
+// =====================================
+// ABILITY LABEL
+//
+// ability_code is data from the Design's game stat profile in the
+// database, never a shirt name -- this only maps the fixed, shared
+// ability_code enum (spec section 16) to display text.
+// =====================================
+
+const ABILITY_LABELS: Record<
+  string,
+  { name: string; describe: (config: Record<string, unknown>) => string }
+> = {
+  BERSERK: {
+    name: "BERSERK",
+    describe: (config) =>
+      `Below ${config.hp_threshold_percent ?? 30}% HP: ATK +${config.attack_bonus_percent ?? 0}%`,
+  },
+
+  FORTIFIED: {
+    name: "FORTIFIED",
+    describe: (config) =>
+      `Elite Damage Taken -${config.elite_damage_reduction_percent ?? 0}%`,
+  },
+
+  TREASURE_HUNTER: {
+    name: "TREASURE HUNTER",
+    describe: (config) =>
+      `Rare Material Drop +${config.rare_material_drop_bonus_percent ?? 0}%`,
+  },
+
+  FIELD_MEDIC: {
+    name: "FIELD MEDIC",
+    describe: (config) =>
+      `Potion Heal +${config.potion_heal_bonus_percent ?? 0}%`,
+  },
+
+  SCOUT: {
+    name: "SCOUT",
+    describe: () =>
+      "Reveals a wider radius while exploring.",
+  },
+
+  ELITE_HUNTER: {
+    name: "ELITE HUNTER",
+    describe: () =>
+      "Deals bonus damage to Elite monsters.",
+  },
+};
+
+// =====================================
+// ITEM GAME STATS PANEL
+//
+// Crafted Shirt Game Stats -- all values are the frozen snapshot the
+// server computed and wrote at Craft time (lootform_craft_atomic).
+// Nothing here is computed in the browser.
+// =====================================
+
+function ItemGameStatsPanel({
+  item,
+}: {
+  item: Item;
+}) {
+  const stats = [
+    { label: "HP", value: item.hp_bonus_snapshot, suffix: "" },
+    { label: "ATK", value: item.attack_bonus_snapshot, suffix: "" },
+    { label: "DEF", value: item.defense_bonus_snapshot, suffix: "" },
+    { label: "LUCK", value: item.luck_bonus_snapshot, suffix: "%" },
+    { label: "HEAL", value: item.heal_bonus_snapshot, suffix: "%" },
+    { label: "VISION", value: item.vision_bonus_snapshot, suffix: "" },
+  ].filter(
+    (stat) => Number(stat.value ?? 0) !== 0
+  );
+
+  const ability =
+    item.ability_code_snapshot
+      ? ABILITY_LABELS[item.ability_code_snapshot]
+      : null;
+
+  if (
+    stats.length === 0 &&
+    !ability
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 border border-zinc-800 bg-black/40 rounded-xl p-4">
+
+      <div className="flex items-center justify-between gap-3">
+
+        <p className="text-zinc-600 text-[8px] tracking-[0.18em]">
+          GAME STATS
+        </p>
+
+        {item.power_score_snapshot != null && (
+          <p className="text-lime-400 text-xs font-black">
+            POWER {item.power_score_snapshot}
+          </p>
+        )}
+
+      </div>
+
+      {stats.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mt-3">
+
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="border border-zinc-800 bg-zinc-950/60 rounded-lg px-2 py-2 text-center"
+            >
+
+              <p className="text-zinc-600 text-[6px]">
+                {stat.label}
+              </p>
+
+              <p className="text-cyan-400 text-xs font-black mt-1">
+                +{stat.value}{stat.suffix}
+              </p>
+
+            </div>
+          ))}
+
+        </div>
+      )}
+
+      {ability && (
+        <div className="mt-3 border border-purple-400/20 bg-purple-400/[0.05] rounded-lg p-3">
+
+          <p className="text-purple-400 text-[7px] tracking-[0.16em]">
+            ABILITY
+          </p>
+
+          <p className="text-white text-xs font-black mt-1">
+            {ability.name}
+          </p>
+
+          <p className="text-zinc-500 text-[8px] mt-1">
+            {ability.describe(
+              item.ability_config_snapshot ?? {}
+            )}
+          </p>
+
+        </div>
+      )}
 
     </div>
   );

@@ -7,6 +7,10 @@ import {
   supabaseAdmin,
 } from "@/lib/supabase-admin";
 
+import {
+  computeEffectiveGameStats,
+} from "@/lib/game-stats";
+
 export const dynamic =
   "force-dynamic";
 
@@ -442,7 +446,48 @@ export async function POST(
     }
 
     // =====================================================
-    // 8. CREATE SESSION
+    // 8. SNAPSHOT EFFECTIVE GAME STATS
+    //
+    // Server Authority (spec section 11/13):
+    //   Auth Player -> Read current Equipment -> Read Item Stat
+    //   Snapshot -> Calculate Effective Game Stats -> freeze onto
+    //   the Session.
+    //
+    // Equipment changed after this point (including in another tab)
+    // must never affect a Session that has already started.
+    // =====================================================
+
+    let statsSnapshot;
+
+    try {
+      statsSnapshot =
+        await computeEffectiveGameStats(
+          userId
+        );
+    } catch (
+      statsError
+    ) {
+      console.error(
+        "START GAME - EFFECTIVE STATS ERROR:",
+        statsError
+      );
+
+      return jsonResponse(
+        {
+          ok: false,
+
+          code:
+            "GAME_STATS_UNAVAILABLE",
+
+          error:
+            "Unable to read player Game Stats.",
+        },
+        500
+      );
+    }
+
+    // =====================================================
+    // 9. CREATE SESSION
     // =====================================================
 
     const {
@@ -489,6 +534,9 @@ export async function POST(
 
           result_payload:
             {},
+
+          stats_snapshot:
+            statsSnapshot,
         })
         .select(`
           id,
@@ -497,7 +545,8 @@ export async function POST(
           game_code_snapshot,
           game_version_snapshot,
           engine_snapshot,
-          started_at
+          started_at,
+          stats_snapshot
         `)
         .single();
 
@@ -525,9 +574,189 @@ export async function POST(
     }
 
     // =====================================================
-    // 9. RESPONSE
+    // 9B. CREATE AUTHORITATIVE EXPEDITION STATE (STEP 2.6)
+    //
+    // start_x/y, exit_x/y and the map layout are the same fixed
+    // constants app/game/play/page.tsx already renders (MAP_SIZE=15,
+    // no randomization exists yet -- see STEP 2.6 report). This row
+    // is what resolve_game_move() and finalize_game_session() treat
+    // as truth; the client never writes to it directly.
+    // =====================================================
+
+    const GRID_EXPEDITION_MAP_SIZE = 15;
+
+    let sessionState:
+      | {
+          current_x: number;
+          current_y: number;
+          start_x: number;
+          start_y: number;
+          exit_x: number;
+          exit_y: number;
+          turn_count: number;
+          exit_reached: boolean;
+          player_current_hp: number | null;
+        }
+      | null = null;
+
+    if (
+      game.code ===
+      "LF-GRID-EXPEDITION"
+    ) {
+      const {
+        data: stateData,
+
+        error: stateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "game_session_state"
+          )
+          .insert({
+            session_id:
+              sessionData.id,
+
+            start_x: 0,
+            start_y: 0,
+
+            exit_x:
+              GRID_EXPEDITION_MAP_SIZE -
+              1,
+
+            exit_y:
+              GRID_EXPEDITION_MAP_SIZE -
+              1,
+
+            current_x: 0,
+            current_y: 0,
+
+            map_seed:
+              "SECTOR-A-01-STATIC-V1",
+
+            map_version:
+              "SECTOR-A-01-V1",
+
+            // AUTHORITATIVE (STEP 2.8): starting HP for Combat,
+            // taken from the same stats_snapshot already frozen
+            // onto the Session above -- never a client value.
+            player_current_hp:
+              statsSnapshot.effective.hp,
+          })
+          .select(`
+            current_x,
+            current_y,
+            start_x,
+            start_y,
+            exit_x,
+            exit_y,
+            turn_count,
+            exit_reached,
+            player_current_hp
+          `)
+          .single();
+
+      if (
+        stateError ||
+        !stateData
+      ) {
+        console.error(
+          "START GAME - SESSION STATE INSERT ERROR:",
+          stateError
+        );
+
+        return jsonResponse(
+          {
+            ok: false,
+
+            code:
+              "SESSION_STATE_CREATE_FAILED",
+
+            error:
+              "Unable to create expedition state.",
+          },
+          500
+        );
+      }
+
+      sessionState =
+        stateData;
+    }
+
+    // =====================================================
+    // 9C. GENERATE AUTHORITATIVE ENCOUNTERS (STEP 2.7)
+    //
+    // Monster/Elite existence, position and tier are now decided
+    // here, server-side, once per session -- the client can no
+    // longer invent a monster that was never placed. Same
+    // distribution the client's old createEntities() used (5
+    // monsters, 50/35/15 SCOUT/GUARD/ELITE), so gameplay feel is
+    // unchanged.
+    // =====================================================
+
+    let encounters:
+      unknown[] = [];
+
+    if (
+      game.code ===
+        "LF-GRID-EXPEDITION" &&
+      sessionState
+    ) {
+      const {
+        data: encounterData,
+
+        error: encounterError,
+      } =
+        await supabaseAdmin
+          .rpc(
+            "generate_game_encounters",
+            {
+              p_session_id:
+                sessionData.id,
+
+              p_user_id:
+                userId,
+
+              p_count: 5,
+            }
+          );
+
+      if (encounterError) {
+        console.error(
+          "START GAME - ENCOUNTER GENERATION ERROR:",
+          encounterError
+        );
+
+        return jsonResponse(
+          {
+            ok: false,
+
+            code:
+              "ENCOUNTER_GENERATION_FAILED",
+
+            error:
+              "Unable to generate expedition encounters.",
+          },
+          500
+        );
+      }
+
+      const encounterResult =
+        encounterData as {
+          encounters?: unknown[];
+        };
+
+      encounters =
+        encounterResult
+          ?.encounters ??
+        [];
+    }
+
+    // =====================================================
+    // 10. RESPONSE
     //
     // No EXP / LT / Item authority is sent to the game.
+    // stats_snapshot is display data the server already computed
+    // and already froze onto the Session row above.
     // =====================================================
 
     return jsonResponse(
@@ -543,6 +772,14 @@ export async function POST(
 
           started_at:
             sessionData.started_at,
+
+          stats_snapshot:
+            sessionData.stats_snapshot,
+
+          state:
+            sessionState,
+
+          encounters,
         },
 
         game: {

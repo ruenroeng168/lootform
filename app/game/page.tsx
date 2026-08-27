@@ -9,8 +9,12 @@ import {
   useRouter,
 } from "next/navigation";
 
+import Link from "next/link";
+
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import { useGameAccessGate } from "@/lib/game-access";
+import GameComingSoonScreen from "@/components/game/GameComingSoonScreen";
 
 type PlayerProfile = {
   user_id: string;
@@ -53,6 +57,15 @@ type SeasonSettings = {
 export default function GamePage() {
   const router =
     useRouter();
+
+  const {
+    checked:
+      gameAccessChecked,
+
+    allowed:
+      gameAccessAllowed,
+  } =
+    useGameAccessGate();
 
   const [
     loading,
@@ -329,6 +342,38 @@ export default function GamePage() {
     0;
 
   // =====================================================
+  // GAME SECTION GATE (temporary, Phase 2 -- see lib/game-access.ts)
+  // =====================================================
+
+  if (
+    !gameAccessChecked
+  ) {
+    return (
+      <main className="min-h-screen bg-black text-white">
+
+        <Navbar />
+
+        <div className="flex min-h-[80vh] items-center justify-center">
+
+          <p className="animate-pulse text-sm font-black tracking-[0.3em] text-cyan-400">
+            LOADING GAME HUB...
+          </p>
+
+        </div>
+
+      </main>
+    );
+  }
+
+  if (
+    !gameAccessAllowed
+  ) {
+    return (
+      <GameComingSoonScreen />
+    );
+  }
+
+  // =====================================================
   // LOADING
   // =====================================================
 
@@ -556,11 +601,12 @@ export default function GamePage() {
 
           <FutureCard
             eyebrow="PLAY SYSTEM"
-            title="GAMES"
-            description="Mini games, season events and interactive LOOTFORM experiences will appear here."
-            status="NO GAMES AVAILABLE"
+            title="GRID EXPEDITION"
+            description="Explore a fog-of-war grid, fight monsters, open loot caches and find the exit. Session and events are recorded server-side."
+            status="EXPEDITION AVAILABLE"
             accent="cyan"
             icon="▶"
+            href="/game/play"
           />
 
           {/* MISSIONS */}
@@ -770,6 +816,7 @@ function FutureCard({
   status,
   accent,
   icon,
+  href,
 }: {
   eyebrow: string;
   title: string;
@@ -780,6 +827,7 @@ function FutureCard({
     | "purple"
     | "lime";
   icon: string;
+  href?: string;
 }) {
   const styles = {
     cyan: {
@@ -821,19 +869,28 @@ function FutureCard({
       accent
     ];
 
-  return (
-    <div
-      className={`
-        relative
-        min-h-[245px]
-        overflow-hidden
-        rounded-[24px]
-        border
-        bg-zinc-950/80
-        p-5
-        ${theme.border}
-      `}
-    >
+  const cardClassName = `
+    relative
+    block
+    min-h-[245px]
+    overflow-hidden
+    rounded-[24px]
+    border
+    bg-zinc-950/80
+    p-5
+    transition
+
+    ${theme.border}
+
+    ${
+      href
+        ? "cursor-pointer hover:border-white/40"
+        : ""
+    }
+  `;
+
+  const cardBody = (
+    <>
 
       <div
         className={`
@@ -884,9 +941,21 @@ function FutureCard({
 
             <div className="flex items-center gap-2">
 
-              <span className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
+              <span
+                className={
+                  href
+                    ? "h-1.5 w-1.5 rounded-full bg-lime-400 shadow-[0_0_8px_rgba(163,230,53,0.8)]"
+                    : "h-1.5 w-1.5 rounded-full bg-zinc-600"
+                }
+              />
 
-              <p className="text-[7px] font-black tracking-[0.16em] text-zinc-500">
+              <p
+                className={
+                  href
+                    ? "text-[7px] font-black tracking-[0.16em] text-lime-400"
+                    : "text-[7px] font-black tracking-[0.16em] text-zinc-500"
+                }
+              >
                 {status}
               </p>
 
@@ -898,6 +967,23 @@ function FutureCard({
 
       </div>
 
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cardClassName}
+      >
+        {cardBody}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={cardClassName}>
+      {cardBody}
     </div>
   );
 }

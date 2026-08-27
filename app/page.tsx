@@ -46,6 +46,16 @@ type Item = {
 
   thumbnail_url_snapshot: string | null;
   model_url_snapshot: string | null;
+
+  hp_bonus_snapshot: number | null;
+  attack_bonus_snapshot: number | null;
+  defense_bonus_snapshot: number | null;
+  luck_bonus_snapshot: number | null;
+  heal_bonus_snapshot: number | null;
+  vision_bonus_snapshot: number | null;
+  power_score_snapshot: number | null;
+  ability_code_snapshot: string | null;
+  ability_config_snapshot: Record<string, unknown> | null;
 };
 
 type PlayerProfile = {
@@ -118,6 +128,16 @@ type EquipmentApiItem = {
 
   thumbnail_url_snapshot: string | null;
   model_url_snapshot: string | null;
+
+  hp_bonus_snapshot: number | null;
+  attack_bonus_snapshot: number | null;
+  defense_bonus_snapshot: number | null;
+  luck_bonus_snapshot: number | null;
+  heal_bonus_snapshot: number | null;
+  vision_bonus_snapshot: number | null;
+  power_score_snapshot: number | null;
+  ability_code_snapshot: string | null;
+  ability_config_snapshot: Record<string, unknown> | null;
 };
 
 type EquipmentEntry = {
@@ -165,6 +185,24 @@ type PlayerRank = {
 type RankApiResponse = {
   ok: boolean;
   rank?: PlayerRank;
+  code?: string;
+  error?: string;
+};
+
+type EffectiveGameStats = {
+  effective: {
+    hp: number;
+    attack: number;
+    defense: number;
+    luck: number;
+    heal: number;
+    vision: number;
+  };
+};
+
+type GameStatsApiResponse = {
+  ok: boolean;
+  stats?: EffectiveGameStats;
   code?: string;
   error?: string;
 };
@@ -321,6 +359,14 @@ export default function HomePage() {
     );
 
   const [
+    gameStats,
+    setGameStats,
+  ] =
+    useState<EffectiveGameStats | null>(
+      null
+    );
+
+  const [
     equipmentSlots,
     setEquipmentSlots,
   ] =
@@ -334,6 +380,14 @@ export default function HomePage() {
   ] =
     useState<PlayerLoadoutSlot>(
       "TOP"
+    );
+
+  const [
+    previewItem,
+    setPreviewItem,
+  ] =
+    useState<Item | null>(
+      null
     );
 
   const [
@@ -500,6 +554,49 @@ export default function HomePage() {
     return result.rank;
   }
 
+  async function loadGameStats(
+    accessToken: string
+  ) {
+    const response =
+      await fetch(
+        "/api/profile/game-stats",
+        {
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
+
+          cache: "no-store",
+        }
+      );
+
+    const result =
+      (await response.json()) as GameStatsApiResponse;
+
+    if (
+      !response.ok ||
+      !result.ok ||
+      !result.stats
+    ) {
+      console.error(
+        "HOME GAME STATS ERROR:",
+        result
+      );
+
+      setGameStats(
+        null
+      );
+
+      return;
+    }
+
+    setGameStats(
+      result.stats
+    );
+  }
+
   useEffect(() => {
     async function loadHome() {
       setLoading(true);
@@ -626,7 +723,16 @@ export default function HomePage() {
               upgrade_level,
               upgrade_exp,
               thumbnail_url_snapshot,
-              model_url_snapshot
+              model_url_snapshot,
+              hp_bonus_snapshot,
+              attack_bonus_snapshot,
+              defense_bonus_snapshot,
+              luck_bonus_snapshot,
+              heal_bonus_snapshot,
+              vision_bonus_snapshot,
+              power_score_snapshot,
+              ability_code_snapshot,
+              ability_config_snapshot
             `)
             .eq(
               "owner_id",
@@ -749,6 +855,10 @@ export default function HomePage() {
         );
 
         await loadPlayerRank(
+          session.access_token
+        );
+
+        await loadGameStats(
           session.access_token
         );
 
@@ -1079,6 +1189,10 @@ export default function HomePage() {
       await loadEquipment(
         session.access_token
       );
+
+      await loadGameStats(
+        session.access_token
+      );
     } catch (
       error
     ) {
@@ -1372,11 +1486,15 @@ export default function HomePage() {
                         selectedEquipmentSlot ===
                         slot
                       }
-                      onSelect={() =>
+                      onSelect={() => {
                         setSelectedEquipmentSlot(
                           slot
-                        )
-                      }
+                        );
+
+                        setPreviewItem(
+                          null
+                        );
+                      }}
                     />
                   )
                 )}
@@ -1559,6 +1677,64 @@ export default function HomePage() {
 
             </section>
 
+            {gameStats && (
+              <section className="rounded-[20px] border border-zinc-800 bg-zinc-950/80 p-3.5 sm:p-4">
+
+                <p className="text-[7px] tracking-[0.26em] text-cyan-400">
+                  EXPEDITION READY
+                </p>
+
+                <h2 className="mt-1 text-lg sm:text-[20px] font-black">
+                  GAME STATS
+                </h2>
+
+                <p className="mt-1 text-[7px] text-zinc-600">
+                  BASE CHARACTER + EQUIPPED ITEM BONUSES
+                </p>
+
+                <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+
+                  <InfoBox
+                    label="HP"
+                    value={`${gameStats.effective.hp}`}
+                    className="text-red-400"
+                  />
+
+                  <InfoBox
+                    label="ATK"
+                    value={`${gameStats.effective.attack}`}
+                    className="text-orange-400"
+                  />
+
+                  <InfoBox
+                    label="DEF"
+                    value={`${gameStats.effective.defense}`}
+                    className="text-cyan-400"
+                  />
+
+                  <InfoBox
+                    label="LUCK"
+                    value={`${gameStats.effective.luck}%`}
+                    className="text-purple-400"
+                  />
+
+                  <InfoBox
+                    label="HEAL"
+                    value={`${gameStats.effective.heal}%`}
+                    className="text-lime-400"
+                  />
+
+                  <InfoBox
+                    label="VISION"
+                    value={`${gameStats.effective.vision}`}
+                    className="text-white"
+                  />
+
+                </div>
+
+              </section>
+            )}
+
             <section
               id="home-loadout"
               className="rounded-[20px] border border-zinc-800 bg-zinc-950/80 p-3.5 sm:p-4"
@@ -1633,11 +1809,15 @@ export default function HomePage() {
                           slot
                         }
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
                           setSelectedEquipmentSlot(
                             slot
-                          )
-                        }
+                          );
+
+                          setPreviewItem(
+                            null
+                          );
+                        }}
                         className={`
                           relative
                           min-h-[168px]
@@ -1816,6 +1996,15 @@ export default function HomePage() {
 
                 </div>
 
+                <EquipmentStatPreview
+                  current={
+                    selectedSlotItem
+                  }
+                  candidate={
+                    previewItem
+                  }
+                />
+
                 {compatibleItems.length ===
                 0 ? (
                   <div className="mt-2.5 flex min-h-[80px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
@@ -1862,6 +2051,26 @@ export default function HomePage() {
                             onClick={() =>
                               void equipItem(
                                 item
+                              )
+                            }
+                            onMouseEnter={() =>
+                              setPreviewItem(
+                                item
+                              )
+                            }
+                            onMouseLeave={() =>
+                              setPreviewItem(
+                                null
+                              )
+                            }
+                            onFocus={() =>
+                              setPreviewItem(
+                                item
+                              )
+                            }
+                            onBlur={() =>
+                              setPreviewItem(
+                                null
                               )
                             }
                             disabled={
@@ -2537,6 +2746,142 @@ function ItemImage({
           fallbackUrl;
       }}
     />
+  );
+}
+
+// =========================================================
+// EQUIPMENT STAT PREVIEW
+//
+// Spec section 9: show CURRENT / NEW ITEM / CHANGE before the
+// player equips anything. `current` is the item already in the
+// selected slot; `candidate` is whichever inventory item the
+// player is hovering/focusing (null when nothing is hovered).
+// All values are the server-computed stat snapshot already on
+// the fetched item -- nothing is computed by trusting new input.
+// =========================================================
+
+type StatSnapshotSource = {
+  hp_bonus_snapshot: number | null;
+  attack_bonus_snapshot: number | null;
+  defense_bonus_snapshot: number | null;
+  luck_bonus_snapshot: number | null;
+  heal_bonus_snapshot: number | null;
+  vision_bonus_snapshot: number | null;
+};
+
+const GAME_STAT_FIELDS = [
+  { key: "hp_bonus_snapshot", label: "HP", suffix: "" },
+  { key: "attack_bonus_snapshot", label: "ATK", suffix: "" },
+  { key: "defense_bonus_snapshot", label: "DEF", suffix: "" },
+  { key: "luck_bonus_snapshot", label: "LUCK", suffix: "%" },
+  { key: "heal_bonus_snapshot", label: "HEAL", suffix: "%" },
+  { key: "vision_bonus_snapshot", label: "VISION", suffix: "" },
+] as const;
+
+function EquipmentStatPreview({
+  current,
+  candidate,
+}: {
+  current: StatSnapshotSource | null;
+  candidate: StatSnapshotSource | null;
+}) {
+  if (
+    !current &&
+    !candidate
+  ) {
+    return null;
+  }
+
+  const rows = GAME_STAT_FIELDS.map(
+    (field) => {
+      const currentValue =
+        Number(
+          current?.[field.key] ?? 0
+        );
+
+      const candidateValue =
+        candidate
+          ? Number(
+              candidate[field.key] ?? 0
+            )
+          : currentValue;
+
+      return {
+        ...field,
+        currentValue,
+        candidateValue,
+        change:
+          candidateValue -
+          currentValue,
+      };
+    }
+  ).filter(
+    (row) =>
+      row.currentValue !== 0 ||
+      row.candidateValue !== 0
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-zinc-800 bg-black/40 p-3">
+
+      <div className="grid grid-cols-3 gap-2 text-[7px] font-black tracking-[0.14em] text-zinc-600">
+
+        <p>CURRENT</p>
+
+        <p className={candidate ? "text-cyan-400" : "text-zinc-700"}>
+          NEW ITEM
+        </p>
+
+        <p className={candidate ? "text-lime-400" : "text-zinc-700"}>
+          CHANGE
+        </p>
+
+      </div>
+
+      <div className="mt-2 space-y-1.5">
+
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="grid grid-cols-3 items-center gap-2 text-[9px] font-black"
+          >
+
+            <p className="text-white">
+              {row.label} +{row.currentValue}{row.suffix}
+            </p>
+
+            <p className={candidate ? "text-cyan-400" : "text-zinc-700"}>
+              {candidate
+                ? `${row.label} +${row.candidateValue}${row.suffix}`
+                : "-"}
+            </p>
+
+            <p
+              className={
+                !candidate || row.change === 0
+                  ? "text-zinc-600"
+                  : row.change > 0
+                  ? "text-lime-400"
+                  : "text-red-400"
+              }
+            >
+              {!candidate
+                ? "-"
+                : row.change === 0
+                ? "NO CHANGE"
+                : `${row.change > 0 ? "+" : ""}${row.change}${row.suffix}`}
+            </p>
+
+          </div>
+        ))}
+
+      </div>
+
+    </div>
   );
 }
 

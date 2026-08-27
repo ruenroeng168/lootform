@@ -1467,6 +1467,258 @@ export async function POST(
     }
 
     /* =====================================================
+       12B. AUTHORITATIVE ENCOUNTER RESOLUTION (STEP 2.7)
+
+       MONSTER_DEFEATED must now name a real, server-owned
+       encounter_id (see game_encounters, STEP 2.7). The browser no
+       longer gets to assert "I fought a monster" or "it was an
+       ELITE" -- resolve_encounter_defeat() atomically verifies the
+       encounter exists, belongs to this exact session, and is still
+       ACTIVE (i.e. the player really walked onto it via
+       resolve_game_move), then consumes it exactly once. The tier
+       used for the score-value check below comes from the
+       encounter's own server-recorded row, never from the client's
+       claimed payload.tier.
+
+       Combat itself (was the fight actually won) is still not
+       verified -- that is STEP 2.8 -- so this event remains
+       TELEMETRY_ONLY. This STEP only guarantees a real monster was
+       there and can be "defeated" at most once.
+    ===================================================== */
+
+    if (
+      eventType === "CUSTOM" &&
+      eventName === "MONSTER_DEFEATED"
+    ) {
+      const rawEncounterId =
+        isPlainObject(rawPayload)
+          ? rawPayload.encounter_id
+          : null;
+
+      const encounterId =
+        typeof rawEncounterId ===
+          "number" &&
+        Number.isFinite(
+          rawEncounterId
+        )
+          ? rawEncounterId
+          : null;
+
+      if (encounterId === null) {
+        return jsonResponse(
+          {
+            ok: false,
+
+            code:
+              "ENCOUNTER_ID_REQUIRED",
+
+            error:
+              "MONSTER_DEFEATED requires payload.encounter_id.",
+          },
+          400
+        );
+      }
+
+      const {
+        data: encounterData,
+
+        error: encounterRpcError,
+      } =
+        await supabaseAdmin
+          .rpc(
+            "resolve_encounter_defeat",
+            {
+              p_session_id:
+                gameSession.id,
+
+              p_user_id: userId,
+
+              p_encounter_id:
+                encounterId,
+            }
+          );
+
+      if (encounterRpcError) {
+        console.error(
+          "GAME EVENT - ENCOUNTER RESOLVE ERROR:",
+          encounterRpcError
+        );
+
+        const message =
+          encounterRpcError.message ??
+          "";
+
+        if (
+          message.includes(
+            "ENCOUNTER_NOT_FOUND"
+          )
+        ) {
+          return jsonResponse(
+            {
+              ok: false,
+              code: "ENCOUNTER_NOT_FOUND",
+              error:
+                "Encounter not found.",
+            },
+            404
+          );
+        }
+
+        if (
+          message.includes(
+            "ENCOUNTER_SESSION_MISMATCH"
+          ) ||
+          message.includes(
+            "GAME_SESSION_FORBIDDEN"
+          )
+        ) {
+          return jsonResponse(
+            {
+              ok: false,
+              code: "ENCOUNTER_FORBIDDEN",
+              error:
+                "This encounter does not belong to the authenticated player's session.",
+            },
+            403
+          );
+        }
+
+        if (
+          message.includes(
+            "ENCOUNTER_NOT_ACTIVE"
+          )
+        ) {
+          return jsonResponse(
+            {
+              ok: false,
+              code: "ENCOUNTER_NOT_ACTIVE",
+              error:
+                "This encounter is not currently active (already resolved, or never reached).",
+            },
+            409
+          );
+        }
+
+        return jsonResponse(
+          {
+            ok: false,
+            code: "ENCOUNTER_RESOLVE_FAILED",
+            error:
+              "Unable to resolve encounter.",
+          },
+          500
+        );
+      }
+
+      const resolvedEncounter =
+        encounterData as {
+          tier?: string;
+        };
+
+      const authoritativeTier =
+        normalizeMonsterTier(
+          resolvedEncounter?.tier ??
+            null
+        );
+
+      const {
+        data: monsterRuleRow,
+
+        error: monsterRuleLookupError,
+      } =
+        await supabaseAdmin
+          .from("game_monster_rules")
+          .select("base_score")
+          .eq("game_id", gameSession.game_id)
+          .eq("tier", authoritativeTier)
+          .eq("is_boss", false)
+          .eq("is_active", true)
+          .order("sort_order", {
+            ascending: true,
+          })
+          .limit(1)
+          .maybeSingle();
+
+      if (monsterRuleLookupError) {
+        console.error(
+          "GAME EVENT - MONSTER RULE VALIDATION ERROR:",
+          monsterRuleLookupError
+        );
+
+        return jsonResponse(
+          {
+            ok: false,
+
+            code:
+              "MONSTER_RULE_QUERY_FAILED",
+
+            error:
+              "Unable to validate monster reward value.",
+          },
+          500
+        );
+      }
+
+      const authoritativeScore =
+        monsterRuleRow
+          ? Number(
+              monsterRuleRow.base_score
+            )
+          : null;
+
+      if (
+        authoritativeScore === null ||
+        numericValue === null ||
+        numericValue !==
+          authoritativeScore
+      ) {
+        return jsonResponse(
+          {
+            ok: false,
+
+            code:
+              "NUMERIC_VALUE_MISMATCH",
+
+            error:
+              "numeric_value does not match the server-owned score for this monster tier.",
+          },
+          400
+        );
+      }
+
+      // Overwrite with server-verified truth -- never persist the
+      // client's claimed tier once the real encounter is known.
+      if (isPlainObject(rawPayload)) {
+        rawPayload.tier =
+          authoritativeTier;
+
+        rawPayload.encounter_id =
+          encounterId;
+      }
+    }
+
+    if (
+      eventType === "CUSTOM" &&
+      eventName === "TREASURE_FOUND" &&
+      numericValue !== null &&
+      (numericValue < 0 ||
+        numericValue > 120)
+    ) {
+      return jsonResponse(
+        {
+          ok: false,
+
+          code:
+            "NUMERIC_VALUE_OUT_OF_RANGE",
+
+          error:
+            "numeric_value is outside the plausible TREASURE_FOUND range.",
+        },
+        400
+      );
+    }
+
+    /* =====================================================
        13. INSERT GAME EVENT
     ===================================================== */
 

@@ -59,11 +59,39 @@ type Item = {
 
   thumbnail_url_snapshot: string | null;
   model_url_snapshot: string | null;
+
+  hp_bonus_snapshot: number | null;
+  attack_bonus_snapshot: number | null;
+  defense_bonus_snapshot: number | null;
+  luck_bonus_snapshot: number | null;
+  heal_bonus_snapshot: number | null;
+  vision_bonus_snapshot: number | null;
+  power_score_snapshot: number | null;
+  ability_code_snapshot: string | null;
+  ability_config_snapshot: Record<string, unknown> | null;
 };
 
 type ItemImageSource = {
   grade: Grade;
   thumbnail_url_snapshot: string | null;
+};
+
+type EffectiveGameStats = {
+  effective: {
+    hp: number;
+    attack: number;
+    defense: number;
+    luck: number;
+    heal: number;
+    vision: number;
+  };
+};
+
+type GameStatsApiResponse = {
+  ok: boolean;
+  stats?: EffectiveGameStats;
+  code?: string;
+  error?: string;
 };
 
 type EquipmentApiItem = {
@@ -88,6 +116,16 @@ type EquipmentApiItem = {
 
   thumbnail_url_snapshot: string | null;
   model_url_snapshot: string | null;
+
+  hp_bonus_snapshot: number | null;
+  attack_bonus_snapshot: number | null;
+  defense_bonus_snapshot: number | null;
+  luck_bonus_snapshot: number | null;
+  heal_bonus_snapshot: number | null;
+  vision_bonus_snapshot: number | null;
+  power_score_snapshot: number | null;
+  ability_code_snapshot: string | null;
+  ability_config_snapshot: Record<string, unknown> | null;
 };
 
 type EquipmentEntry = {
@@ -313,6 +351,22 @@ export default function ProfilePage() {
     );
 
   const [
+    previewItem,
+    setPreviewItem,
+  ] =
+    useState<Item | null>(
+      null
+    );
+
+  const [
+    gameStats,
+    setGameStats,
+  ] =
+    useState<EffectiveGameStats | null>(
+      null
+    );
+
+  const [
     equippingItemId,
     setEquippingItemId,
   ] =
@@ -426,6 +480,49 @@ export default function ProfilePage() {
     return nextSlots;
   }
 
+  async function loadGameStats(
+    accessToken: string
+  ) {
+    const response =
+      await fetch(
+        "/api/profile/game-stats",
+        {
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
+
+          cache: "no-store",
+        }
+      );
+
+    const result =
+      (await response.json()) as GameStatsApiResponse;
+
+    if (
+      !response.ok ||
+      !result.ok ||
+      !result.stats
+    ) {
+      console.error(
+        "PROFILE GAME STATS ERROR:",
+        result
+      );
+
+      setGameStats(
+        null
+      );
+
+      return;
+    }
+
+    setGameStats(
+      result.stats
+    );
+  }
+
   // =====================================
   // EQUIP ITEM
   // =====================================
@@ -523,6 +620,10 @@ export default function ProfilePage() {
       }
 
       await loadEquipment(
+        session.access_token
+      );
+
+      await loadGameStats(
         session.access_token
       );
     } catch (error) {
@@ -714,7 +815,16 @@ export default function ProfilePage() {
             upgrade_level,
             upgrade_exp,
             thumbnail_url_snapshot,
-            model_url_snapshot
+            model_url_snapshot,
+            hp_bonus_snapshot,
+            attack_bonus_snapshot,
+            defense_bonus_snapshot,
+            luck_bonus_snapshot,
+            heal_bonus_snapshot,
+            vision_bonus_snapshot,
+            power_score_snapshot,
+            ability_code_snapshot,
+            ability_config_snapshot
           `)
           .eq(
             "owner_id",
@@ -783,6 +893,10 @@ export default function ProfilePage() {
             });
           }
         }
+
+        await loadGameStats(
+          session.access_token
+        );
       }
     } catch (error) {
       console.error(
@@ -1272,6 +1386,64 @@ export default function ProfilePage() {
 
             </section>
 
+            {gameStats && (
+              <section className="border border-zinc-800 bg-zinc-950/80 rounded-[28px] p-6">
+
+                <p className="text-cyan-400 text-[9px] tracking-[0.3em]">
+                  EXPEDITION READY
+                </p>
+
+                <h2 className="text-2xl font-black mt-2">
+                  GAME STATS
+                </h2>
+
+                <p className="text-zinc-600 text-[7px] mt-1">
+                  BASE CHARACTER + EQUIPPED ITEM BONUSES
+                </p>
+
+                <div className="grid grid-cols-3 gap-2 mt-4 sm:grid-cols-6">
+
+                  <Info
+                    label="HP"
+                    value={`${gameStats.effective.hp}`}
+                    className="text-red-400"
+                  />
+
+                  <Info
+                    label="ATK"
+                    value={`${gameStats.effective.attack}`}
+                    className="text-orange-400"
+                  />
+
+                  <Info
+                    label="DEF"
+                    value={`${gameStats.effective.defense}`}
+                    className="text-cyan-400"
+                  />
+
+                  <Info
+                    label="LUCK"
+                    value={`${gameStats.effective.luck}%`}
+                    className="text-purple-400"
+                  />
+
+                  <Info
+                    label="HEAL"
+                    value={`${gameStats.effective.heal}%`}
+                    className="text-lime-400"
+                  />
+
+                  <Info
+                    label="VISION"
+                    value={`${gameStats.effective.vision}`}
+                    className="text-white"
+                  />
+
+                </div>
+
+              </section>
+            )}
+
             {/* =====================================
                 LOADOUT
             ===================================== */}
@@ -1340,11 +1512,15 @@ export default function ProfilePage() {
                       <button
                         key={slot}
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
                           setSelectedEquipmentSlot(
                             slot
-                          )
-                        }
+                          );
+
+                          setPreviewItem(
+                            null
+                          );
+                        }}
                         className={`
                           relative
                           min-h-[168px]
@@ -1510,6 +1686,15 @@ export default function ProfilePage() {
 
                 </div>
 
+                <EquipmentStatPreview
+                  current={
+                    selectedSlotItem
+                  }
+                  candidate={
+                    previewItem
+                  }
+                />
+
                 {compatibleItems.length ===
                 0 ? (
                   <div className="mt-3 flex min-h-[80px] items-center justify-center rounded-xl border border-dashed border-zinc-800 bg-black/30">
@@ -1552,6 +1737,26 @@ export default function ProfilePage() {
                             onClick={() =>
                               void equipItem(
                                 item
+                              )
+                            }
+                            onMouseEnter={() =>
+                              setPreviewItem(
+                                item
+                              )
+                            }
+                            onMouseLeave={() =>
+                              setPreviewItem(
+                                null
+                              )
+                            }
+                            onFocus={() =>
+                              setPreviewItem(
+                                item
+                              )
+                            }
+                            onBlur={() =>
+                              setPreviewItem(
+                                null
                               )
                             }
                             disabled={
@@ -1863,6 +2068,138 @@ export default function ProfilePage() {
 // =====================================
 // ITEM IMAGE
 // =====================================
+
+// =========================================================
+// EQUIPMENT STAT PREVIEW
+//
+// Mirrors app/page.tsx (Home) so Profile Loadout behaves identically.
+// Spec section 9: show CURRENT / NEW ITEM / CHANGE before Equip.
+// =========================================================
+
+type StatSnapshotSource = {
+  hp_bonus_snapshot: number | null;
+  attack_bonus_snapshot: number | null;
+  defense_bonus_snapshot: number | null;
+  luck_bonus_snapshot: number | null;
+  heal_bonus_snapshot: number | null;
+  vision_bonus_snapshot: number | null;
+};
+
+const GAME_STAT_FIELDS = [
+  { key: "hp_bonus_snapshot", label: "HP", suffix: "" },
+  { key: "attack_bonus_snapshot", label: "ATK", suffix: "" },
+  { key: "defense_bonus_snapshot", label: "DEF", suffix: "" },
+  { key: "luck_bonus_snapshot", label: "LUCK", suffix: "%" },
+  { key: "heal_bonus_snapshot", label: "HEAL", suffix: "%" },
+  { key: "vision_bonus_snapshot", label: "VISION", suffix: "" },
+] as const;
+
+function EquipmentStatPreview({
+  current,
+  candidate,
+}: {
+  current: StatSnapshotSource | null;
+  candidate: StatSnapshotSource | null;
+}) {
+  if (
+    !current &&
+    !candidate
+  ) {
+    return null;
+  }
+
+  const rows = GAME_STAT_FIELDS.map(
+    (field) => {
+      const currentValue =
+        Number(
+          current?.[field.key] ?? 0
+        );
+
+      const candidateValue =
+        candidate
+          ? Number(
+              candidate[field.key] ?? 0
+            )
+          : currentValue;
+
+      return {
+        ...field,
+        currentValue,
+        candidateValue,
+        change:
+          candidateValue -
+          currentValue,
+      };
+    }
+  ).filter(
+    (row) =>
+      row.currentValue !== 0 ||
+      row.candidateValue !== 0
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-zinc-800 bg-black/40 p-3">
+
+      <div className="grid grid-cols-3 gap-2 text-[7px] font-black tracking-[0.14em] text-zinc-600">
+
+        <p>CURRENT</p>
+
+        <p className={candidate ? "text-cyan-400" : "text-zinc-700"}>
+          NEW ITEM
+        </p>
+
+        <p className={candidate ? "text-lime-400" : "text-zinc-700"}>
+          CHANGE
+        </p>
+
+      </div>
+
+      <div className="mt-2 space-y-1.5">
+
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="grid grid-cols-3 items-center gap-2 text-[9px] font-black"
+          >
+
+            <p className="text-white">
+              {row.label} +{row.currentValue}{row.suffix}
+            </p>
+
+            <p className={candidate ? "text-cyan-400" : "text-zinc-700"}>
+              {candidate
+                ? `${row.label} +${row.candidateValue}${row.suffix}`
+                : "-"}
+            </p>
+
+            <p
+              className={
+                !candidate || row.change === 0
+                  ? "text-zinc-600"
+                  : row.change > 0
+                  ? "text-lime-400"
+                  : "text-red-400"
+              }
+            >
+              {!candidate
+                ? "-"
+                : row.change === 0
+                ? "NO CHANGE"
+                : `${row.change > 0 ? "+" : ""}${row.change}${row.suffix}`}
+            </p>
+
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
 
 function ItemImage({
   item,
