@@ -419,7 +419,7 @@ export async function GET() {
         {
           headers: {
             "Cache-Control":
-              "no-store, max-age=0",
+              "public, s-maxage=20, stale-while-revalidate=120",
           },
         }
       );
@@ -611,7 +611,7 @@ export async function GET() {
         {
           headers: {
             "Cache-Control":
-              "no-store, max-age=0",
+              "public, s-maxage=20, stale-while-revalidate=120",
           },
         }
       );
@@ -1166,7 +1166,7 @@ export async function GET() {
       {
         headers: {
           "Cache-Control":
-            "no-store, max-age=0",
+            "public, s-maxage=20, stale-while-revalidate=120",
         },
       }
     );
