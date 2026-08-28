@@ -90,6 +90,12 @@ type Item = {
 
   ability_config_snapshot:
     Record<string, unknown> | null;
+
+  bonus_ability_code_snapshot:
+    string | null;
+
+  bonus_ability_config_snapshot:
+    Record<string, unknown> | null;
 };
 
 type ShippingAddress = {
@@ -370,7 +376,9 @@ export default function CollectionPage() {
             vision_bonus_snapshot,
             power_score_snapshot,
             ability_code_snapshot,
-            ability_config_snapshot
+            ability_config_snapshot,
+            bonus_ability_code_snapshot,
+            bonus_ability_config_snapshot
           `)
           .eq(
             "owner_id",
@@ -2177,9 +2185,15 @@ function ItemGameStatsPanel({
       ? ABILITY_LABELS[item.ability_code_snapshot]
       : null;
 
+  const bonusAbility =
+    item.bonus_ability_code_snapshot
+      ? ABILITY_LABELS[item.bonus_ability_code_snapshot]
+      : null;
+
   if (
     stats.length === 0 &&
-    !ability
+    !ability &&
+    !bonusAbility
   ) {
     return null;
   }
@@ -2238,6 +2252,26 @@ function ItemGameStatsPanel({
           <p className="text-zinc-500 text-[8px] mt-1">
             {ability.describe(
               item.ability_config_snapshot ?? {}
+            )}
+          </p>
+
+        </div>
+      )}
+
+      {bonusAbility && (
+        <div className="mt-3 border border-orange-400/30 bg-orange-400/[0.06] rounded-lg p-3">
+
+          <p className="text-orange-400 text-[7px] tracking-[0.16em]">
+            LEGENDARY BONUS ABILITY
+          </p>
+
+          <p className="text-white text-xs font-black mt-1">
+            {bonusAbility.name}
+          </p>
+
+          <p className="text-zinc-500 text-[8px] mt-1">
+            {bonusAbility.describe(
+              item.bonus_ability_config_snapshot ?? {}
             )}
           </p>
 

@@ -29,6 +29,9 @@ export type EquippedItemGameStats = {
   ability_code: string | null;
   ability_config: Record<string, unknown> | null;
 
+  bonus_ability_code: string | null;
+  bonus_ability_config: Record<string, unknown> | null;
+
   hp_bonus: number;
   attack_bonus: number;
   defense_bonus: number;
@@ -81,6 +84,9 @@ type EquipmentRow = {
         ability_code_snapshot: string | null;
         ability_config_snapshot: Record<string, unknown> | null;
 
+        bonus_ability_code_snapshot: string | null;
+        bonus_ability_config_snapshot: Record<string, unknown> | null;
+
         hp_bonus_snapshot: number | null;
         attack_bonus_snapshot: number | null;
         defense_bonus_snapshot: number | null;
@@ -117,6 +123,8 @@ export async function computeEffectiveGameStats(
         grade,
         ability_code_snapshot,
         ability_config_snapshot,
+        bonus_ability_code_snapshot,
+        bonus_ability_config_snapshot,
         hp_bonus_snapshot,
         attack_bonus_snapshot,
         defense_bonus_snapshot,
@@ -147,6 +155,9 @@ export async function computeEffectiveGameStats(
 
         ability_code: item.ability_code_snapshot,
         ability_config: item.ability_config_snapshot,
+
+        bonus_ability_code: item.bonus_ability_code_snapshot,
+        bonus_ability_config: item.bonus_ability_config_snapshot,
 
         hp_bonus: item.hp_bonus_snapshot ?? 0,
         attack_bonus: item.attack_bonus_snapshot ?? 0,
