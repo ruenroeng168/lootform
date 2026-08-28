@@ -9,6 +9,7 @@ import {
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import { broadcastWalletBalanceUpdated } from "@/lib/wallet-events";
 
 type Grade =
   | "COMMON"
@@ -127,6 +128,55 @@ type CraftedItem = {
 
   catalog_snapshot_at?:
     | string
+    | null;
+
+  /* ===================================
+     CRAFTED SHIRT GAME STATS
+     (as returned by lootform_craft_atomic)
+  =================================== */
+
+  hp_bonus?:
+    | number
+    | null;
+
+  attack_bonus?:
+    | number
+    | null;
+
+  defense_bonus?:
+    | number
+    | null;
+
+  luck_bonus?:
+    | number
+    | null;
+
+  heal_bonus?:
+    | number
+    | null;
+
+  vision_bonus?:
+    | number
+    | null;
+
+  power_score?:
+    | number
+    | null;
+
+  ability_code?:
+    | string
+    | null;
+
+  ability_config?:
+    | Record<string, unknown>
+    | null;
+
+  bonus_ability_code?:
+    | string
+    | null;
+
+  bonus_ability_config?:
+    | Record<string, unknown>
     | null;
 };
 
@@ -1304,16 +1354,29 @@ export default function CraftPage() {
           craftData.wallet
             .balance
         );
+
+        broadcastWalletBalanceUpdated(
+          craftData.wallet
+            .balance
+        );
       } else {
         setWalletBalance(
           (
             current
-          ) =>
-            Math.max(
-              0,
-              current -
-                locked.cost
-            )
+          ) => {
+            const next =
+              Math.max(
+                0,
+                current -
+                  locked.cost
+              );
+
+            broadcastWalletBalanceUpdated(
+              next
+            );
+
+            return next;
+          }
         );
       }
 
@@ -2838,6 +2901,176 @@ function CraftCinematicOverlay({
 }
 
 /* =========================================================
+   ABILITY LABEL
+   (same fixed ability_code enum used in Collection)
+========================================================= */
+
+const ABILITY_LABELS: Record<
+  string,
+  { name: string; describe: (config: Record<string, unknown>) => string }
+> = {
+  BERSERK: {
+    name: "BERSERK",
+    describe: (config) =>
+      `Below ${config.hp_threshold_percent ?? 30}% HP: ATK +${config.attack_bonus_percent ?? 0}%`,
+  },
+
+  FORTIFIED: {
+    name: "FORTIFIED",
+    describe: (config) =>
+      `Elite Damage Taken -${config.elite_damage_reduction_percent ?? 0}%`,
+  },
+
+  TREASURE_HUNTER: {
+    name: "TREASURE HUNTER",
+    describe: (config) =>
+      `Rare Material Drop +${config.rare_material_drop_bonus_percent ?? 0}%`,
+  },
+
+  FIELD_MEDIC: {
+    name: "FIELD MEDIC",
+    describe: (config) =>
+      `Potion Heal +${config.potion_heal_bonus_percent ?? 0}%`,
+  },
+
+  SCOUT: {
+    name: "SCOUT",
+    describe: () =>
+      "Reveals a wider radius while exploring.",
+  },
+
+  ELITE_HUNTER: {
+    name: "ELITE HUNTER",
+    describe: () =>
+      "Deals bonus damage to Elite monsters.",
+  },
+};
+
+/* =========================================================
+   RESULT GAME STATS PANEL
+   All values are the frozen snapshot the server computed at
+   Craft time -- nothing here is rolled in the browser.
+========================================================= */
+
+function ResultGameStatsPanel({
+  item,
+}: {
+  item: CraftedItem;
+}) {
+  const stats = [
+    { label: "HP", value: item.hp_bonus, suffix: "" },
+    { label: "ATK", value: item.attack_bonus, suffix: "" },
+    { label: "DEF", value: item.defense_bonus, suffix: "" },
+    { label: "LUCK", value: item.luck_bonus, suffix: "%" },
+    { label: "HEAL", value: item.heal_bonus, suffix: "%" },
+    { label: "VISION", value: item.vision_bonus, suffix: "" },
+  ].filter(
+    (stat) => Number(stat.value ?? 0) !== 0
+  );
+
+  const ability =
+    item.ability_code
+      ? ABILITY_LABELS[item.ability_code]
+      : null;
+
+  const bonusAbility =
+    item.bonus_ability_code
+      ? ABILITY_LABELS[item.bonus_ability_code]
+      : null;
+
+  if (
+    stats.length === 0 &&
+    !ability &&
+    !bonusAbility
+  ) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 border border-zinc-800 bg-black/40 rounded-xl p-4">
+
+      <div className="flex items-center justify-between gap-3">
+
+        <p className="text-zinc-600 text-[8px] tracking-[0.18em]">
+          GAME STATS
+        </p>
+
+        {item.power_score != null && (
+          <p className="text-lime-400 text-xs font-black">
+            POWER {item.power_score}
+          </p>
+        )}
+
+      </div>
+
+      {stats.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mt-3">
+
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="border border-zinc-800 bg-zinc-950/60 rounded-lg px-2 py-2 text-center"
+            >
+
+              <p className="text-zinc-600 text-[6px]">
+                {stat.label}
+              </p>
+
+              <p className="text-cyan-400 text-xs font-black mt-1">
+                +{stat.value}{stat.suffix}
+              </p>
+
+            </div>
+          ))}
+
+        </div>
+      )}
+
+      {ability && (
+        <div className="mt-3 border border-purple-400/20 bg-purple-400/[0.05] rounded-lg p-3">
+
+          <p className="text-purple-400 text-[7px] tracking-[0.16em]">
+            ABILITY
+          </p>
+
+          <p className="text-white text-xs font-black mt-1">
+            {ability.name}
+          </p>
+
+          <p className="text-zinc-500 text-[8px] mt-1">
+            {ability.describe(
+              item.ability_config ?? {}
+            )}
+          </p>
+
+        </div>
+      )}
+
+      {bonusAbility && (
+        <div className="mt-3 border border-orange-400/30 bg-orange-400/[0.06] rounded-lg p-3">
+
+          <p className="text-orange-400 text-[7px] tracking-[0.16em]">
+            LEGENDARY BONUS ABILITY
+          </p>
+
+          <p className="text-white text-xs font-black mt-1">
+            {bonusAbility.name}
+          </p>
+
+          <p className="text-zinc-500 text-[8px] mt-1">
+            {bonusAbility.describe(
+              item.bonus_ability_config ?? {}
+            )}
+          </p>
+
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+/* =========================================================
    RESULT
 ========================================================= */
 
@@ -3021,6 +3254,10 @@ function ResultView({
             />
 
           </div>
+
+          <ResultGameStatsPanel
+            item={item}
+          />
 
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
 

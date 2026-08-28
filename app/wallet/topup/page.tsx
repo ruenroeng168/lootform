@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
+import { broadcastWalletBalanceUpdated } from "@/lib/wallet-events";
 
 // =====================================
 // TYPES
@@ -221,7 +222,10 @@ export default function WalletTopupPage() {
 
       const topup = result.topup as TopupSuccess;
       setTestSuccess(topup);
-      setBalance(Number(topup.balance ?? 0));
+
+      const nextBalance = Number(topup.balance ?? 0);
+      setBalance(nextBalance);
+      broadcastWalletBalanceUpdated(nextBalance);
     } catch (error) {
       console.error("TEST TOPUP ERROR:", error);
       setErrorMessage(error instanceof Error ? error.message : "ไม่สามารถเติม LT ได้");

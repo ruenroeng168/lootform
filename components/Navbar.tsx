@@ -16,6 +16,10 @@ import {
   supabase,
 } from "@/lib/supabase";
 
+import {
+  WALLET_BALANCE_UPDATED_EVENT,
+} from "@/lib/wallet-events";
+
 type MenuItem = {
   label: string;
   path: string;
@@ -251,6 +255,49 @@ export default function Navbar() {
   }, [
     pathname,
   ]);
+
+  // =====================================================
+  // WALLET BALANCE LIVE SYNC
+  //
+  // Navbar only re-fetches the wallet balance when `pathname`
+  // changes (loadPlayer() above) -- a same-page balance change
+  // (e.g. spending LT on /craft without navigating away) never
+  // re-runs that effect, so the nav pill went stale until a full
+  // page reload. Pages that change the wallet balance dispatch
+  // this event with the new authoritative balance so Navbar can
+  // reflect it immediately, without needing its own data fetch.
+  // =====================================================
+
+  useEffect(() => {
+    function handleWalletBalanceUpdated(
+      event: Event
+    ) {
+      const detail =
+        (event as CustomEvent<{ balance?: number }>)
+          .detail;
+
+      if (
+        typeof detail?.balance ===
+        "number"
+      ) {
+        setWalletBalance(
+          detail.balance
+        );
+      }
+    }
+
+    window.addEventListener(
+      WALLET_BALANCE_UPDATED_EVENT,
+      handleWalletBalanceUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        WALLET_BALANCE_UPDATED_EVENT,
+        handleWalletBalanceUpdated
+      );
+    };
+  }, []);
 
   // =====================================================
   // VISIBLE MENU
