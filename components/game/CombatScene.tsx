@@ -10,6 +10,8 @@ import LootformHeroSprite, {
   type HeroGrade,
 } from "@/components/game/LootformHeroSprite";
 
+import LootformMonsterSprite from "@/components/game/LootformMonsterSprite";
+
 // =========================================================
 // TYPES
 // =========================================================
@@ -180,19 +182,6 @@ export default function CombatScene({
     useState(
       false
     );
-
-  // =====================================================
-  // MONSTER VISUAL
-  // =====================================================
-
-  const monsterVisual =
-    monsterTier ===
-    "ELITE"
-      ? "👹"
-      : monsterTier ===
-        "GUARD"
-      ? "👾"
-      : "👾";
 
   // =====================================================
   // CREATE BATTLE TIMELINE
@@ -732,13 +721,11 @@ export default function CombatScene({
                 `}
               />
 
-              <span
+              <div
                 className={`
                   relative
                   z-10
                   select-none
-                  text-[100px]
-                  leading-none
 
                   ${
                     attacker ===
@@ -748,8 +735,17 @@ export default function CombatScene({
                   }
                 `}
               >
-                {monsterVisual}
-              </span>
+
+                <LootformMonsterSprite
+                  tier={
+                    monsterTier
+                  }
+                  size={
+                    132
+                  }
+                />
+
+              </div>
 
               {monsterDamageText && (
                 <div className="combat-damage absolute left-[8%] top-[20%] text-3xl font-black text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,1)]">
