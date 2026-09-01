@@ -43,6 +43,9 @@ export const metadata: Metadata = {
   title: "LOOTFORM — Digital Loot, Physical Form",
   description:
     "Craft graded streetwear. Every drop is server-rolled — Common, Rare, Epic, Legendary — then shipped to your door.",
+  verification: {
+    google: "OvtVv8ZCrJYcplVa-35pyEcpXKn3v8p8CwkPHrC5fgU",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
