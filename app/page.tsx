@@ -53,6 +53,10 @@ type Item = {
   luck_bonus_snapshot: number | null;
   heal_bonus_snapshot: number | null;
   vision_bonus_snapshot: number | null;
+  mp_bonus_snapshot: number | null;
+  mat_bonus_snapshot: number | null;
+  mdf_bonus_snapshot: number | null;
+  agi_bonus_snapshot: number | null;
   power_score_snapshot: number | null;
   ability_code_snapshot: string | null;
   ability_config_snapshot: Record<string, unknown> | null;
@@ -135,6 +139,10 @@ type EquipmentApiItem = {
   luck_bonus_snapshot: number | null;
   heal_bonus_snapshot: number | null;
   vision_bonus_snapshot: number | null;
+  mp_bonus_snapshot: number | null;
+  mat_bonus_snapshot: number | null;
+  mdf_bonus_snapshot: number | null;
+  agi_bonus_snapshot: number | null;
   power_score_snapshot: number | null;
   ability_code_snapshot: string | null;
   ability_config_snapshot: Record<string, unknown> | null;
@@ -197,6 +205,10 @@ type EffectiveGameStats = {
     luck: number;
     heal: number;
     vision: number;
+    mp: number;
+    mat: number;
+    mdf: number;
+    agi: number;
   };
 };
 
@@ -730,6 +742,10 @@ export default function HomePage() {
               luck_bonus_snapshot,
               heal_bonus_snapshot,
               vision_bonus_snapshot,
+              mp_bonus_snapshot,
+              mat_bonus_snapshot,
+              mdf_bonus_snapshot,
+              agi_bonus_snapshot,
               power_score_snapshot,
               ability_code_snapshot,
               ability_config_snapshot
@@ -1085,6 +1101,28 @@ export default function HomePage() {
       selectedEquipmentSlot,
       selectedSlotEntry,
     ]);
+
+  async function openRpgMakerGame() {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session) {
+      router.push("/login");
+      return;
+    }
+
+    const baseUrl =
+      process.env.NEXT_PUBLIC_RPGMAKER_GAME_URL ||
+      "http://localhost:8420";
+
+    const url = new URL(baseUrl);
+    url.searchParams.set("token", session.access_token);
+    url.searchParams.set("uid", session.user.id);
+
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  }
 
   async function equipItem(
     item: Item
@@ -1692,7 +1730,7 @@ export default function HomePage() {
                   BASE CHARACTER + EQUIPPED ITEM BONUSES
                 </p>
 
-                <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:grid-cols-5">
 
                   <InfoBox
                     label="HP"
@@ -1728,6 +1766,30 @@ export default function HomePage() {
                     label="VISION"
                     value={`${gameStats.effective.vision}`}
                     className="text-white"
+                  />
+
+                  <InfoBox
+                    label="MP"
+                    value={`${gameStats.effective.mp}`}
+                    className="text-cyan-300"
+                  />
+
+                  <InfoBox
+                    label="MAT"
+                    value={`${gameStats.effective.mat}`}
+                    className="text-purple-300"
+                  />
+
+                  <InfoBox
+                    label="MDF"
+                    value={`${gameStats.effective.mdf}`}
+                    className="text-blue-400"
+                  />
+
+                  <InfoBox
+                    label="AGI"
+                    value={`${gameStats.effective.agi}`}
+                    className="text-lime-300"
                   />
 
                 </div>
@@ -2428,6 +2490,20 @@ export default function HomePage() {
 
             </section>
 
+            <section>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void openRpgMakerGame()
+                }
+                className="w-full border border-purple-400/30 bg-purple-400/[0.05] text-purple-400 rounded-xl py-2.5 font-black text-[11px] hover:bg-purple-400/10 transition"
+              >
+                PLAY RPG MAKER (BETA)
+              </button>
+
+            </section>
+
           </div>
 
         </section>
@@ -2767,6 +2843,10 @@ type StatSnapshotSource = {
   luck_bonus_snapshot: number | null;
   heal_bonus_snapshot: number | null;
   vision_bonus_snapshot: number | null;
+  mp_bonus_snapshot: number | null;
+  mat_bonus_snapshot: number | null;
+  mdf_bonus_snapshot: number | null;
+  agi_bonus_snapshot: number | null;
 };
 
 const GAME_STAT_FIELDS = [
@@ -2776,6 +2856,10 @@ const GAME_STAT_FIELDS = [
   { key: "luck_bonus_snapshot", label: "LUCK", suffix: "%" },
   { key: "heal_bonus_snapshot", label: "HEAL", suffix: "%" },
   { key: "vision_bonus_snapshot", label: "VISION", suffix: "" },
+  { key: "mp_bonus_snapshot", label: "MP", suffix: "" },
+  { key: "mat_bonus_snapshot", label: "MAT", suffix: "" },
+  { key: "mdf_bonus_snapshot", label: "MDF", suffix: "" },
+  { key: "agi_bonus_snapshot", label: "AGI", suffix: "" },
 ] as const;
 
 function EquipmentStatPreview({

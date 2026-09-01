@@ -17,6 +17,10 @@ export const BASE_GAME_STATS = {
   luck: 0,
   heal: 0,
   vision: 2,
+  mp: 0,
+  mat: 0,
+  mdf: 0,
+  agi: 0,
 };
 
 export type EquippedItemGameStats = {
@@ -38,6 +42,10 @@ export type EquippedItemGameStats = {
   luck_bonus: number;
   heal_bonus: number;
   vision_bonus: number;
+  mp_bonus: number;
+  mat_bonus: number;
+  mdf_bonus: number;
+  agi_bonus: number;
   power_score: number;
 };
 
@@ -53,6 +61,10 @@ export type EffectiveGameStats = {
     luck_bonus: number;
     heal_bonus: number;
     vision_bonus: number;
+    mp_bonus: number;
+    mat_bonus: number;
+    mdf_bonus: number;
+    agi_bonus: number;
     power_score: number;
   };
 
@@ -63,6 +75,10 @@ export type EffectiveGameStats = {
     luck: number;
     heal: number;
     vision: number;
+    mp: number;
+    mat: number;
+    mdf: number;
+    agi: number;
   };
 };
 
@@ -93,6 +109,10 @@ type EquipmentRow = {
         luck_bonus_snapshot: number | null;
         heal_bonus_snapshot: number | null;
         vision_bonus_snapshot: number | null;
+        mp_bonus_snapshot: number | null;
+        mat_bonus_snapshot: number | null;
+        mdf_bonus_snapshot: number | null;
+        agi_bonus_snapshot: number | null;
         power_score_snapshot: number | null;
       }
     | null;
@@ -131,6 +151,10 @@ export async function computeEffectiveGameStats(
         luck_bonus_snapshot,
         heal_bonus_snapshot,
         vision_bonus_snapshot,
+        mp_bonus_snapshot,
+        mat_bonus_snapshot,
+        mdf_bonus_snapshot,
+        agi_bonus_snapshot,
         power_score_snapshot
       )
     `)
@@ -165,6 +189,10 @@ export async function computeEffectiveGameStats(
         luck_bonus: Number(item.luck_bonus_snapshot ?? 0),
         heal_bonus: Number(item.heal_bonus_snapshot ?? 0),
         vision_bonus: item.vision_bonus_snapshot ?? 0,
+        mp_bonus: item.mp_bonus_snapshot ?? 0,
+        mat_bonus: item.mat_bonus_snapshot ?? 0,
+        mdf_bonus: item.mdf_bonus_snapshot ?? 0,
+        agi_bonus: item.agi_bonus_snapshot ?? 0,
         power_score: item.power_score_snapshot ?? 0,
       };
     });
@@ -177,6 +205,10 @@ export async function computeEffectiveGameStats(
       luck_bonus: accumulator.luck_bonus + current.luck_bonus,
       heal_bonus: accumulator.heal_bonus + current.heal_bonus,
       vision_bonus: accumulator.vision_bonus + current.vision_bonus,
+      mp_bonus: accumulator.mp_bonus + current.mp_bonus,
+      mat_bonus: accumulator.mat_bonus + current.mat_bonus,
+      mdf_bonus: accumulator.mdf_bonus + current.mdf_bonus,
+      agi_bonus: accumulator.agi_bonus + current.agi_bonus,
       power_score: accumulator.power_score + current.power_score,
     }),
     {
@@ -186,6 +218,10 @@ export async function computeEffectiveGameStats(
       luck_bonus: 0,
       heal_bonus: 0,
       vision_bonus: 0,
+      mp_bonus: 0,
+      mat_bonus: 0,
+      mdf_bonus: 0,
+      agi_bonus: 0,
       power_score: 0,
     }
   );
@@ -204,6 +240,10 @@ export async function computeEffectiveGameStats(
       luck: BASE_GAME_STATS.luck + totals.luck_bonus,
       heal: BASE_GAME_STATS.heal + totals.heal_bonus,
       vision: BASE_GAME_STATS.vision + totals.vision_bonus,
+      mp: BASE_GAME_STATS.mp + totals.mp_bonus,
+      mat: BASE_GAME_STATS.mat + totals.mat_bonus,
+      mdf: BASE_GAME_STATS.mdf + totals.mdf_bonus,
+      agi: BASE_GAME_STATS.agi + totals.agi_bonus,
     },
   };
 }

@@ -159,6 +159,22 @@ type CraftedItem = {
     | number
     | null;
 
+  mp_bonus?:
+    | number
+    | null;
+
+  mat_bonus?:
+    | number
+    | null;
+
+  mdf_bonus?:
+    | number
+    | null;
+
+  agi_bonus?:
+    | number
+    | null;
+
   power_score?:
     | number
     | null;
@@ -2964,6 +2980,10 @@ function ResultGameStatsPanel({
     { label: "LUCK", value: item.luck_bonus, suffix: "%" },
     { label: "HEAL", value: item.heal_bonus, suffix: "%" },
     { label: "VISION", value: item.vision_bonus, suffix: "" },
+    { label: "MP", value: item.mp_bonus, suffix: "" },
+    { label: "MAT", value: item.mat_bonus, suffix: "" },
+    { label: "MDF", value: item.mdf_bonus, suffix: "" },
+    { label: "AGI", value: item.agi_bonus, suffix: "" },
   ].filter(
     (stat) => Number(stat.value ?? 0) !== 0
   );

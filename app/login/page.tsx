@@ -41,6 +41,55 @@ export default function LoginPage() {
     setErrorMessage,
   ] = useState("");
 
+  const [
+    oauthLoading,
+    setOauthLoading,
+  ] = useState<
+    "google" | "facebook" | null
+  >(null);
+
+  // =====================================
+  // OAUTH (GOOGLE / FACEBOOK)
+  // =====================================
+
+  async function handleOAuth(
+    provider: "google" | "facebook"
+  ) {
+    if (loading || oauthLoading) {
+      return;
+    }
+
+    setOauthLoading(provider);
+    setMessage("");
+    setErrorMessage("");
+
+    try {
+      const {
+        error,
+      } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Supabase redirects the whole page to the provider's consent
+      // screen and back -- no further action needed here on success.
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "ไม่สามารถเข้าสู่ระบบผ่านผู้ให้บริการนี้ได้"
+      );
+
+      setOauthLoading(null);
+    }
+  }
+
   // =====================================
   // LOGIN / REGISTER
   // =====================================
@@ -510,10 +559,126 @@ export default function LoginPage() {
               </div>
 
               {/* =====================================
+                  OAUTH (GOOGLE / FACEBOOK)
+              ===================================== */}
+
+              <div className="grid grid-cols-2 gap-2.5 mt-7">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOAuth("google")
+                  }
+                  disabled={
+                    loading ||
+                    oauthLoading !== null
+                  }
+                  className="
+                    flex
+                    items-center
+                    justify-center
+                    gap-2.5
+                    border
+                    border-zinc-800
+                    bg-white
+                    text-black
+                    rounded-xl
+                    py-3.5
+                    text-xs
+                    font-black
+                    hover:bg-zinc-100
+                    disabled:opacity-40
+                    disabled:cursor-not-allowed
+                    transition
+                  "
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 48 48"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill="#FFC107"
+                      d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"
+                    />
+                    <path
+                      fill="#FF3D00"
+                      d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+                    />
+                    <path
+                      fill="#4CAF50"
+                      d="M24 44c5.5 0 10.4-2.1 14.1-5.6l-6.5-5.5C29.6 34.7 27 35.6 24 35.6c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.6 39.6 16.3 44 24 44z"
+                    />
+                    <path
+                      fill="#1976D2"
+                      d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.5 5.5C41.5 35.9 44 30.4 44 24c0-1.2-.1-2.4-.4-3.5z"
+                    />
+                  </svg>
+
+                  {oauthLoading === "google"
+                    ? "..."
+                    : "Google"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleOAuth("facebook")
+                  }
+                  disabled={
+                    loading ||
+                    oauthLoading !== null
+                  }
+                  className="
+                    flex
+                    items-center
+                    justify-center
+                    gap-2.5
+                    border
+                    border-zinc-800
+                    bg-[#1877F2]
+                    text-white
+                    rounded-xl
+                    py-3.5
+                    text-xs
+                    font-black
+                    hover:bg-[#1666d8]
+                    disabled:opacity-40
+                    disabled:cursor-not-allowed
+                    transition
+                  "
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5 3.66 9.15 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.9 3.77-3.9 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.89h2.78l-.44 2.91h-2.34V22c4.78-.79 8.44-4.94 8.44-9.94z" />
+                  </svg>
+
+                  {oauthLoading === "facebook"
+                    ? "..."
+                    : "Facebook"}
+                </button>
+
+              </div>
+
+              <div className="flex items-center gap-3 mt-6">
+                <div className="h-[1px] flex-1 bg-zinc-800" />
+                <span className="text-zinc-700 text-[9px] tracking-[0.2em]">
+                  หรือใช้ EMAIL
+                </span>
+                <div className="h-[1px] flex-1 bg-zinc-800" />
+              </div>
+
+              {/* =====================================
                   EMAIL
               ===================================== */}
 
-              <div className="mt-7">
+              <div className="mt-5">
 
                 <label className="text-zinc-600 text-[9px] tracking-[0.25em]">
                   EMAIL

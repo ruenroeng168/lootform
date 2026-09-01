@@ -82,6 +82,18 @@ type Item = {
   vision_bonus_snapshot:
     number | null;
 
+  mp_bonus_snapshot:
+    number | null;
+
+  mat_bonus_snapshot:
+    number | null;
+
+  mdf_bonus_snapshot:
+    number | null;
+
+  agi_bonus_snapshot:
+    number | null;
+
   power_score_snapshot:
     number | null;
 
@@ -374,6 +386,10 @@ export default function CollectionPage() {
             luck_bonus_snapshot,
             heal_bonus_snapshot,
             vision_bonus_snapshot,
+            mp_bonus_snapshot,
+            mat_bonus_snapshot,
+            mdf_bonus_snapshot,
+            agi_bonus_snapshot,
             power_score_snapshot,
             ability_code_snapshot,
             ability_config_snapshot,
@@ -2176,6 +2192,10 @@ function ItemGameStatsPanel({
     { label: "LUCK", value: item.luck_bonus_snapshot, suffix: "%" },
     { label: "HEAL", value: item.heal_bonus_snapshot, suffix: "%" },
     { label: "VISION", value: item.vision_bonus_snapshot, suffix: "" },
+    { label: "MP", value: item.mp_bonus_snapshot, suffix: "" },
+    { label: "MAT", value: item.mat_bonus_snapshot, suffix: "" },
+    { label: "MDF", value: item.mdf_bonus_snapshot, suffix: "" },
+    { label: "AGI", value: item.agi_bonus_snapshot, suffix: "" },
   ].filter(
     (stat) => Number(stat.value ?? 0) !== 0
   );

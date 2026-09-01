@@ -82,6 +82,22 @@ type ItemRow = {
     | number
     | null;
 
+  mp_bonus_snapshot:
+    | number
+    | null;
+
+  mat_bonus_snapshot:
+    | number
+    | null;
+
+  mdf_bonus_snapshot:
+    | number
+    | null;
+
+  agi_bonus_snapshot:
+    | number
+    | null;
+
   power_score_snapshot:
     | number
     | null;
@@ -298,6 +314,10 @@ async function getItem(
         luck_bonus_snapshot,
         heal_bonus_snapshot,
         vision_bonus_snapshot,
+        mp_bonus_snapshot,
+        mat_bonus_snapshot,
+        mdf_bonus_snapshot,
+        agi_bonus_snapshot,
         power_score_snapshot,
         ability_code_snapshot,
         ability_config_snapshot
@@ -495,6 +515,10 @@ export async function GET(
             luck_bonus_snapshot,
             heal_bonus_snapshot,
             vision_bonus_snapshot,
+            mp_bonus_snapshot,
+            mat_bonus_snapshot,
+            mdf_bonus_snapshot,
+            agi_bonus_snapshot,
             power_score_snapshot,
             ability_code_snapshot,
             ability_config_snapshot

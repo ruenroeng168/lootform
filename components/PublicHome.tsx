@@ -184,7 +184,7 @@ export default function PublicHome() {
                 <span style={{ color: GRADE_META[pull.grade].color }} className="font-black">
                   ●
                 </span>
-                <span className="text-white">SOMEONE JUST PULLED</span>
+                <span className="text-white">เพิ่งมีคนเปิดได้</span>
                 <span className="font-black" style={{ color: GRADE_META[pull.grade].color }}>
                   {pull.grade}
                 </span>
@@ -197,22 +197,24 @@ export default function PublicHome() {
       )}
 
       <div className="relative z-10 mx-auto max-w-[1360px] px-5 pb-16 pt-12 sm:px-6 lg:px-7 lg:pt-16">
-        <section className="grid items-center gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
+        <section className="grid items-start gap-10 lg:grid-cols-[1.08fr_0.92fr] lg:gap-14">
           <div>
             <p className="font-mono text-[9px] tracking-[0.34em] text-[var(--grade-rare)]">
-              LOOTFORM // DIGITAL LOOT SYSTEM
+              LOOTFORM // ร้านเสื้อผ้าสตรีทแวร์ + เกมสะสมไอเทม
             </p>
 
-            <h1 className="font-display mt-5 max-w-[820px] text-[54px] font-black leading-[0.92] sm:text-[72px] lg:text-[86px]">
-              OPEN THE BOX.
+            <h1 className="font-display mt-5 max-w-[720px] text-[40px] font-black leading-[1.25] sm:text-[54px] lg:text-[64px]">
+              เปิดกล่องเดียว
               <br />
-              <span className="text-[var(--grade-rare)]">WEAR</span> THE DROP.
+              ได้<span className="text-[var(--grade-rare)]">เสื้อจริง</span>
+              <br />
+              <span className="text-[var(--grade-rare)]">+</span> ไอเทมเกม
             </h1>
 
             <p className="mt-7 max-w-[650px] text-sm leading-7 text-[var(--muted)] sm:text-base">
-              A LOOTFORM box is a real piece of apparel and a real in-game item at the same time —
-              no streetwear brand and no gacha game gives you both. Craft a design, reveal your
-              grade live, and the same item shows up on your body and in your player collection.
+              LOOTFORM คือแบรนด์สตรีทแวร์ที่ทุกกล่องคือของจริง 2 อย่างพร้อมกัน — เสื้อผ้าตัวจริงที่จัดส่งถึงบ้านคุณ
+              และไอเทมในเกมที่ใช้เล่นได้จริงในบัญชีของคุณ ไม่มีแบรนด์เสื้อไหนหรือเกมกาชาไหนให้คุณได้ทั้งสองอย่างพร้อมกัน
+              เลือกดีไซน์ Craft แล้วดูเกรดถูกเผยสด ๆ ไอเทมชิ้นเดียวกันจะโผล่ทั้งบนตัวคุณและในคอลเลกชันผู้เล่น
             </p>
 
             <div className="mt-8">
@@ -221,17 +223,17 @@ export default function PublicHome() {
                 onClick={() => router.push("/login")}
                 className="rounded-xl bg-[var(--grade-rare)] px-8 py-4 text-sm font-black tracking-[0.04em] text-black shadow-[0_8px_30px_-8px_var(--grade-rare)] transition hover:brightness-110 hover:shadow-[0_10px_40px_-6px_var(--grade-rare)]"
               >
-                OPEN THE BOX NOW
+                เปิดกล่องเลย
               </button>
 
               <p className="mt-3 text-xs text-[var(--muted-dim)]">
-                Free to join · Already have a player?{" "}
+                สมัครฟรี · มีผู้เล่นอยู่แล้ว?{" "}
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
                   className="font-bold text-[var(--grade-rare)] hover:underline"
                 >
-                  Sign in
+                  เข้าสู่ระบบ
                 </button>
               </p>
             </div>
@@ -239,7 +241,7 @@ export default function PublicHome() {
             {countdown && !countdown.expired && (
               <div className="mt-8 inline-flex items-center gap-3 rounded-xl border border-[var(--border)] bg-black/25 px-4 py-3">
                 <span className="font-mono text-[8px] tracking-[0.22em] text-[var(--muted-dim)]">
-                  {season?.name ?? "THIS DROP"} CLOSES IN
+                  {season?.name ?? "ซีซั่นนี้"} ปิดรับใน
                 </span>
                 <span className="font-mono text-sm font-black text-[var(--grade-legendary)]">
                   {String(countdown.days).padStart(2, "0")}D{" "}
@@ -252,10 +254,10 @@ export default function PublicHome() {
 
             <div className="mt-8 flex flex-wrap gap-2">
               {[
-                ["🔒", "SECURE ACCOUNT"],
-                ["🎲", "SERVER-VERIFIED ODDS"],
-                ["📦", "REAL SHIPPING"],
-                ["🏷️", "UNIQUE ITEM ID"],
+                ["🔒", "บัญชีปลอดภัย"],
+                ["🎲", "อัตราสุ่มเปิดเผยจริง"],
+                ["📦", "จัดส่งของจริงถึงบ้าน"],
+                ["🏷️", "มีเลขไอเทมเฉพาะตัว"],
               ].map(([icon, label]) => (
                 <span
                   key={label}
@@ -295,28 +297,48 @@ export default function PublicHome() {
                 const meta = GRADE_META[grade];
                 const odds = season?.odds?.[grade];
                 const positions = [
-                  { top: "-8%", left: "-14%" },
-                  { top: "-8%", right: "-14%" },
-                  { bottom: "-8%", left: "-14%" },
-                  { bottom: "-8%", right: "-14%" },
+                  { top: "-4%", left: "-4%" },
+                  { top: "-4%", right: "-4%" },
+                  { bottom: "-4%", left: "-4%" },
+                  { bottom: "-4%", right: "-4%" },
                 ];
+                // Rarer grades read visually bigger, brighter and more
+                // alive — reinforces the value gradient at a glance
+                // instead of 4 identical badges that only differ by color.
+                const paddingClass = ["px-3 py-1.5", "px-3.5 py-2", "px-4 py-2.5", "px-5 py-3"][index];
+                const labelSizeClass = ["text-[8px]", "text-[9px]", "text-[10px]", "text-[11px]"][index];
+                const pctSizeClass = ["text-[11px]", "text-[12px]", "text-[15px]", "text-[18px]"][index];
+                const borderWidthClass = ["border", "border", "border-[1.5px]", "border-2"][index];
+                const glowPx = [6, 12, 22, 36][index];
+                const glowAlpha = [30, 40, 55, 70][index];
+                const isPulsing = index >= 2;
 
                 return (
                   <div
                     key={grade}
-                    className="absolute rounded-full border bg-black/80 px-3 py-1.5 backdrop-blur-xl"
+                    className={`badge-in absolute rounded-full ${borderWidthClass} bg-black/85 ${paddingClass} backdrop-blur-xl ${
+                      isPulsing ? "badge-pulse" : ""
+                    }`}
                     style={{
-                      borderColor: `color-mix(in srgb, ${meta.color} 45%, transparent)`,
+                      borderColor: `color-mix(in srgb, ${meta.color} ${45 + index * 8}%, transparent)`,
+                      boxShadow: `0 0 ${glowPx}px color-mix(in srgb, ${meta.color} ${glowAlpha}%, transparent)`,
+                      animationDelay: `${index * 0.15}s`,
                       ...positions[index],
                     }}
                   >
                     <p
-                      className="text-center font-mono text-[8px] font-black tracking-[0.12em]"
-                      style={{ color: meta.color }}
+                      className={`text-center font-mono ${labelSizeClass} font-black tracking-[0.14em]`}
+                      style={{
+                        color: meta.color,
+                        textShadow:
+                          index >= 2
+                            ? `0 0 10px color-mix(in srgb, ${meta.color} 80%, transparent)`
+                            : undefined,
+                      }}
                     >
                       {meta.label}
                     </p>
-                    <p className="text-center font-mono text-[9px] font-black text-white">
+                    <p className={`text-center font-mono ${pctSizeClass} font-black text-white`}>
                       {typeof odds === "number" ? `${odds}%` : "—"}
                     </p>
                   </div>
@@ -325,9 +347,45 @@ export default function PublicHome() {
             </div>
 
             <p className="mt-10 text-center font-mono text-[8px] tracking-[0.2em] text-[var(--muted-dim)]">
-              DROP RATES ARE SHOWN OPENLY — WHAT YOU SEE IS WHAT THE SERVER ROLLS
+              อัตราสุ่มเปิดเผยตรงไปตรงมา — สิ่งที่คุณเห็นคือสิ่งที่เซิร์ฟเวอร์สุ่มจริง
             </p>
           </div>
+        </section>
+
+        {/* ============================================================
+            WHAT IS LOOTFORM — plain-language explainer for a first-time
+            visitor: this is a clothing store where every item doubles
+            as a playable game item. Placed right after the hero so
+            nobody has to guess what the site sells.
+        ============================================================ */}
+        <section className="mt-14 grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
+          <article
+            className="hud-frame p-6 text-center sm:text-left"
+            style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}
+          >
+            <span className="text-3xl" aria-hidden="true">
+              👕
+            </span>
+            <h3 className="font-display mt-3 text-lg font-black">เสื้อผ้าตัวจริง</h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              สตรีทแวร์คุณภาพจริง จัดส่งถึงบ้านคุณ ไม่ใช่แค่ของในหน้าจอ
+            </p>
+          </article>
+
+          <div className="text-center text-2xl font-black text-[var(--muted-dim)]">+</div>
+
+          <article
+            className="hud-frame p-6 text-center sm:text-left"
+            style={{ "--grade-color": "var(--grade-epic)" } as CSSProperties}
+          >
+            <span className="text-3xl" aria-hidden="true">
+              🎮
+            </span>
+            <h3 className="font-display mt-3 text-lg font-black">ไอเทมในเกม</h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              เสื้อตัวเดียวกันนี้เล่นได้จริงในเกมของ LOOTFORM มีเกรด มีค่าพลัง มีเลขประจำตัวเฉพาะตัว
+            </p>
+          </article>
         </section>
 
         {/* ============================================================
@@ -337,32 +395,31 @@ export default function PublicHome() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="font-mono text-[9px] tracking-[0.28em] text-[var(--grade-rare)]">
-                {season ? `SEASON // ${season.name}` : "PRODUCT CATALOG"}
+                {season ? `SEASON // ${season.name}` : "แคตตาล็อกสินค้า"}
               </p>
               <h2 className="font-display mt-2 text-2xl font-black sm:text-3xl">
-                BROWSE THIS DROP
+                สินค้าที่เปิด Craft อยู่ตอนนี้
               </h2>
             </div>
             <div className="flex flex-col items-start gap-2 sm:items-end">
               <p className="max-w-[420px] text-xs text-[var(--muted-dim)]">
-                Preview what&apos;s craftable this season. Create a player to open the box,
-                reveal a grade and start your collection.
+                ตัวอย่างสิ่งที่ Craft ได้ในซีซั่นนี้ สร้างผู้เล่นเพื่อเปิดกล่อง เผยเกรด และเริ่มคอลเลกชันของคุณ
               </p>
               <button
                 type="button"
                 onClick={() => router.push("/catalog")}
                 className="font-mono text-[9px] font-black tracking-[0.16em] text-[var(--grade-rare)] hover:underline"
               >
-                VIEW FULL CATALOG →
+                ดูแคตตาล็อกทั้งหมด →
               </button>
             </div>
           </div>
 
           {catalogLoading ? (
-            <p className="mt-6 text-sm text-[var(--muted-dim)]">Loading catalog…</p>
+            <p className="mt-6 text-sm text-[var(--muted-dim)]">กำลังโหลดแคตตาล็อก…</p>
           ) : !dropOpen || catalogDesigns.length === 0 ? (
             <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] bg-black/20 p-8 text-center text-sm text-[var(--muted-dim)]">
-              No drop is live right now — check back soon.
+              ตอนนี้ยังไม่มีดรอปที่เปิดอยู่ — กลับมาเช็คอีกครั้งเร็ว ๆ นี้
             </div>
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -378,21 +435,21 @@ export default function PublicHome() {
                 >
                   {!design.craft_ready && (
                     <span className="absolute right-2 top-2 z-10 rounded-full border border-[var(--border-strong)] bg-black/70 px-2 py-1 font-mono text-[7px] tracking-[0.16em] text-[var(--muted-dim)]">
-                      COMING SOON
+                      เร็ว ๆ นี้
                     </span>
                   )}
 
-                  <div className="flex h-[120px] items-center justify-center overflow-hidden rounded-lg bg-black/25">
+                  <div className="flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-black/25">
                     {design.thumbnail_url ? (
                       <img
                         src={design.thumbnail_url}
                         alt={design.name}
-                        className={`h-full w-full object-contain ${design.craft_ready ? "" : "grayscale"}`}
+                        className={`h-full w-full object-cover ${design.craft_ready ? "" : "grayscale"}`}
                         loading="lazy"
                       />
                     ) : (
                       <span className="font-mono text-[8px] tracking-[0.2em] text-[var(--muted-dim)]">
-                        NO PREVIEW
+                        ยังไม่มีรูป
                       </span>
                     )}
                   </div>
@@ -413,11 +470,19 @@ export default function PublicHome() {
         {/* ============================================================
             HOW IT WORKS — real order → reveal → wear/play flow
         ============================================================ */}
-        <section className="mt-16 grid gap-4 md:grid-cols-3">
+        <section className="mt-16">
+          <p className="font-mono text-[9px] tracking-[0.28em] text-[var(--grade-rare)]">
+            วิธีการเล่น
+          </p>
+          <h2 className="font-display mt-2 text-2xl font-black sm:text-3xl">
+            จากสั่งซื้อ ถึงใส่จริง เล่นจริง
+          </h2>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
           {[
-            ["01", "ORDER", "Pick a design, spend LT, and lock in your Craft — this is a real purchase of a real physical item."],
-            ["02", "REVEAL ONLINE", "The grade is rolled by the server the instant you Craft. No waiting for shipping to find out what you got."],
-            ["03", "WEAR IT / PLAY IT", "The same item is now in your player collection and on its way to your door — equip it in-game and wear it in real life."],
+            ["01", "สั่งซื้อ", "เลือกดีไซน์ ใช้ LT และล็อก Craft ของคุณ — นี่คือการซื้อของจริง ชิ้นงานจริง ไม่ใช่ของเสมือน"],
+            ["02", "เผยเกรดสด ๆ", "เกรดถูกสุ่มโดยเซิร์ฟเวอร์ทันทีที่คุณ Craft ไม่ต้องรอของมาส่งถึงจะรู้ว่าได้อะไร"],
+            ["03", "ใส่จริง / เล่นจริง", "ไอเทมชิ้นเดียวกันอยู่ในคอลเลกชันผู้เล่นของคุณทันที และกำลังเดินทางมาส่งถึงบ้าน — สวมใส่จริงพร้อมใช้เล่นในเกม"],
           ].map(([index, title, description]) => (
             <article key={index} className="hud-frame p-6" style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}>
               <p className="font-mono text-[9px] tracking-[0.24em] text-[var(--grade-rare)]">{index}</p>
@@ -425,6 +490,53 @@ export default function PublicHome() {
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{description}</p>
             </article>
           ))}
+          </div>
+        </section>
+
+        {/* ============================================================
+            FAQ / TRUST — answers the questions a first-time guest has
+            before they'll hand over LT. Keeps claims to what the badges
+            above already promise (secure account, server odds, unique
+            ID, real shipping) — no invented shipping times or refund
+            policy numbers.
+        ============================================================ */}
+        <section className="mt-16">
+          <p className="font-mono text-[9px] tracking-[0.28em] text-[var(--grade-rare)]">
+            ก่อนเปิดกล่อง
+          </p>
+          <h2 className="font-display mt-2 text-2xl font-black sm:text-3xl">
+            คำถามที่พบบ่อย
+          </h2>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            {[
+              [
+                "Grade ถูกสุ่มยังไง เชื่อถือได้แค่ไหน?",
+                "เกรดถูกสุ่มโดยเซิร์ฟเวอร์ทันทีที่คุณกด Craft ไม่ใช่สุ่มฝั่งเบราว์เซอร์ และอัตรา Drop ของแต่ละ Season ถูกแสดงไว้อย่างเปิดเผยที่ด้านบนของหน้านี้ — สิ่งที่คุณเห็นคือสิ่งที่เซิร์ฟเวอร์ทอยจริง",
+              ],
+              [
+                "บัญชีและข้อมูลของฉันปลอดภัยไหม?",
+                "ระบบบัญชีใช้การยืนยันตัวตนแบบเดียวกับที่เว็บระดับมาตรฐานใช้ (Supabase Auth) รองรับทั้งอีเมล/รหัสผ่านและการล็อกอินผ่าน Google เรายึดหลักไม่ให้ฝั่งเบราว์เซอร์แก้ไขค่ากระเป๋าเงิน เกรด หรือความเป็นเจ้าของไอเทมได้โดยตรง ทุกอย่างตรวจสอบฝั่งเซิร์ฟเวอร์เสมอ",
+              ],
+              [
+                "ไอเทมที่ได้มีเลขประจำตัวจริงไหม ซ้ำกับคนอื่นได้ไหม?",
+                "ไอเทมทุกชิ้นที่ Craft สำเร็จจะได้รับ Serial Number เฉพาะตัว ผูกกับบัญชีของคุณ ไม่มีวันซ้ำกับไอเทมชิ้นอื่น และใช้เลขเดียวกันทั้งในระบบเกมและของจริงที่จัดส่ง",
+              ],
+              [
+                "ของจริงจะได้รับยังไง?",
+                "เมื่อ Craft สำเร็จ ไอเทมจะปรากฏในคอลเลกชันของคุณทันที และทีมงานจะจัดส่งของจริงตามที่อยู่ที่ลงทะเบียนไว้ในบัญชี — รายละเอียดรอบการจัดส่งและนโยบายการคืนสินค้าจะแจ้งในหน้าบัญชีของคุณ",
+              ],
+            ].map(([question, answer]) => (
+              <article
+                key={question}
+                className="hud-frame p-5"
+                style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}
+              >
+                <h3 className="text-sm font-black text-white">{question}</h3>
+                <p className="mt-2 text-xs leading-6 text-[var(--muted)]">{answer}</p>
+              </article>
+            ))}
+          </div>
         </section>
 
         {/* ============================================================
@@ -441,14 +553,13 @@ export default function PublicHome() {
 
           <div className="relative">
             <p className="font-mono text-[9px] tracking-[0.28em] text-[var(--grade-rare)]">
-              READY WHEN YOU ARE
+              พร้อมหรือยัง
             </p>
             <h2 className="font-display mt-3 text-2xl font-black sm:text-4xl">
-              CREATE YOUR PLAYER. CRAFT YOUR FIRST DROP.
+              สร้างผู้เล่นของคุณ แล้ว Craft กล่องแรก
             </h2>
             <p className="mx-auto mt-3 max-w-[520px] text-sm text-[var(--muted)]">
-              Free account, server-rolled odds, and a real physical item on the way the moment
-              you Craft.
+              สมัครฟรี อัตราสุ่มโดยเซิร์ฟเวอร์ และของจริงจะถูกจัดส่งทันทีที่คุณ Craft
             </p>
 
             <button
@@ -456,7 +567,7 @@ export default function PublicHome() {
               onClick={() => router.push("/login")}
               className="mt-7 rounded-xl bg-[var(--grade-rare)] px-10 py-4 text-sm font-black tracking-[0.04em] text-black transition hover:brightness-110"
             >
-              OPEN THE BOX NOW
+              เปิดกล่องเลย
             </button>
           </div>
         </section>
@@ -507,6 +618,37 @@ export default function PublicHome() {
         .loot-box-float {
           animation: lootformFloat 4.5s ease-in-out infinite;
         }
+
+        @keyframes lootformBadgeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.6);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes lootformBadgePulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.08);
+          }
+        }
+
+        .badge-in {
+          animation: lootformBadgeIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+        }
+
+        .badge-pulse {
+          animation:
+            lootformBadgeIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards,
+            lootformBadgePulse 2.4s ease-in-out 0.6s infinite;
+        }
       `}</style>
     </main>
   );
@@ -519,7 +661,7 @@ function HeroBoxPlaceholder({ seasonName }: { seasonName?: string }) {
       <p className="font-mono text-[9px] tracking-[0.24em] text-[var(--grade-rare)]">
         {seasonName ?? "SEASON DROP"}
       </p>
-      <p className="font-display text-lg font-black">MYSTERY BOX</p>
+      <p className="font-display text-lg font-black">กล่องปริศนา</p>
     </div>
   );
 }
