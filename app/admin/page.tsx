@@ -627,6 +627,22 @@ export default function AdminDashboardPage() {
                 />
 
                 {/* ===========================================
+                    SHOP (plain, non-random)
+                =========================================== */}
+
+                <ControlCard
+                  title="SHOP"
+                  description="Plain-priced catalog with no grade roll, plus order slip review."
+                  button="OPEN SHOP"
+                  accent="cyan"
+                  onClick={() =>
+                    router.push(
+                      "/admin/shop"
+                    )
+                  }
+                />
+
+                {/* ===========================================
                     SEASON
                 =========================================== */}
 

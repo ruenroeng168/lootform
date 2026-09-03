@@ -271,43 +271,53 @@ export default function PublicHome() {
           </div>
 
           <div className="relative">
-            <div className="loot-box-float relative mx-auto h-[280px] w-[280px] sm:h-[320px] sm:w-[320px]">
-              <div className="absolute inset-0 rounded-[32px] bg-[var(--grade-rare)]/25 blur-[60px]" />
+            <div className="loot-box-float relative mx-auto h-[300px] w-[300px] sm:h-[360px] sm:w-[360px]">
+              <div className="absolute inset-0 rounded-[32px] bg-[var(--grade-rare)]/20 blur-[70px]" />
               <div
-                className="hud-frame hud-glow relative flex h-full w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--surface-raised)] to-black/60"
+                className="hud-frame hud-glow relative h-full w-full overflow-hidden rounded-[24px] bg-gradient-to-b from-[var(--surface-raised)] to-black/70"
                 style={{ "--grade-color": "var(--grade-rare)" } as CSSProperties}
               >
-                {season?.hero_model_url ? (
-                  <HeroBoxModel3D
-                    modelUrl={season.hero_model_url}
-                    fallback={<HeroBoxPlaceholder seasonName={season?.name} />}
-                  />
-                ) : season?.hero_image_url ? (
-                  <img
-                    src={season.hero_image_url}
-                    alt="Season hero"
-                    className="h-full w-full object-contain p-6"
-                  />
-                ) : (
-                  <HeroBoxPlaceholder seasonName={season?.name} />
-                )}
+                {/* Podium spotlight -- reads as a stage the product stands
+                    on, instead of a flat centered image. */}
+                <div
+                  className="pointer-events-none absolute bottom-[6%] left-1/2 h-[26%] w-[70%] -translate-x-1/2 rounded-[50%] blur-2xl"
+                  style={{ background: "var(--grade-legendary)", opacity: 0.22 }}
+                />
+                <div className="relative flex h-full w-full flex-col items-center justify-center gap-3 p-6">
+                  {season?.hero_model_url ? (
+                    <HeroBoxModel3D
+                      modelUrl={season.hero_model_url}
+                      fallback={<HeroBoxPlaceholder seasonName={season?.name} />}
+                    />
+                  ) : season?.hero_image_url ? (
+                    <img
+                      src={season.hero_image_url}
+                      alt="Season hero"
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <HeroBoxPlaceholder seasonName={season?.name} />
+                  )}
+                </div>
               </div>
 
               {GRADE_ORDER.map((grade, index) => {
                 const meta = GRADE_META[grade];
                 const odds = season?.odds?.[grade];
                 const positions = [
-                  { top: "-4%", left: "-4%" },
-                  { top: "-4%", right: "-4%" },
-                  { bottom: "-4%", left: "-4%" },
-                  { bottom: "-4%", right: "-4%" },
+                  { top: "-6%", left: "-8%" },
+                  { top: "-6%", right: "-8%" },
+                  { bottom: "-6%", left: "-8%" },
+                  { bottom: "-6%", right: "-8%" },
                 ];
                 // Rarer grades read visually bigger, brighter and more
                 // alive — reinforces the value gradient at a glance
                 // instead of 4 identical badges that only differ by color.
-                const paddingClass = ["px-3 py-1.5", "px-3.5 py-2", "px-4 py-2.5", "px-5 py-3"][index];
-                const labelSizeClass = ["text-[8px]", "text-[9px]", "text-[10px]", "text-[11px]"][index];
-                const pctSizeClass = ["text-[11px]", "text-[12px]", "text-[15px]", "text-[18px]"][index];
+                const sizeClass = ["h-[68px] w-[68px]", "h-[74px] w-[74px]", "h-[80px] w-[80px]", "h-[88px] w-[88px]"][
+                  index
+                ];
+                const labelSizeClass = ["text-[7px]", "text-[7px]", "text-[8px]", "text-[8px]"][index];
+                const pctSizeClass = ["text-[13px]", "text-[14px]", "text-[16px]", "text-[19px]"][index];
                 const borderWidthClass = ["border", "border", "border-[1.5px]", "border-2"][index];
                 const glowPx = [6, 12, 22, 36][index];
                 const glowAlpha = [30, 40, 55, 70][index];
@@ -316,10 +326,12 @@ export default function PublicHome() {
                 return (
                   <div
                     key={grade}
-                    className={`badge-in absolute rounded-full ${borderWidthClass} bg-black/85 ${paddingClass} backdrop-blur-xl ${
+                    className={`badge-in absolute flex flex-col items-center justify-center ${sizeClass} ${borderWidthClass} bg-black/85 backdrop-blur-xl ${
                       isPulsing ? "badge-pulse" : ""
                     }`}
                     style={{
+                      clipPath:
+                        "polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)",
                       borderColor: `color-mix(in srgb, ${meta.color} ${45 + index * 8}%, transparent)`,
                       boxShadow: `0 0 ${glowPx}px color-mix(in srgb, ${meta.color} ${glowAlpha}%, transparent)`,
                       animationDelay: `${index * 0.15}s`,
@@ -327,7 +339,7 @@ export default function PublicHome() {
                     }}
                   >
                     <p
-                      className={`text-center font-mono ${labelSizeClass} font-black tracking-[0.14em]`}
+                      className={`text-center font-mono ${labelSizeClass} font-black tracking-[0.1em]`}
                       style={{
                         color: meta.color,
                         textShadow:

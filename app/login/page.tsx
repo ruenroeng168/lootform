@@ -6,6 +6,30 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
+// =====================================
+// SAFE REDIRECT TARGET
+//
+// Reads ?redirect= via window.location.search directly (not the
+// useSearchParams hook) so this page doesn't need a Suspense
+// boundary for a production build. Only same-origin relative paths
+// are honored -- rejects "//evil.com" and absolute URLs to avoid an
+// open-redirect via a crafted /login?redirect= link.
+// =====================================
+
+function getSafeRedirect() {
+  if (typeof window === "undefined") {
+    return "/";
+  }
+
+  const redirect = new URLSearchParams(window.location.search).get("redirect");
+
+  if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+    return redirect;
+  }
+
+  return "/";
+}
+
 export default function LoginPage() {
   const router = useRouter();
 
@@ -69,7 +93,7 @@ export default function LoginPage() {
       } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}${getSafeRedirect()}`,
         },
       });
 
@@ -172,7 +196,7 @@ export default function LoginPage() {
       }
 
       router.push(
-        "/"
+        getSafeRedirect()
       );
 
       router.refresh();
