@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
-import { broadcastWalletBalanceUpdated } from "@/lib/wallet-events";
 
 // =====================================
 // TYPES
@@ -30,13 +29,6 @@ type SubmittedOrder = {
   amount_thb: number;
   token_amount: number;
   status: string;
-};
-
-type TopupSuccess = {
-  reference: string;
-  order_id: number;
-  token_amount: number;
-  balance: number;
 };
 
 const MAX_SLIP_SIZE = 5 * 1024 * 1024;
@@ -65,10 +57,6 @@ export default function WalletTopupPage() {
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submittedOrder, setSubmittedOrder] = useState<SubmittedOrder | null>(null);
-
-  const [testToppingUp, setTestToppingUp] = useState(false);
-  const [testSuccess, setTestSuccess] = useState<TopupSuccess | null>(null);
-  const [isTestMode, setIsTestMode] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -112,7 +100,6 @@ export default function WalletTopupPage() {
 
       setPackages(packagesResult.packages as TopupPackage[]);
       setSettings(packagesResult.settings as TopupSettings | null);
-      setIsTestMode(packagesResult.environment_mode === "TEST");
     } catch (error) {
       console.error("LOAD TOPUP ERROR:", error);
       setErrorMessage(error instanceof Error ? error.message : "Unable to load top-up");
@@ -183,54 +170,6 @@ export default function WalletTopupPage() {
       setErrorMessage(error instanceof Error ? error.message : "ไม่สามารถส่งคำขอเติมเงินได้");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  // =====================================
-  // TEST TOP-UP (dev convenience, server rejects outside TEST mode)
-  // =====================================
-
-  async function testTopup() {
-    setTestToppingUp(true);
-    setErrorMessage("");
-    setTestSuccess(null);
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-
-      const response = await fetch("/api/wallet/topup/test", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ packageCode: "LT100" }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.message || "ไม่สามารถเติม LT ได้");
-      }
-
-      const topup = result.topup as TopupSuccess;
-      setTestSuccess(topup);
-
-      const nextBalance = Number(topup.balance ?? 0);
-      setBalance(nextBalance);
-      broadcastWalletBalanceUpdated(nextBalance);
-    } catch (error) {
-      console.error("TEST TOPUP ERROR:", error);
-      setErrorMessage(error instanceof Error ? error.message : "ไม่สามารถเติม LT ได้");
-    } finally {
-      setTestToppingUp(false);
     }
   }
 
@@ -413,43 +352,6 @@ export default function WalletTopupPage() {
                 {submitting ? "กำลังส่งคำขอ..." : "ส่งคำขอเติมเงิน"}
               </button>
             </div>
-          </section>
-        )}
-
-        {/* =====================================
-            DEV TEST TOP-UP
-
-            Only rendered when the system is in TEST mode. The API
-            already rejects this outside TEST mode, but hiding it
-            here too means players never see a dead button once the
-            system switches to LIVE at go-live.
-        ===================================== */}
-
-        {isTestMode && (
-          <section className="mt-10 border border-yellow-300/20 bg-yellow-300/[0.02] rounded-2xl p-6">
-            <div className="inline-flex items-center gap-2 border border-yellow-300/20 bg-yellow-300/5 rounded-full px-4 py-2">
-              <span className="w-1.5 h-1.5 bg-yellow-300 rounded-full animate-pulse" />
-              <span className="text-yellow-300 text-[9px] tracking-[0.3em]">DEV / TEST ONLY</span>
-            </div>
-
-            <p className="text-zinc-500 text-xs mt-4">
-              ปุ่มนี้ใช้ทดสอบระบบเท่านั้น — เติม 100 LT ทันทีโดยไม่ต้องโอนเงินจริง
-              ใช้ได้เฉพาะตอนระบบอยู่ใน TEST mode เท่านั้น
-            </p>
-
-            {testSuccess && (
-              <p className="text-lime-400 text-sm font-black mt-3">
-                +{testSuccess.token_amount} LT (Ref: {testSuccess.reference})
-              </p>
-            )}
-
-            <button
-              disabled={testToppingUp}
-              onClick={testTopup}
-              className="mt-4 border border-yellow-300/30 bg-yellow-300/[0.05] text-yellow-300 py-3 px-6 rounded-xl text-xs font-black hover:bg-yellow-300/10 disabled:opacity-50 transition"
-            >
-              {testToppingUp ? "PROCESSING..." : "TEST TOP-UP +100 LT"}
-            </button>
           </section>
         )}
       </div>
