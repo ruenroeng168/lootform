@@ -1102,6 +1102,9 @@ export default function HomePage() {
       selectedSlotEntry,
     ]);
 
+  // Temporarily unused: the "PLAY RPG MAKER" button below is disabled
+  // until the game build is ready for players. Re-wire its onClick to
+  // this when launching.
   async function openRpgMakerGame() {
     const {
       data: { session },
@@ -2494,12 +2497,12 @@ export default function HomePage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  void openRpgMakerGame()
-                }
-                className="w-full border border-purple-400/30 bg-purple-400/[0.05] text-purple-400 rounded-xl py-2.5 font-black text-[11px] hover:bg-purple-400/10 transition"
+                disabled
+                aria-disabled="true"
+                title="ระบบยังไม่เปิดให้เล่น"
+                className="w-full border border-purple-400/20 bg-purple-400/[0.03] text-purple-400/40 rounded-xl py-2.5 font-black text-[11px] cursor-not-allowed"
               >
-                PLAY RPG MAKER (BETA)
+                PLAY RPG MAKER (COMING SOON)
               </button>
 
             </section>
