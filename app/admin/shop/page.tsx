@@ -138,6 +138,16 @@ export default function AdminShopPage() {
       return;
     }
 
+    const parsedSizes = form.available_sizes
+      .split(",")
+      .map((size) => size.trim())
+      .filter(Boolean);
+
+    if (parsedSizes.length === 0) {
+      setError("กรุณาระบุไซซ์อย่างน้อย 1 ไซซ์ (เช่น S, M, L, XL) — ไม่งั้นลูกค้าจะสั่งซื้อโดยไม่มีไซซ์ได้");
+      return;
+    }
+
     setSaving(true);
     setError("");
     setSuccess("");
@@ -150,10 +160,7 @@ export default function AdminShopPage() {
           category: form.category,
           description: form.description,
           price_thb: priceThb,
-          available_sizes: form.available_sizes
-            .split(",")
-            .map((size) => size.trim())
-            .filter(Boolean),
+          available_sizes: parsedSizes,
           image_url: form.image_url,
           sort_order: items.length,
         }),

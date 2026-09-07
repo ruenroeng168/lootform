@@ -255,7 +255,7 @@ export default function ShopItemPage() {
             <section className="mt-8 grid gap-6 sm:grid-cols-[240px_1fr]">
               <div className="flex items-center justify-center rounded-xl border border-zinc-800 bg-black/40 h-[240px] overflow-hidden">
                 {item.image_url ? (
-                  <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />
+                  <img src={item.image_url} alt={item.name} className="h-full w-full object-contain" />
                 ) : (
                   <p className="text-zinc-600 text-xs">ยังไม่มีรูป</p>
                 )}
