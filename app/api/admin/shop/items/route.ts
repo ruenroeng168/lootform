@@ -193,6 +193,12 @@ export async function DELETE(request: NextRequest) {
   const { error } = await supabaseAdmin.from("shop_items").delete().eq("id", id);
 
   if (error) {
+    if (error.code === "23503") {
+      return NextResponse.json(
+        { success: false, message: "ลบไม่ได้ เพราะมีออเดอร์ลูกค้าอ้างอิงสินค้านี้อยู่ — ใช้ปุ่ม INACTIVE แทนถ้าต้องการเลิกขาย" },
+        { status: 409 }
+      );
+    }
     console.error("ADMIN SHOP ITEMS DELETE ERROR:", error);
     return NextResponse.json({ success: false, message: "Unable to delete shop item" }, { status: 500 });
   }

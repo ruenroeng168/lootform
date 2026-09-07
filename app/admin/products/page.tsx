@@ -1291,6 +1291,76 @@ export default function AdminProductsPage() {
   }
 
   /* =======================================================
+     DELETE PRODUCT
+  ======================================================= */
+
+  async function deleteProduct(
+    product: Product
+  ) {
+    if (
+      !window.confirm(
+        `ลบ Product "${product.name}" ถาวรพร้อมทุกดีไซน์ในนี้? ย้อนกลับไม่ได้`
+      )
+    ) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      setSaving(
+        true
+      );
+
+      setBusyKey(
+        `delete-product-${product.id}`
+      );
+
+      await authenticatedFetch(
+        "/api/admin/products",
+        {
+          method:
+            "DELETE",
+
+          body:
+            JSON.stringify({
+              action:
+                "delete_product",
+
+              product_id:
+                product.id,
+            }),
+        }
+      );
+
+      setSuccess(
+        `${product.name} deleted.`
+      );
+
+      await loadProducts();
+    } catch (
+      deleteError
+    ) {
+      console.error(
+        deleteError
+      );
+
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Cannot delete product."
+      );
+    } finally {
+      setSaving(
+        false
+      );
+
+      setBusyKey("");
+    }
+  }
+
+  /* =======================================================
      ADD DESIGN
   ======================================================= */
 
@@ -2220,6 +2290,76 @@ export default function AdminProductsPage() {
   }
 
   /* =======================================================
+     DELETE DESIGN
+  ======================================================= */
+
+  async function deleteDesign(
+    design: Design
+  ) {
+    if (
+      !window.confirm(
+        `ลบดีไซน์ "${design.name}" ถาวร? ย้อนกลับไม่ได้`
+      )
+    ) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      setSaving(
+        true
+      );
+
+      setBusyKey(
+        `delete-design-${design.id}`
+      );
+
+      await authenticatedFetch(
+        "/api/admin/products",
+        {
+          method:
+            "DELETE",
+
+          body:
+            JSON.stringify({
+              action:
+                "delete_design",
+
+              design_id:
+                design.id,
+            }),
+        }
+      );
+
+      setSuccess(
+        `${design.name} deleted.`
+      );
+
+      await loadProducts();
+    } catch (
+      deleteError
+    ) {
+      console.error(
+        deleteError
+      );
+
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Cannot delete design."
+      );
+    } finally {
+      setSaving(
+        false
+      );
+
+      setBusyKey("");
+    }
+  }
+
+  /* =======================================================
      LOADING
   ======================================================= */
 
@@ -3044,6 +3184,24 @@ export default function AdminProductsPage() {
                               : product.is_active
                                 ? "HIDE PRODUCT"
                                 : "PUBLISH PRODUCT"}
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={
+                              saving
+                            }
+                            onClick={() =>
+                              deleteProduct(
+                                product
+                              )
+                            }
+                            className="rounded-xl border border-red-400/20 bg-red-400/5 px-5 py-3 text-xs font-black text-red-400/70 disabled:opacity-50"
+                          >
+                            {busyKey ===
+                            `delete-product-${product.id}`
+                              ? "DELETING..."
+                              : "DELETE PRODUCT"}
                           </button>
                         </div>
                       </div>
@@ -4173,6 +4331,24 @@ export default function AdminProductsPage() {
                                         : design.is_active
                                           ? "HIDE FROM CRAFT"
                                           : "PUBLISH TO CRAFT"}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        saving
+                                      }
+                                      onClick={() =>
+                                        deleteDesign(
+                                          design
+                                        )
+                                      }
+                                      className="rounded-xl border border-red-400/20 bg-red-400/5 px-4 py-3 text-[10px] font-black text-red-400/70 disabled:opacity-50"
+                                    >
+                                      {busyKey ===
+                                      `delete-design-${design.id}`
+                                        ? "DELETING..."
+                                        : "DELETE DESIGN"}
                                     </button>
                                   </div>
                                 </div>

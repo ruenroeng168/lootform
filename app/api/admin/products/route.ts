@@ -2037,3 +2037,180 @@ export async function PATCH(
     );
   }
 }
+
+/* =========================================================
+   DELETE
+   PERMANENTLY REMOVE A PRODUCT OR DESIGN
+
+   items.product_id / items.design_id are ON DELETE NO ACTION --
+   the database itself refuses to delete a product/design that any
+   real crafted item still references (error code 23503), so this
+   only ever destroys rows nothing has been crafted from yet. Use
+   the existing is_active toggle to retire a design/product that
+   already has crafted items out in the world.
+========================================================= */
+
+export async function DELETE(
+  request: NextRequest
+) {
+  try {
+    const auth =
+      await requireAdmin(
+        request
+      );
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    const body =
+      await request.json();
+
+    const action =
+      cleanText(
+        body?.action
+      );
+
+    if (
+      action ===
+      "delete_design"
+    ) {
+      const designId =
+        Number(
+          body?.design_id
+        );
+
+      if (
+        !Number.isInteger(
+          designId
+        ) ||
+        designId <= 0
+      ) {
+        return jsonError(
+          "Valid design_id is required"
+        );
+      }
+
+      const {
+        error,
+      } =
+        await supabaseAdmin
+          .from(
+            "product_designs"
+          )
+          .delete()
+          .eq(
+            "id",
+            designId
+          );
+
+      if (error) {
+        if (
+          error.code ===
+          "23503"
+        ) {
+          return jsonError(
+            "ลบไม่ได้ เพราะมีไอเทมที่ Craft จากดีไซน์นี้ไปแล้ว — ใช้ปุ่มปิดใช้งานแทน",
+            409
+          );
+        }
+
+        console.error(
+          "ADMIN PRODUCTS DELETE DESIGN ERROR:",
+          error
+        );
+
+        return jsonError(
+          error.message,
+          500
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+
+        action:
+          "delete_design",
+      });
+    }
+
+    if (
+      action ===
+      "delete_product"
+    ) {
+      const productId =
+        Number(
+          body?.product_id
+        );
+
+      if (
+        !Number.isInteger(
+          productId
+        ) ||
+        productId <= 0
+      ) {
+        return jsonError(
+          "Valid product_id is required"
+        );
+      }
+
+      const {
+        error,
+      } =
+        await supabaseAdmin
+          .from(
+            "products"
+          )
+          .delete()
+          .eq(
+            "id",
+            productId
+          );
+
+      if (error) {
+        if (
+          error.code ===
+          "23503"
+        ) {
+          return jsonError(
+            "ลบไม่ได้ เพราะมีไอเทมที่ Craft จากโปรดักต์นี้ไปแล้ว — ใช้ปุ่มปิดใช้งานแทน",
+            409
+          );
+        }
+
+        console.error(
+          "ADMIN PRODUCTS DELETE PRODUCT ERROR:",
+          error
+        );
+
+        return jsonError(
+          error.message,
+          500
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+
+        action:
+          "delete_product",
+      });
+    }
+
+    return jsonError(
+      "Unknown action"
+    );
+  } catch (error) {
+    console.error(
+      "ADMIN PRODUCTS DELETE ERROR:",
+      error
+    );
+
+    return jsonError(
+      error instanceof Error
+        ? error.message
+        : "Internal server error",
+      500
+    );
+  }
+}

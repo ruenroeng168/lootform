@@ -872,6 +872,78 @@ export default function AdminCharactersPage() {
   }
 
   /* =======================================================
+     DELETE CHARACTER
+  ======================================================= */
+
+  async function deleteCharacter(
+    character:
+      CharacterModel
+  ) {
+    if (
+      !window.confirm(
+        `ลบตัวละคร "${character.name}" ถาวร? ย้อนกลับไม่ได้`
+      )
+    ) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    try {
+      setSaving(
+        true
+      );
+
+      setBusyKey(
+        `delete-${character.id}`
+      );
+
+      await authenticatedFetch(
+        "/api/admin/characters",
+        {
+          method:
+            "DELETE",
+
+          body:
+            JSON.stringify({
+              character_id:
+                character.id,
+            }),
+        }
+      );
+
+      setSuccess(
+        `${character.name} deleted.`
+      );
+
+      await loadCharacters();
+    } catch (
+      deleteError
+    ) {
+      console.error(
+        "CHARACTER DELETE ERROR:",
+        deleteError
+      );
+
+      setError(
+        deleteError instanceof
+        Error
+          ? deleteError.message
+          : "Cannot delete Character"
+      );
+    } finally {
+      setSaving(
+        false
+      );
+
+      setBusyKey(
+        ""
+      );
+    }
+  }
+
+  /* =======================================================
      SET DEFAULT
   ======================================================= */
 
@@ -1974,6 +2046,30 @@ export default function AdminCharactersPage() {
                                   ? "DEFAULT LOCKED"
                                   : "HIDE"
                                 : "PUBLISH"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void deleteCharacter(
+                                  character
+                                )
+                              }
+                              disabled={
+                                saving ||
+                                character.is_default
+                              }
+                              title={
+                                character.is_default
+                                  ? "ตั้งตัวละครอื่นเป็น Default ก่อนแล้วค่อยลบ"
+                                  : undefined
+                              }
+                              className="rounded-xl border border-red-400/20 bg-red-400/[0.02] px-4 py-3 text-[10px] font-black text-red-400/60 disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                              {busyKey ===
+                              `delete-${character.id}`
+                                ? "DELETING..."
+                                : "DELETE"}
                             </button>
 
                           </div>

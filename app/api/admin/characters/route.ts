@@ -1383,3 +1383,151 @@ export async function PATCH(
     );
   }
 }
+
+/* =========================================================
+   DELETE
+   PERMANENTLY REMOVE A CHARACTER MODEL
+
+   player_profiles.character_model_id is ON DELETE RESTRICT --
+   the database refuses to delete a Character any real player has
+   selected, so this only ever destroys rows nobody is using yet.
+   Use is_active / a different Default to retire one that already
+   has players on it.
+========================================================= */
+
+export async function DELETE(
+  request: NextRequest
+) {
+  try {
+    const auth =
+      await requireAdmin(
+        request
+      );
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    let body:
+      Record<string, unknown>;
+
+    try {
+      body =
+        await request.json();
+    } catch {
+      return errorResponse(
+        "Invalid JSON body",
+        400,
+        "INVALID_JSON"
+      );
+    }
+
+    const characterId =
+      parsePositiveInteger(
+        body.character_id
+      );
+
+    if (!characterId) {
+      return errorResponse(
+        "Invalid character_id",
+        400,
+        "INVALID_CHARACTER_ID"
+      );
+    }
+
+    let current:
+      CharacterRow | null;
+
+    try {
+      current =
+        await loadCharacter(
+          characterId
+        );
+    } catch (
+      error
+    ) {
+      return errorResponse(
+        error instanceof Error
+          ? error.message
+          : "Unable to load Character",
+        500,
+        "CHARACTER_QUERY_FAILED"
+      );
+    }
+
+    if (!current) {
+      return errorResponse(
+        "Character not found",
+        404,
+        "CHARACTER_NOT_FOUND"
+      );
+    }
+
+    if (
+      current.is_default
+    ) {
+      return errorResponse(
+        "ลบไม่ได้ เพราะเป็นตัวละคร Default อยู่ — ตั้งตัวละครอื่นเป็น Default ก่อนแล้วค่อยลบ",
+        409,
+        "CHARACTER_IS_DEFAULT"
+      );
+    }
+
+    const {
+      error,
+    } =
+      await supabaseAdmin
+        .from(
+          "character_models"
+        )
+        .delete()
+        .eq(
+          "id",
+          characterId
+        );
+
+    if (error) {
+      if (
+        error.code ===
+        "23503"
+      ) {
+        return errorResponse(
+          "ลบไม่ได้ เพราะมีผู้เล่นเลือกใช้ตัวละครนี้อยู่ — ปิดใช้งาน (INACTIVE) แทน",
+          409,
+          "CHARACTER_IN_USE"
+        );
+      }
+
+      console.error(
+        "ADMIN CHARACTER DELETE ERROR:",
+        error
+      );
+
+      return errorResponse(
+        error.message,
+        500,
+        "CHARACTER_DELETE_FAILED"
+      );
+    }
+
+    return successResponse({
+      message:
+        `${current.name} deleted.`,
+    });
+  } catch (
+    error
+  ) {
+    console.error(
+      "ADMIN CHARACTER DELETE INTERNAL ERROR:",
+      error
+    );
+
+    return errorResponse(
+      error instanceof Error
+        ? error.message
+        : "Unable to delete Character",
+      500,
+      "INTERNAL_SERVER_ERROR"
+    );
+  }
+}
