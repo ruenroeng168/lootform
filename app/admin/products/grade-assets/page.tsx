@@ -3,6 +3,7 @@
 import {
   ChangeEvent,
   ReactNode,
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -184,7 +185,17 @@ const gradeBackground: Record<
    PAGE
 ========================================================= */
 
+/* useSearchParams() needs a Suspense boundary or the
+   production build fails while prerendering this page. */
 export default function AdminGradeAssetsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminGradeAssetsContent />
+    </Suspense>
+  );
+}
+
+function AdminGradeAssetsContent() {
   const router =
     useRouter();
 
