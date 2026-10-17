@@ -102,7 +102,7 @@ function parseProduct(body: Record<string, unknown>) {
 
 async function syncVariants(productId: number, variants: VariantInput[]) {
   const { data: existing, error: loadError } = await supabaseAdmin
-    .from("shop_product_variants")
+    .from("store_product_variants")
     .select("id, size")
     .eq("product_id", productId);
 
@@ -112,11 +112,11 @@ async function syncVariants(productId: number, variants: VariantInput[]) {
   const removeIds = (existing ?? []).filter((row) => !keep.has(row.size)).map((row) => row.id);
 
   if (removeIds.length > 0) {
-    const { error } = await supabaseAdmin.from("shop_product_variants").delete().in("id", removeIds);
+    const { error } = await supabaseAdmin.from("store_product_variants").delete().in("id", removeIds);
     if (error) throw error;
   }
 
-  const { error: upsertError } = await supabaseAdmin.from("shop_product_variants").upsert(
+  const { error: upsertError } = await supabaseAdmin.from("store_product_variants").upsert(
     variants.map((variant) => ({
       product_id: productId,
       size: variant.size,
@@ -131,7 +131,7 @@ async function syncVariants(productId: number, variants: VariantInput[]) {
 
 async function loadProduct(id: number) {
   const { data, error } = await supabaseAdmin
-    .from("shop_products")
+    .from("store_products")
     .select(`${PRODUCT_SELECT}, is_active`)
     .eq("id", id)
     .single();
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return fail(auth.message, auth.status);
 
   const { data, error } = await supabaseAdmin
-    .from("shop_products")
+    .from("store_products")
     .select(`${PRODUCT_SELECT}, is_active`)
     .order("sort_order", { ascending: true })
     .order("id", { ascending: true });
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
   if ("error" in parsed) return fail(parsed.error as string);
 
   const { data, error } = await supabaseAdmin
-    .from("shop_products")
+    .from("store_products")
     .insert(parsed.product)
     .select("id")
     .single();
@@ -209,7 +209,7 @@ export async function PATCH(request: NextRequest) {
   if ("error" in parsed) return fail(parsed.error as string);
 
   const { error } = await supabaseAdmin
-    .from("shop_products")
+    .from("store_products")
     .update({ ...parsed.product, updated_at: new Date().toISOString() })
     .eq("id", id);
 
@@ -235,7 +235,7 @@ export async function DELETE(request: NextRequest) {
   const id = Number(new URL(request.url).searchParams.get("id"));
   if (!Number.isInteger(id) || id <= 0) return fail("Invalid product id");
 
-  const { error } = await supabaseAdmin.from("shop_products").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("store_products").delete().eq("id", id);
 
   if (error) {
     console.error("ADMIN SHOP PRODUCT DELETE ERROR:", error);

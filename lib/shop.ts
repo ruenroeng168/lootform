@@ -20,7 +20,7 @@ export type ShopCategory = (typeof SHOP_CATEGORIES)[number]["code"];
 export const SHOP_SIZE_ORDER = ["XS", "S", "M", "L", "XL", "XXL", "FREE"];
 
 /* Flat-rate Thailand shipping, free above a threshold.
-   Passed into shop_place_order_atomic() so the database
+   Passed into store_place_order_atomic() so the database
    computes the same total the checkout page previews. */
 export const SHIPPING_FEE_THB = 60;
 export const FREE_SHIPPING_MIN_THB = 1500;

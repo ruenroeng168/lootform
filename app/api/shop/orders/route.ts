@@ -16,19 +16,19 @@ import {
          payload: JSON { request_id, items:[{variant_id, quantity}],
                          address:{...}, note }
          file:    payment slip (JPEG/PNG/WEBP, max 5 MB)
-         Creates a PENDING order through shop_place_order_atomic(),
+         Creates a PENDING order through store_place_order_atomic(),
          which prices the cart from the database and reserves stock.
          Nothing is marked paid here — an Admin reviews the slip.
 
    GET   The signed-in customer's orders, newest first.
 
-   BUCKET: shop-slips (PRIVATE)
+   BUCKET: store-slips (PRIVATE)
 ========================================================= */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BUCKET = "shop-slips";
+const BUCKET = "store-slips";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const VALID_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
 
     uploadedPath = storagePath;
 
-    const { data, error } = await supabaseAdmin.rpc("shop_place_order_atomic", {
+    const { data, error } = await supabaseAdmin.rpc("store_place_order_atomic", {
       p_user_id: user.id,
       p_request_id: requestId,
       p_reference: generateReference(),
@@ -232,13 +232,13 @@ export async function GET(request: NextRequest) {
   if (!user) return errorResponse("Unauthorized", 401);
 
   const { data, error } = await supabaseAdmin
-    .from("shop_orders")
+    .from("store_orders")
     .select(
       `id, reference, status, subtotal_thb, shipping_fee_thb, total_thb,
        recipient_name, phone, address_line, subdistrict, district, province,
        postal_code, note, tracking_carrier, tracking_number, cancel_reason,
        created_at, paid_at, shipped_at, delivered_at,
-       items:shop_order_items ( id, product_name, product_slug, size, image_url,
+       items:store_order_items ( id, product_name, product_slug, size, image_url,
                                 unit_price_thb, quantity, line_total_thb )`
     )
     .eq("user_id", user.id)

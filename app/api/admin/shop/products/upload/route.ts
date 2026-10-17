@@ -6,7 +6,7 @@ import { requireShopAdmin } from "@/lib/shop-data";
 /* =========================================================
    LOOTFORM ADMIN SHOP PRODUCT IMAGE UPLOAD
 
-   BUCKET: shop-products (PUBLIC)
+   BUCKET: store-products (PUBLIC)
    MAX: 5 MB, JPEG/PNG/WEBP
    Returns the public URL; the product form adds it to images[].
 ========================================================= */
@@ -14,7 +14,7 @@ import { requireShopAdmin } from "@/lib/shop-data";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BUCKET = "shop-products";
+const BUCKET = "store-products";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const EXTENSIONS: Record<string, string> = {
   "image/jpeg": "jpg",

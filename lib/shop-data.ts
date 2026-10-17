@@ -5,13 +5,13 @@ import { sortVariants, type ShopProduct } from "@/lib/shop";
    LOOTFORM SHOP — server-side reads
 
    Uses the secret key, so import ONLY from Server Components
-   and route handlers. shop_* tables are service_role-only.
+   and route handlers. store_* tables are service_role-only.
 ========================================================= */
 
 export const PRODUCT_SELECT = `
   id, slug, name, category, description, price_thb, compare_at_price_thb,
   images, color_name, material, fit, care, is_featured, is_new, sort_order,
-  variants:shop_product_variants ( id, size, stock )
+  variants:store_product_variants ( id, size, stock )
 `;
 
 type ProductRow = Omit<ShopProduct, "variants"> & {
@@ -48,7 +48,7 @@ export function normalizeProduct(row: ProductRow): ShopProduct {
 
 export async function getActiveProducts(): Promise<ShopProduct[]> {
   const { data, error } = await supabaseAdmin
-    .from("shop_products")
+    .from("store_products")
     .select(PRODUCT_SELECT)
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
@@ -64,7 +64,7 @@ export async function getActiveProducts(): Promise<ShopProduct[]> {
 
 export async function getActiveProductBySlug(slug: string): Promise<ShopProduct | null> {
   const { data, error } = await supabaseAdmin
-    .from("shop_products")
+    .from("store_products")
     .select(PRODUCT_SELECT)
     .eq("slug", slug)
     .eq("is_active", true)

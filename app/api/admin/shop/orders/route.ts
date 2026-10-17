@@ -6,18 +6,18 @@ import { requireShopAdmin } from "@/lib/shop-data";
    LOOTFORM ADMIN SHOP ORDERS
 
    GET   ?status=PENDING|PAID|SHIPPED|DELIVERED|CANCELLED
-         (default PENDING). Slips live in the PRIVATE shop-slips
+         (default PENDING). Slips live in the PRIVATE store-slips
          bucket and are returned as short-lived signed URLs.
    POST  { order_id, action, reason?, tracking_carrier?, tracking_number? }
          action: APPROVE | REJECT | SHIP | DELIVER | CANCEL
-         Runs shop_order_transition_atomic(); REJECT/CANCEL
+         Runs store_order_transition_atomic(); REJECT/CANCEL
          restore stock in the same transaction.
 ========================================================= */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SLIP_BUCKET = "shop-slips";
+const SLIP_BUCKET = "store-slips";
 const SIGNED_URL_TTL_SECONDS = 600;
 const STATUSES = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
 const ACTIONS = ["APPROVE", "REJECT", "SHIP", "DELIVER", "CANCEL"];
@@ -42,13 +42,13 @@ export async function GET(request: NextRequest) {
   const status = STATUSES.includes(statusParam) ? statusParam : "PENDING";
 
   const { data: orders, error } = await supabaseAdmin
-    .from("shop_orders")
+    .from("store_orders")
     .select(
       `id, reference, user_id, status, subtotal_thb, shipping_fee_thb, total_thb,
        recipient_name, phone, address_line, subdistrict, district, province,
        postal_code, note, slip_image_path, tracking_carrier, tracking_number,
        cancel_reason, reviewed_at, created_at, paid_at, shipped_at, delivered_at,
-       items:shop_order_items ( id, product_name, size, image_url,
+       items:store_order_items ( id, product_name, size, image_url,
                                 unit_price_thb, quantity, line_total_thb )`
     )
     .eq("status", status)
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
   if (!Number.isInteger(orderId) || orderId <= 0) return fail("Invalid order id");
   if (!ACTIONS.includes(action)) return fail("Action ไม่ถูกต้อง");
 
-  const { data, error } = await supabaseAdmin.rpc("shop_order_transition_atomic", {
+  const { data, error } = await supabaseAdmin.rpc("store_order_transition_atomic", {
     p_order_id: orderId,
     p_admin_id: auth.userId,
     p_action: action,

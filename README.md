@@ -17,8 +17,8 @@ SUPABASE_SECRET_KEY=your-supabase-secret-key
 A direct-purchase apparel store (THB) lives alongside the craft loop:
 `/shop`, `/shop/[slug]`, `/cart`, `/checkout`, `/orders`, and Admin at `/admin/shop`.
 
-1. Run `supabase/migrations/202610170001_shop_storefront.sql` (creates the
-   `shop_*` tables, the `shop-products` / `shop-slips` buckets, the atomic
+1. Run `supabase/migrations/202610170001_store_storefront.sql` (creates the
+   `store_*` tables, the `store-products` / `store-slips` buckets, the atomic
    order functions, and 8 starter products) **before** deploying the code.
 2. Payment details (bank + QR) are shared with top-up — set them in `/admin/topup`.
 3. Replace the placeholder artwork in `/public/shop` by uploading real photos in `/admin/shop`.
