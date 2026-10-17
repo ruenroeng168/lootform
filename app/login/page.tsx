@@ -122,8 +122,19 @@ export default function LoginPage() {
         throw error;
       }
 
+      // Return to where login was requested (e.g. /checkout),
+      // only for same-site relative paths.
+      const nextPath =
+        new URLSearchParams(
+          window.location.search
+        ).get("next");
+
       router.push(
-        "/"
+        nextPath &&
+          nextPath.startsWith("/") &&
+          !nextPath.startsWith("//")
+          ? nextPath
+          : "/"
       );
 
       router.refresh();

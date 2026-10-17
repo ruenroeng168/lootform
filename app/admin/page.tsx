@@ -627,6 +627,22 @@ export default function AdminDashboardPage() {
                 />
 
                 {/* ===========================================
+                    STORE
+                =========================================== */}
+
+                <ControlCard
+                  title="STORE"
+                  description="Online apparel store: orders, slip review, tracking, products and stock."
+                  button="OPEN STORE"
+                  accent="cyan"
+                  onClick={() =>
+                    router.push(
+                      "/admin/shop"
+                    )
+                  }
+                />
+
+                {/* ===========================================
                     SEASON
                 =========================================== */}
 

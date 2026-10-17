@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+<defs>
+  <radialGradient id="bg-cargo-utility-pants" cx="50%" cy="42%" r="70%">
+    <stop offset="0" stop-color="#1a1a21"/><stop offset="1" stop-color="#0c0c10"/>
+  </radialGradient>
+  <radialGradient id="glow-cargo-utility-pants" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#7bd88f" stop-opacity="0.18"/><stop offset="1" stop-color="#7bd88f" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="shade-cargo-utility-pants" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity="0.10"/>
+    <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000" stop-opacity="0.28"/>
+  </linearGradient>
+  <pattern id="grid-cargo-utility-pants" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.025"/>
+  </pattern>
+</defs>
+<rect width="800" height="1000" fill="url(#bg-cargo-utility-pants)"/>
+<rect width="800" height="1000" fill="url(#grid-cargo-utility-pants)"/>
+<ellipse cx="400" cy="500" rx="360" ry="380" fill="url(#glow-cargo-utility-pants)"/>
+<ellipse cx="400" cy="880" rx="250" ry="22" fill="#000" opacity="0.45"/>
+<g>
+  <path d="M260 190 L540 190 L560 260 L590 860 L455 870 L405 360 L395 360 L345 870 L210 860 L240 260 Z" fill="#4c5233" stroke="#ffffff" stroke-opacity="0.10" stroke-width="2"/>
+  <path d="M260 190 L540 190 L560 260 L590 860 L455 870 L405 360 L395 360 L345 870 L210 860 L240 260 Z" fill="url(#shade-cargo-utility-pants)"/>
+  <rect x="258" y="185" width="284" height="42" rx="4" fill="#000" opacity="0.25"/>
+  <path d="M385 225 Q380 270 360 290 M415 225 Q420 270 440 290" stroke="#e8e6df" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M400 230 V360" stroke="#000" stroke-opacity="0.3" stroke-width="3"/>
+  <path d="M225 470 L320 470 L325 600 L222 600 Z" fill="#000" opacity="0.18"/>
+  <path d="M225 470 L320 470 L320 500 L225 500 Z" fill="#000" opacity="0.18"/>
+  <path d="M575 470 L480 470 L475 600 L578 600 Z" fill="#000" opacity="0.18"/>
+  <path d="M575 470 L480 470 L480 500 L575 500 Z" fill="#000" opacity="0.18"/>
+  <path d="M225 470 L320 470 L325 600 L222 600 Z" fill="none" stroke="#000" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="6 6"/>
+  <path d="M575 470 L480 470 L475 600 L578 600 Z" fill="none" stroke="#000" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="6 6"/>
+  <path d="M212 830 L345 840 M588 830 L455 840" stroke="#000" stroke-opacity="0.35" stroke-width="6"/>
+  <rect x="485" y="640" width="60" height="22" fill="#111" opacity="0.6"/><text x="515" y="656" text-anchor="middle" font-family="monospace" font-size="12" fill="#f0a93b">LF-07</text>
+</g>
+<g fill="none" stroke="#7bd88f" stroke-width="3" opacity="0.55">
+  <path d="M40 80V40H80"/><path d="M760 920V960H720"/>
+</g>
+<text x="40" y="960" font-family="monospace" font-size="16" letter-spacing="4" fill="#ffffff" fill-opacity="0.28">LOOTFORM · CARGO-UTILITY-PANTS</text>
+</svg>
