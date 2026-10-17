@@ -12,6 +12,19 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
 SUPABASE_SECRET_KEY=your-supabase-secret-key
 ```
 
+### Online store (`/shop`)
+
+A direct-purchase apparel store (THB) lives alongside the craft loop:
+`/shop`, `/shop/[slug]`, `/cart`, `/checkout`, `/orders`, and Admin at `/admin/shop`.
+
+1. Run `supabase/migrations/202610170001_shop_storefront.sql` (creates the
+   `shop_*` tables, the `shop-products` / `shop-slips` buckets, the atomic
+   order functions, and 8 starter products) **before** deploying the code.
+2. Payment details (bank + QR) are shared with top-up — set them in `/admin/topup`.
+3. Replace the placeholder artwork in `/public/shop` by uploading real photos in `/admin/shop`.
+
+Shipping is a flat ฿60, free from ฿1,500 (`lib/shop.ts`).
+
 ### Run the dev server
 
 ```bash

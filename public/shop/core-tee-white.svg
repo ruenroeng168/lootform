@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+<defs>
+  <radialGradient id="bg-core-tee-white" cx="50%" cy="42%" r="70%">
+    <stop offset="0" stop-color="#1a1a21"/><stop offset="1" stop-color="#0c0c10"/>
+  </radialGradient>
+  <radialGradient id="glow-core-tee-white" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#a8adbb" stop-opacity="0.18"/><stop offset="1" stop-color="#a8adbb" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="shade-core-tee-white" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity="0.10"/>
+    <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000" stop-opacity="0.28"/>
+  </linearGradient>
+  <pattern id="grid-core-tee-white" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.025"/>
+  </pattern>
+</defs>
+<rect width="800" height="1000" fill="url(#bg-core-tee-white)"/>
+<rect width="800" height="1000" fill="url(#grid-core-tee-white)"/>
+<ellipse cx="400" cy="500" rx="360" ry="380" fill="url(#glow-core-tee-white)"/>
+<ellipse cx="400" cy="880" rx="250" ry="22" fill="#000" opacity="0.45"/>
+<g>
+  <path d="M330 240 Q400 292 470 240 L560 268 L670 380 L600 465 L545 425 L545 820 Q400 834 255 820 L255 425 L200 465 L130 380 L240 268 Z" fill="#ecebe6" stroke="#ffffff" stroke-opacity="0.10" stroke-width="2"/>
+  <path d="M330 240 Q400 292 470 240 L560 268 L670 380 L600 465 L545 425 L545 820 Q400 834 255 820 L255 425 L200 465 L130 380 L240 268 Z" fill="url(#shade-core-tee-white)"/>
+  <path d="M330 240 Q400 292 470 240 Q400 316 330 240 Z" fill="#000" opacity="0.35"/>
+  <path d="M322 238 Q400 306 478 238" fill="none" stroke="#000" stroke-opacity="0.3" stroke-width="10"/>
+  <path d="M265 805 Q400 818 535 805" fill="none" stroke="#000" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="6 6"/>
+  <path d="M208 450 L148 385" fill="none" stroke="#000" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="6 6"/>
+  <path d="M592 450 L652 385" fill="none" stroke="#000" stroke-opacity="0.25" stroke-width="2" stroke-dasharray="6 6"/>
+  <text x="400" y="390" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="34" letter-spacing="2.72" fill="#111114">LOOTFORM</text><text x="400" y="420" text-anchor="middle" font-family="monospace" font-size="13" letter-spacing="5" fill="#555">DIGITAL LOOT · PHYSICAL FORM</text>
+</g>
+<g fill="none" stroke="#a8adbb" stroke-width="3" opacity="0.55">
+  <path d="M40 80V40H80"/><path d="M760 920V960H720"/>
+</g>
+<text x="40" y="960" font-family="monospace" font-size="16" letter-spacing="4" fill="#ffffff" fill-opacity="0.28">LOOTFORM · CORE-TEE-WHITE</text>
+</svg>
