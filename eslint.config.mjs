@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate app (ลูกชิ้นนายช่าง) with its own config; not part of LOOTFORM.
+    "lukchin-naichang/**",
   ]),
 ]);
 
