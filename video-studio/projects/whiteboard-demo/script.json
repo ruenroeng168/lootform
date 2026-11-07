@@ -8,7 +8,7 @@
   "tail": 3.0,
   "tts": {
     "engine": "gemini",
-    "model": "gemini-2.5-flash-preview-tts",
+    "model": "gemini-3.8-flash-tts",
     "voice": "Puck",
     "style": "Read the following Thai script as a friendly, upbeat Thai YouTube explainer host talking to a friend. Warm, natural, smooth pacing with lively intonation; not robotic, not rushed. Speak only the Thai text:"
   },

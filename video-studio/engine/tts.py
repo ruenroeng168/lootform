@@ -25,7 +25,7 @@ def _cache_name(cfg, text):
     return hashlib.sha1(key.encode()).hexdigest()[:16] + ".wav"
 
 
-def gemini(text, out, voice="Charon", style="", model="gemini-2.5-flash-preview-tts", retries=4):
+def gemini(text, out, voice="Charon", style="", model="gemini-3.8-flash-tts", retries=4):
     prompt = f"{style.strip()}\n\n{text}" if style else text
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -78,7 +78,7 @@ def synth(text, cfg, cache_dir, piper_model=None, log=print):
     tmp = out.with_suffix(".tmp.wav")
     if eng == "gemini":
         gemini(text, tmp, cfg.get("voice", "Charon"), cfg.get("style", ""),
-               cfg.get("model", "gemini-2.5-flash-preview-tts"))
+               cfg.get("model", "gemini-3.8-flash-tts"))
     else:
         piper(text, tmp, piper_model, cfg.get("speed", 1.0))
     tmp.rename(out)
