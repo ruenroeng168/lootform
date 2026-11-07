@@ -25,9 +25,13 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 @font-face{font-family:"IBM Plex Sans Thai";font-weight:600;src:url(../../../assets/fonts/IBMPlexSansThai-SemiBold.ttf)}
 @font-face{font-family:"IBM Plex Sans Thai";font-weight:700;src:url(../../../assets/fonts/IBMPlexSansThai-Bold.ttf)}
 @font-face{font-family:"IBM Plex Mono";font-weight:500;src:url(../../../assets/fonts/IBMPlexMono-Medium.ttf)}
+@font-face{font-family:"Sriracha";font-weight:400;src:url(../../../assets/fonts/Sriracha-Regular.ttf)}
+@font-face{font-family:"Mali";font-weight:600;src:url(../../../assets/fonts/Mali-SemiBold.ttf)}
+@font-face{font-family:"Mali";font-weight:700;src:url(../../../assets/fonts/Mali-Bold.ttf)}
 html,body{margin:0;background:#000}</style></head><body>
 <canvas id="c" width="${tl.width}" height="${tl.height}"></canvas>
 <script src="../../../engine/lib.js"></script>
+<script src="../../../engine/sketch.js"></script>
 <script src="../scene.js"></script></body></html>`;
 const pagePath = path.join(out, "_render.html");
 writeFileSync(pagePath, html);
@@ -39,11 +43,19 @@ await page.goto(pathToFileURL(pagePath).href);
 await page.evaluate(async (tl) => {
   await Promise.all([
     '700 10px "Chakra Petch"', '600 10px "Chakra Petch"', '600 10px "IBM Plex Sans Thai"',
-    '700 10px "IBM Plex Sans Thai"', '500 10px "IBM Plex Mono"',
+    '700 10px "IBM Plex Sans Thai"', '500 10px "IBM Plex Mono"', '400 10px "Sriracha"',
+    '600 10px "Mali"', '700 10px "Mali"',
   ].map((f) => document.fonts.load(f, "ABCกขค")));
   window.TL = tl;
   window.scene.setup(document.getElementById("c"), tl);
 }, tl);
+
+if (args.includes("--events")) {
+  const ev = await page.evaluate(() => (window.scene.events ? window.scene.events() : {}));
+  writeFileSync(path.join(out, "events.json"), JSON.stringify(ev));
+  await browser.close();
+  process.exit(0);
+}
 
 const frameAt = (i) => page.evaluate((i) => {
   window.scene.draw(i / window.TL.fps, i);
