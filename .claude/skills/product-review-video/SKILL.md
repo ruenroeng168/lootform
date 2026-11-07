@@ -32,7 +32,19 @@ This environment usually can't open shop pages (network policy) — ask the user
 - **Images & brands:** use photos the seller allows or the user shot; no competitor logos, celebrity faces or copyrighted music. The pipeline's music is procedurally generated (safe).
 - Platform rules change — tell the user to check the current TikTok Shop / Shopee affiliate content policy before scaling up.
 
-## 3. Build
+## 3. Background removal (floating product shots)
+
+```bash
+python3 video-studio/engine/cutout.py projects/<slug>/assets/*.jpg --preview        # BiRefNet, best edges
+python3 video-studio/engine/cutout.py img.jpg --crop 0,400,800,900 --fast           # crop first; ISNet = faster
+```
+- Writes transparent PNGs to `assets/cut/` (trimmed + padded) and `_preview.jpg` (checkerboard + dark bg) — **look at the preview** before using them.
+- Use in `data.json`: `"images": [{"src": "assets/cut/x.png", "cutout": true}, "assets/scene.jpg"]` → cut-outs float with a theme glow and a shape-following shadow; normal photos stay in a rounded card.
+- Pick per-feature photos with `features[i].image` (index into `images`) and the closing shot with `hero_image`.
+- Limits: text/stickers printed over the product can't be removed (crop around them first); white product on white background may lose parts; lifestyle/scene photos (product in use) usually look better left as photos.
+- Crop away misleading seller text (e.g. impossible wattage) before cutting out.
+
+## 4. Build
 
 ```bash
 python3 video-studio/engine/new_project.py product-review <slug>
@@ -45,7 +57,7 @@ python3 video-studio/engine/build.py video-studio/projects/<slug>            # f
 
 `script.json` cues the scene expects: `hook, intro, f1, f2, f3, verdict ("ข้อดี | ข้อควรรู้"), price ("ปกติ… | ตอนนี้…"), cta`. Use `|` inside a line to split it into sync points (verdict → cons appear at the `|`; price → strike-through + new price at the `|`).
 
-## 4. Script formula (30–45 s)
+## 5. Script formula (30–45 s)
 
 1. **Hook ≤3 s** — a question or problem the buyer has ("เย็นทั้งวันจริงไหม?"), never a false claim.
 2. **Intro** — what it is, for whom.
@@ -56,7 +68,7 @@ python3 video-studio/engine/build.py video-studio/projects/<slug>            # f
 
 Give the user: 3 hook options, the script, caption ×2, 5–8 hashtags (#รีวิว #ปักตะกร้า #TikTokShop + category tags), and the AI-label reminder.
 
-## 5. Check before handing over
+## 6. Check before handing over
 
 - Look at `out/stills` contact sheet: no overlap, text inside safe zone (x 60–940, y 150–1500; bottom/right are covered by app UI).
 - Voice split check runs automatically (per-line transcription); if a line shows ⚠, look at `out/vo_lines/`.

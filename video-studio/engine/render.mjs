@@ -18,10 +18,12 @@ const tl = JSON.parse(readFileSync(path.join(out, "timeline.json"), "utf8"));
 // Inline project images as data URLs (file:// images would taint the canvas).
 const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
 if (tl.data && Array.isArray(tl.data.images)) {
-  tl.data.images = tl.data.images.map((src) => {
+  tl.data.images = tl.data.images.map((entry) => {
+    const src = typeof entry === "string" ? entry : entry.src;
     const file = path.join(project, src);
     const mime = MIME[path.extname(file).toLowerCase()] || "image/png";
-    return `data:${mime};base64,` + readFileSync(file).toString("base64");
+    const url = `data:${mime};base64,` + readFileSync(file).toString("base64");
+    return typeof entry === "string" ? url : { ...entry, src: url };
   });
 }
 const stills = args.includes("--stills");

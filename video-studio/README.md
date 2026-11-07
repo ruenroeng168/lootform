@@ -43,3 +43,4 @@ Add it to the environment's Network secrets: Host `generativelanguage.googleapis
 - **product-review**: a vertical affiliate ("ปักตะกร้า") review. Product data goes in `data.json` (photos in `assets/`), voice lines in `script.json`. Example: `projects/demo-bottle` (fictional product, uses placeholder photos).
 - Skills for Claude sessions live in `../.claude/skills/`: `product-review-video` (workflow + honesty/compliance rules) and `sports-news-clip` (news research + clip workflow).
 - `data.json` in any project is passed to `scene.js` as `TL.data`; image paths in `data.images` are inlined at render time.
+- `engine/cutout.py`: local AI background removal (BiRefNet; `--fast` uses ISNet) that writes transparent PNGs for floating product shots. Models are downloaded into `models/` (gitignored). Requires `pip install "rembg[cpu]"`.

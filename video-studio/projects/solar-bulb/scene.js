@@ -23,8 +23,11 @@
     blobs = Array.from({ length: 6 }, () => ({ x: r() * W, y: r() * H, r: 220 + r() * 260, p: r() * 6, s: 0.2 + r() * 0.3 }));
   }
   function preload() {
-    return Promise.all((D.images || []).map((src) => new Promise((res) => {
-      const im = new Image(); im.onload = () => res(im); im.onerror = () => { console.error("image failed: " + src); res(null); };
+    // images[] entries: "path" or {"src": "path", "cutout": true} (transparent PNG from engine/cutout.py)
+    return Promise.all((D.images || []).map((e) => new Promise((res) => {
+      const src = typeof e === "string" ? e : e.src;
+      const im = new Image(); im.onload = () => { im.cutout = !!(e && e.cutout); res(im); };
+      im.onerror = () => { console.error("image failed: " + String(src).slice(0, 80)); res(null); };
       im.src = src.startsWith("data:") ? src : "../" + src;
     }))).then((list) => { imgs = list.filter(Boolean); });
   }
@@ -55,7 +58,31 @@
     txt("1L", 0, 70, F.d(64), WHITE);
     g.restore();
   }
+  // floating cut-out product: theme glow + silhouette drop shadow, gentle float/sway, no frame
+  function floatingProduct(im, k, x, y, w, h, t, alpha) {
+    g.save(); g.globalAlpha *= alpha;
+    const cx = x + w / 2, cy = y + h / 2;
+    const glow = g.createRadialGradient(cx, cy, 20, cx, cy, Math.max(w, h) * 0.62);
+    glow.addColorStop(0, hexA(THEME, 0.32)); glow.addColorStop(0.55, hexA(THEME, 0.12)); glow.addColorStop(1, hexA(THEME, 0));
+    g.fillStyle = glow; g.beginPath(); g.arc(cx, cy, Math.max(w, h) * 0.62, 0, 7); g.fill();
+    g.strokeStyle = hexA(THEME, 0.25); g.lineWidth = 4;
+    g.beginPath(); g.arc(cx, cy, Math.min(w, h) * 0.46 + 6 * Math.sin(t * 1.4), 0, 7); g.stroke();
+    const fl = 14 * Math.sin(t * 1.6 + k), sway = 0.03 * Math.sin(t * 0.9 + k);
+    const sc = Math.min(w * 0.88 / im.width, h * 0.82 / im.height) * (1 + 0.025 * Math.sin(t * 0.5));
+    const iw = im.width * sc, ih = im.height * sc;
+    // floor shadow
+    g.fillStyle = "rgba(20,20,40,0.16)"; g.beginPath();
+    g.ellipse(cx, cy + ih / 2 + 30, iw * 0.38 * (1 - fl / 120), 22, 0, 0, 7); g.fill();
+    g.save(); g.translate(cx, cy + fl); g.rotate(sway);
+    g.shadowColor = "rgba(20,20,40,0.28)"; g.shadowBlur = 40; g.shadowOffsetY = 28;
+    g.drawImage(im, -iw / 2, -ih / 2, iw, ih);
+    g.restore();
+    g.restore();
+  }
+
   function productImage(k, x, y, w, h, t, alpha = 1) {
+    const cim = imgs.length ? imgs[k % imgs.length] : null;
+    if (cim && cim.cutout) return floatingProduct(cim, k, x, y, w, h, t, alpha);
     g.save(); g.globalAlpha *= alpha;
     shadowed(() => { rr(x, y, w, h, 48); g.fillStyle = WHITE; g.fill(); });
     rr(x, y, w, h, 48); g.clip();
@@ -322,12 +349,17 @@
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
     background(t);
     const cs = cardState(t);
-    const k = featureIndexAt(t);
-    const prevK = Math.max(0, k - 1);
-    const sw = (D.features || [])[k - 1];
-    const fade = sw ? prog(t, T0(sw.cue) - 0.3, T0(sw.cue) + 0.1) : 1;
-    if (fade < 1) productImage(prevK, cs.x, cs.y, cs.w, cs.h, t, cs.a);
-    productImage(k, cs.x, cs.y, cs.w, cs.h, t, cs.a * fade);
+    // which photo is on screen: hero (0) for intro, feature.image (default i+1) per feature,
+    // data.hero_image (default 0) from the verdict on
+    const fs = D.features || [];
+    const sched = [{ t: -1, k: 0 }];
+    fs.forEach((f, i) => sched.push({ t: T0(f.cue) - 0.3, k: f.image ?? i + 1 }));
+    if (has("verdict")) sched.push({ t: T0("verdict") - 0.3, k: D.hero_image ?? 0 });
+    let si = 0; while (si + 1 < sched.length && sched[si + 1].t <= t) si++;
+    const cur = sched[si], prev = sched[Math.max(0, si - 1)];
+    const fade = si ? prog(t, cur.t, cur.t + 0.4) : 1;
+    if (fade < 1 && prev.k !== cur.k) productImage(prev.k, cs.x, cs.y, cs.w, cs.h, t, cs.a * (1 - fade));
+    productImage(cur.k, cs.x, cs.y, cs.w, cs.h, t, cs.a * (prev.k !== cur.k ? fade : 1));
     hook(t);
     features(t);
     verdict(t);

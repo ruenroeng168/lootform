@@ -2,3 +2,4 @@ voices/
 projects/*/out/
 __pycache__/
 samples/
+models/
