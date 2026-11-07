@@ -335,7 +335,9 @@ def main(project):
 
     timeline = {"fps": fps, "width": spec["width"], "height": spec["height"],
                 "duration": round(duration, 3), "frames": frames, "cues": cues,
-                "captions": captions, "mouth": [round(float(m), 3) for m in mouth]}
+                "captions": captions, "mouth": [round(float(m), 3) for m in mouth],
+                # project data (e.g. product info) for scene.js; image paths are made page-relative
+                "data": json.loads((project / "data.json").read_text()) if (project / "data.json").exists() else {}}
     (out / "timeline.json").write_text(json.dumps(timeline, ensure_ascii=False, indent=1))
     log(f"timeline: {duration:.2f}s, {frames} frames")
 

@@ -15,6 +15,15 @@ const project = path.resolve(process.argv[2]);
 const out = path.join(project, "out");
 const args = process.argv.slice(3);
 const tl = JSON.parse(readFileSync(path.join(out, "timeline.json"), "utf8"));
+// Inline project images as data URLs (file:// images would taint the canvas).
+const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
+if (tl.data && Array.isArray(tl.data.images)) {
+  tl.data.images = tl.data.images.map((src) => {
+    const file = path.join(project, src);
+    const mime = MIME[path.extname(file).toLowerCase()] || "image/png";
+    return `data:${mime};base64,` + readFileSync(file).toString("base64");
+  });
+}
 const stills = args.includes("--stills");
 const range = (args.find((a) => a.startsWith("--frames=")) || "").slice(9);
 
@@ -48,6 +57,7 @@ await page.evaluate(async (tl) => {
   ].map((f) => document.fonts.load(f, "ABCกขค")));
   window.TL = tl;
   window.scene.setup(document.getElementById("c"), tl);
+  if (window.scene.preload) await window.scene.preload();  // e.g. product photos
 }, tl);
 
 if (args.includes("--events")) {
