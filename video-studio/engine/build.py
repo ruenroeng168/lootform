@@ -230,11 +230,13 @@ def best_split(x, wav, texts, out):
     import verify_vo
     est = estimate_lengths(texts, out)
     cands = [("estimate", split_take(x, len(texts), est))]
-    if "--no-verify" in sys.argv:
+    if "--no-verify" in sys.argv or "--split=estimate" in sys.argv:
         return cands[0][1]
     starts = asr_boundaries(wav, texts, out)
     if starts:
         alt = split_take(x, len(texts), est, starts=starts)
+        if "--split=transcript" in sys.argv:  # skip per-line verification (e.g. rate-limited)
+            return alt
         if [len(c) for c in alt] != [len(c) for c in cands[0][1]]:
             cands.append(("transcript", alt))
     tdir = out / "vo" / "verify"; tdir.mkdir(parents=True, exist_ok=True)
@@ -289,8 +291,7 @@ def main(project):
     if base_voice.get("engine") == "gemini" and base_voice.get("batch", True):
         # One request for the whole script: a single continuous take, 1 quota unit per video.
         texts = [" ".join(p.strip() for p in ln["text"].split("|")) for ln in spec["lines"]]
-        cfg = {**base_voice, "style": base_voice.get("style", "") +
-               " Read each paragraph below in order, leaving a clear pause of about one second between paragraphs."}
+        cfg = {**base_voice, "notes": "Read the paragraphs in order. Pause about one second between paragraphs."}
         wav = tts.synth("\n\n".join(texts), cfg, out / "vo", pmodel, log)
         batched = best_split(load_audio(wav), wav, texts, out)
     clips, cues, t = [], {}, 0.0

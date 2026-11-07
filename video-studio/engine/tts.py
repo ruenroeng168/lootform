@@ -21,7 +21,7 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:ge
 
 def _cache_name(cfg, text):
     key = json.dumps([cfg.get("engine"), cfg.get("model"), cfg.get("voice"), cfg.get("style"),
-                      cfg.get("speed"), text], ensure_ascii=False)
+                      cfg.get("speed"), cfg.get("notes"), "v2", text], ensure_ascii=False)
     return hashlib.sha1(key.encode()).hexdigest()[:16] + ".wav"
 
 
@@ -32,8 +32,14 @@ def _retry_delay(msg, default):
     return float(m.group(1)) + 1 if m else default
 
 
-def gemini(text, out, voice="Charon", style="", model="gemini-3.8-flash-tts", retries=10):
-    prompt = f"{style.strip()}\n\n{text}" if style else text
+def gemini(text, out, voice="Charon", style="", model="gemini-3.8-flash-tts", retries=10, notes=""):
+    # Director's-notes format: newer TTS models read a "style: text" prompt verbatim
+    # when the style is long, so keep notes and transcript clearly separated.
+    if style or notes:
+        prompt = ("### DIRECTOR'S NOTES (do not read aloud)\n"
+                  f"Style: {style.strip().rstrip(':')}\n{notes}\n\n### TRANSCRIPT\n{text}")
+    else:
+        prompt = text
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
@@ -90,7 +96,7 @@ def synth(text, cfg, cache_dir, piper_model=None, log=print):
     tmp = out.with_suffix(".tmp.wav")
     if eng == "gemini":
         gemini(text, tmp, cfg.get("voice", "Charon"), cfg.get("style", ""),
-               cfg.get("model", "gemini-3.8-flash-tts"))
+               cfg.get("model", "gemini-3.8-flash-tts"), notes=cfg.get("notes", ""))
     else:
         piper(text, tmp, piper_model, cfg.get("speed", 1.0))
     tmp.rename(out)

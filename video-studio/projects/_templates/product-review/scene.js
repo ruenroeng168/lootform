@@ -63,8 +63,19 @@
     const im = imgs.length ? imgs[k % imgs.length] : null;
     const kb = 1.04 + 0.04 * Math.sin(t * 0.35 + k);            // slow Ken Burns zoom
     if (im) {
-      const sc = Math.max(w / im.width, h / im.height) * kb;
-      g.drawImage(im, x + w / 2 - (im.width * sc) / 2 + 10 * Math.sin(t * 0.3), y + h / 2 - (im.height * sc) / 2, im.width * sc, im.height * sc);
+      const ar = im.width / im.height, car = w / h;
+      if (Math.abs(ar / car - 1) > 0.25) {
+        // very different aspect: blurred cover backdrop + whole image contained (nothing cropped away)
+        const cs = Math.max(w / im.width, h / im.height) * 1.1;
+        g.save(); g.filter = "blur(28px) brightness(1.05)";
+        g.drawImage(im, x + w / 2 - (im.width * cs) / 2, y + h / 2 - (im.height * cs) / 2, im.width * cs, im.height * cs);
+        g.restore();
+        const sc = Math.min(w / im.width, h / im.height) * (kb - 0.02);
+        g.drawImage(im, x + w / 2 - (im.width * sc) / 2, y + h / 2 - (im.height * sc) / 2, im.width * sc, im.height * sc);
+      } else {
+        const sc = Math.max(w / im.width, h / im.height) * kb;
+        g.drawImage(im, x + w / 2 - (im.width * sc) / 2 + 10 * Math.sin(t * 0.3), y + h / 2 - (im.height * sc) / 2, im.width * sc, im.height * sc);
+      }
     } else {
       const bg = g.createRadialGradient(x + w / 2, y + h * 0.45, 20, x + w / 2, y + h / 2, w * 0.7);
       bg.addColorStop(0, hexA(THEME, 0.18)); bg.addColorStop(1, hexA(THEME, 0.04));
@@ -162,7 +173,8 @@
       const hp = ease.outCubic(prog(t, t0 + 0.2, t0 + 0.7));
       g.fillStyle = hexA(THEME, 0.25); g.fillRect(236, 1150, tw * hp, 16);
       wrap(f.detail || "", F.m(44), 820).slice(0, 3).forEach((l, j) => txt(l, 120, 1235 + j * 58, F.m(44), MUTED, "left"));
-      if (f.source === "spec") txt("* ตามสเปกผู้ผลิต", 980, 1370, F.m(26), MUTED, "right");
+      const srcLabel = { spec: "* ตามสเปกผู้ผลิต", shop: "* ตามข้อมูลหน้าร้าน", tested: "* จากการทดลองใช้จริง" }[f.source];
+      if (srcLabel) txt(srcLabel, 980, 1370, F.m(26), MUTED, "right");
       g.restore();
     });
   }
@@ -201,7 +213,24 @@
   function priceTag(t) {
     const t0 = T0("price");
     const a = prog(t, t0 - 0.1, t0 + 0.3);
-    if (a <= 0 || D.price == null) return;
+    if (a <= 0) return;
+    if (D.price == null) {  // no fixed price: show the shop's promo (if any) + "check price in basket"
+      g.save(); g.globalAlpha = a;
+      const pk = ease.outBack(prog(t, MK("price", 0) + 0.1, MK("price", 0) + 0.6), 2);
+      if (D.promo && pk > 0) {
+        g.save(); g.translate(540, 1150); g.rotate(-0.03); g.scale(pk, pk);
+        const ps = fit(D.promo, F.b, 110, 640);
+        shadowed(() => { rr(-360, -110, 720, 220, 50); g.fillStyle = THEME; g.fill(); }, 40, hexA(THEME, 0.5), 18);
+        txt(D.promo, 0, 4, F.b(ps), WHITE);
+        g.restore();
+      }
+      const p2 = prog(t, MK("price", 1) - 0.1, MK("price", 1) + 0.3);
+      if (p2 > 0) { g.globalAlpha = a * p2; txt("เช็กราคาล่าสุดในตะกร้า", 540, 1320, F.b(54), INK); }
+      g.globalAlpha = a;
+      if (D.price_note) txt(D.price_note, 540, 1385, F.m(30), MUTED);
+      g.restore();
+      return;
+    }
     const cur = D.currency || "฿";
     g.save(); g.globalAlpha = a;
     const y = 1040;
