@@ -1,0 +1,22 @@
+{
+  "title": "สิ่งมีชีวิตไร้ขน เดินสองขาล่าไก่ เอเลี่ยนจริงไหม?",
+  "fps": 30, "width": 1080, "height": 1920, "bpm": 84, "duck": 0.5, "tail": 3.0,
+  "sources": [
+    "https://mexiconewsdaily.com/lifestyle/mexico-best-known-ufologists-latest-claim-humanoid-being-near-northern-border/",
+    "https://www.gazetaexpress.com/en/Mysterious-creature-near-US-Mexico-border-sparks-fear;-UFO-researcher-claims-it-could-come-from-another-dimension/",
+    "https://www.sciencetimes.com/articles/62771/20261020/mysterious-valley-juarez-humanoid-cryptid-reportedly-preying-chickens-near-us-mexico-border.htm",
+    "https://en.wikipedia.org/wiki/Chupacabra",
+    "https://www.sanook.com/news/9910654/"
+  ],
+  "tts": { "voice": "Puck", "style": "Intriguing Thai mystery-explainer narrator: suspenseful and curious at the start, then calm, clear and trustworthy when giving the facts; smooth natural pacing" },
+  "lines": [
+    { "cue": "hook",    "at": 1.6, "text": "สิ่งมีชีวิตไร้ขน เดินสองขา ไล่กินไก่ | ชาวเน็ตลือกันว่าเป็นเอเลี่ยน | จริงไหม?" },
+    { "cue": "what",    "gap": 0.8, "text": "เรื่องนี้มาจากแถบชายแดนสหรัฐฯ กับเม็กซิโก | ทีมของไฮเม เมาส์ซาน นักวิจัยยูเอฟโอชื่อดัง | อ้างว่ากล้องดักถ่ายจับภาพมันได้เมื่อกลางเดือนตุลาคม" },
+    { "cue": "claims",  "gap": 0.7, "text": "เขาอ้างว่ามันเดินสองขา | และเป็นตัวการที่ทำให้ไก่ กระต่าย และม้าในพื้นที่ตาย" },
+    { "cue": "facts",   "gap": 0.7, "text": "แต่พอดูให้ดี | ในคลิปที่เผยแพร่ ยังไม่เห็นมันยืนสองขาเลย | สื่อแต่ละเจ้ารายงานขนาดตัวไม่ตรงกัน ตั้งแต่หกสิบเซนติเมตร ไปจนเกือบสองเมตร | และทางการก็ยังไม่ยืนยันว่ามีสัตว์อันตราย" },
+    { "cue": "explain", "gap": 0.7, "text": "ชาวเน็ตหลายคนมองว่า อาจเป็นอิกัวน่าที่ขาดเม็ดสี | ส่วนกรณีชูปาคาบราในอดีต ส่วนใหญ่กลายเป็นหมาที่เป็นโรคขี้เรื้อนจนขนร่วง" },
+    { "cue": "maussan", "gap": 0.7, "text": "อีกเรื่องที่ควรรู้ เมาส์ซาน คือคนเดียวกับที่เคยนำมัมมี่เอเลี่ยน ไปแสดงต่อสภาเม็กซิโก เมื่อปีสองพันยี่สิบสาม | ซึ่งนักวิทยาศาสตร์โต้แย้งอย่างหนัก" },
+    { "cue": "verdict", "gap": 0.7, "text": "สรุปตอนนี้ | ยังไม่มีหลักฐานว่าเป็นเอเลี่ยน | เป็นแค่คำกล่าวอ้าง ที่รอการพิสูจน์" },
+    { "cue": "cta",     "gap": 0.8, "text": "คุณคิดว่ามันคือตัวอะไร คอมเมนต์มาเลย | แล้วอย่าเพิ่งแชร์ต่อว่าเป็นเอเลี่ยนนะครับ" }
+  ]
+}
