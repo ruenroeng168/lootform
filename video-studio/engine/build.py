@@ -93,6 +93,65 @@ def marks_for(parts, x, start):
     return marks
 
 
+def split_take(x, n, expected=None, min_gap=0.15):
+    """Split one continuous take into n paragraphs.
+
+    Picks n-1 ordered pauses that are long AND close to the expected boundaries
+    (relative paragraph lengths, e.g. from a quick offline TTS pass), via DP.
+    """
+    if n == 1:
+        return [x]
+    dur = len(x) / S.SR
+    win = int(0.03 * S.SR)
+    env = np.sqrt(np.convolve(x ** 2, np.ones(win) / win, mode="same"))
+    quiet = env < 0.035 * env.max()
+    gaps, i = [], 0
+    while i < len(quiet):
+        if quiet[i]:
+            j = i
+            while j < len(quiet) and quiet[j]:
+                j += 1
+            if (j - i) / S.SR >= min_gap and i > 0 and j < len(quiet):
+                gaps.append(((i + j) / 2 / S.SR, (j - i) / S.SR))
+            i = j
+        else:
+            i += 1
+    if len(gaps) < n - 1:
+        raise RuntimeError(f"take has {len(gaps)} pauses, need {n - 1}; set tts.batch=false")
+    w = np.array(expected if expected else [1] * n, dtype=float)
+    exp = np.cumsum(w)[:-1] / w.sum() * dur
+    G, K = len(gaps), n - 1
+    score = lambda k, g: gaps[g][1] - 0.12 * abs(gaps[g][0] - exp[k])
+    dp = np.full((K, G), -1e9); back = np.zeros((K, G), dtype=int)
+    for g in range(G):
+        dp[0, g] = score(0, g)
+    for k in range(1, K):
+        best, arg = -1e9, -1
+        for g in range(G):
+            if g > 0 and dp[k - 1, g - 1] > best:
+                best, arg = dp[k - 1, g - 1], g - 1
+            if arg >= 0:
+                dp[k, g] = best + score(k, g); back[k, g] = arg
+    g = int(np.argmax(dp[K - 1])); picks = [g]
+    for k in range(K - 1, 0, -1):
+        g = back[k, g]; picks.append(g)
+    cuts = [int(gaps[g][0] * S.SR) for g in reversed(picks)]
+    log("take split at", ", ".join(f"{c / S.SR:.1f}s" for c in cuts),
+        "| expected", ", ".join(f"{e:.1f}" for e in exp))
+    return [x[a:b] for a, b in zip([0] + cuts, cuts + [len(x)])]
+
+
+def estimate_lengths(texts, out):
+    """Relative spoken length per paragraph from a fast offline Piper pass (no quota)."""
+    try:
+        model = piper_model("th_TH-tsync2-medium")
+        cfg = {"engine": "piper", "voice": "th_TH-tsync2-medium"}
+        return [len(trim(load_audio(tts.synth(t, cfg, out / "vo_est", model, lambda *a: None)))) for t in texts]
+    except Exception as e:  # fall back to character counts
+        log("length estimate fallback:", e)
+        return [len(t.replace(" ", "")) for t in texts]
+
+
 def main(project):
     project = Path(project).resolve()
     spec = json.loads((project / "script.json").read_text())
@@ -108,13 +167,26 @@ def main(project):
     pmodel = piper_model(base_voice["voice"]) if base_voice.get("engine", "piper") == "piper" else None
 
     # 1–2. voice-over + timeline -------------------------------------------
+    for a in sys.argv:
+        if a.startswith("--model="):
+            base_voice = {**base_voice, "model": a[8:]}
+    batched = None
+    if base_voice.get("engine") == "gemini" and base_voice.get("batch", True):
+        # One request for the whole script: a single continuous take, 1 quota unit per video.
+        texts = [" ".join(p.strip() for p in ln["text"].split("|")) for ln in spec["lines"]]
+        cfg = {**base_voice, "style": base_voice.get("style", "") +
+               " Read each paragraph below in order, leaving a clear pause of about one second between paragraphs."}
+        wav = tts.synth("\n\n".join(texts), cfg, out / "vo", pmodel, log)
+        batched = split_take(load_audio(wav), len(texts), estimate_lengths(texts, out))
     clips, cues, t = [], {}, 0.0
-    for ln in spec["lines"]:
+    for li, ln in enumerate(spec["lines"]):
         cfg = {**base_voice, **{k: ln[k] for k in ("voice", "style", "engine", "speed") if k in ln}}
         parts = [p.strip() for p in ln["text"].split("|")]
         spoken = " ".join(parts)
-        wav = tts.synth(spoken, cfg, out / "vo", pmodel, log)
-        x = process_voice(trim(load_audio(wav)), cfg.get("engine", "piper"), ln.get("gain", 1.0))
+        raw = batched[li] if batched else load_audio(tts.synth(spoken, cfg, out / "vo", pmodel, log))
+        x = process_voice(trim(raw), cfg.get("engine", "piper"), ln.get("gain", 1.0))
+        (out / "vo_lines").mkdir(exist_ok=True)
+        write_wav(out / "vo_lines" / f"{li:02d}_{ln['cue']}.wav", x)
         start = ln["at"] if "at" in ln else t + ln.get("gap", 0.3)
         end = start + len(x) / S.SR
         cues[ln["cue"]] = {"start": round(start, 3), "end": round(end, 3),
