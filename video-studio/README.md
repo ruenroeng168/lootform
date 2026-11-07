@@ -11,7 +11,7 @@ python3 video-studio/engine/build.py video-studio/projects/teaser
 
 | Step | What it does | File |
 |---|---|---|
-| 1. Voice | Thai neural TTS (Piper `th_TH-tsync2-medium`, runs offline). One clip per script line, trimmed and compressed | `engine/build.py` |
+| 1. Voice | **Gemini TTS** (default voice `Puck`, storytelling style): the whole script is read in one request, then split into lines at the pauses and verified with `engine/verify_vo.py`. `--engine=piper` uses the offline voice for previews | `engine/build.py`, `engine/tts.py` |
 | 2. Timeline | Line timings become **cues** (`hello`, `legendary`, ...) that the visuals and sound sync to | `engine/build.py` |
 | 3. Score | Procedural music bed (pad / arp / bass / drums) and SFX (whoosh, riser, boom, sparkle...), ducked under the voice | `projects/*/score.py`, `engine/synth.py` |
 | 4. Lip-sync | Voice loudness per frame drives the character's LED mouth | `engine/build.py` |
@@ -31,3 +31,8 @@ python3 video-studio/engine/build.py video-studio/projects/teaser
 - `pip install piper-tts unicode-rbnf sklearn-crfsuite gensim nltk && pip install --no-deps tltk` (the Thai phonemizer for Piper)
 - The voice model is downloaded into `voices/` automatically on the first run (not committed)
 - Brand fonts (OFL) are in `assets/fonts/`: Chakra Petch, IBM Plex Sans Thai, IBM Plex Mono
+
+## Gemini key
+
+Add it to the environment's Network secrets: Host `generativelanguage.googleapis.com`, Header `x-goog-api-key`
+(or set `$GEMINI_API_KEY`). Free tier: about 10 requests/day per model; 1 video = 1 request.

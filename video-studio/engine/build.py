@@ -23,6 +23,14 @@ sys.path.insert(0, str(Path(__file__).parent))
 import synth as S  # noqa: E402
 import tts  # noqa: E402
 
+# House voice: Gemini "Puck", warm storyteller (chosen by the channel owner).
+DEFAULT_VOICE = {
+    "engine": "gemini",
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Puck",
+    "style": "Speak in Thai as a warm, friendly YouTube storyteller talking to a friend, smooth natural pacing:",
+}
+
 ENGINE = Path(__file__).parent
 STUDIO = ENGINE.parent
 
@@ -158,7 +166,12 @@ def main(project):
     out = project / "out"
     out.mkdir(parents=True, exist_ok=True)
     fps = spec["fps"]
-    base_voice = spec.get("tts") or {"engine": "piper", "voice": spec.get("voice", "th_TH-tsync2-medium")}
+    if "tts" in spec:
+        base_voice = {**DEFAULT_VOICE, **spec["tts"]}
+    elif "voice" in spec:  # legacy offline projects (e.g. teaser)
+        base_voice = {"engine": "piper", "voice": spec["voice"]}
+    else:
+        base_voice = dict(DEFAULT_VOICE)
     if any(a.startswith("--engine=") for a in sys.argv):  # e.g. --engine=piper for offline previews
         eng = [a for a in sys.argv if a.startswith("--engine=")][0][9:]
         base_voice = {"engine": eng, "voice": "th_TH-tsync2-medium"} if eng == "piper" else {**base_voice, "engine": eng}
