@@ -1,0 +1,26 @@
+{
+  "title": "LOOTFORM — Meet LOOTY",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "voice": "th_TH-tsync2-medium",
+  "bpm": 110,
+  "tail": 3.6,
+  "lines": [
+    { "cue": "hello",     "text": "สวัสดีครับ ผมชื่อลูตตี้", "at": 1.3,
+      "caption": "สวัสดีครับ ผมชื่อ LOOTY มาจาก LOOTFORM" },
+    { "cue": "intro2",    "text": "มาจากลูทฟอร์ม", "gap": 0.12 },
+    { "cue": "pull",      "text": "เสื้อทุกตัวที่คุณซื้อ คือการสุ่มหนึ่งครั้ง", "gap": 0.6,
+      "caption": "เสื้อทุกตัวที่คุณซื้อ = การสุ่ม 1 ครั้ง" },
+    { "cue": "maybe",     "text": "คุณอาจได้", "gap": 0.55,
+      "caption": "คุณอาจได้ Common · Rare · Epic หรือว่า…" },
+    { "cue": "common",    "text": "คอมมอน", "gap": 0.12 },
+    { "cue": "rare",      "text": "แรร์", "gap": 0.12 },
+    { "cue": "epic",      "text": "เอพิค", "gap": 0.12 },
+    { "cue": "or",        "text": "หรือว่า", "gap": 0.2 },
+    { "cue": "legendary", "text": "เลเจนดารี่", "gap": 1.5, "speed": 0.9, "gain": 1.15,
+      "caption": "LEGENDARY!" },
+    { "cue": "outro",     "text": "เตรียมตัวให้พร้อม แล้วมาลุ้นไปด้วยกันครับ", "gap": 1.5,
+      "caption": "เตรียมตัวให้พร้อม แล้วมาลุ้นไปด้วยกัน" }
+  ]
+}
