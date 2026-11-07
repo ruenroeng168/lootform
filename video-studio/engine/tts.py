@@ -25,7 +25,14 @@ def _cache_name(cfg, text):
     return hashlib.sha1(key.encode()).hexdigest()[:16] + ".wav"
 
 
-def gemini(text, out, voice="Charon", style="", model="gemini-3.8-flash-tts", retries=4):
+def _retry_delay(msg, default):
+    """Seconds the API asks us to wait (RetryInfo), else `default`."""
+    import re
+    m = re.search(r'"retryDelay":\s*"([\d.]+)s"', msg) or re.search(r"retry in ([\d.]+)s", msg)
+    return float(m.group(1)) + 1 if m else default
+
+
+def gemini(text, out, voice="Charon", style="", model="gemini-3.8-flash-tts", retries=10):
     prompt = f"{style.strip()}\n\n{text}" if style else text
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -52,9 +59,14 @@ def gemini(text, out, voice="Charon", style="", model="gemini-3.8-flash-tts", re
                 w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(pcm)
             return
         except urllib.error.HTTPError as e:
-            msg = e.read().decode(errors="replace")[:400]
+            msg = e.read().decode(errors="replace")
+            if "PerDay" in msg:
+                raise RuntimeError("Gemini TTS daily quota used up; try again tomorrow or enable billing") from None
             if e.code in (429, 500, 503) and attempt < retries - 1:
-                time.sleep(4 * 2 ** attempt); continue
+                wait = _retry_delay(msg, min(60, 4 * 2 ** attempt))
+                print(f"[tts] rate-limited, waiting {wait:.0f}s", flush=True)
+                time.sleep(wait); continue
+            msg = msg[:400]
             raise RuntimeError(f"Gemini TTS HTTP {e.code}: {msg}") from None
         except (KeyError, IndexError):
             if attempt < retries - 1:
