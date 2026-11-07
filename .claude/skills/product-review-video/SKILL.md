@@ -20,6 +20,14 @@ Pipeline lives in `video-studio/` (see its README). Template: `video-studio/proj
 
 This environment usually can't open shop pages (network policy) — ask the user to paste the spec or screenshots.
 
+## 0. Platform fit — read first
+
+**TikTok Shop "ปักตะกร้า" rejects fully generated clips.** A slideshow of product photos + graphics + AI voice was flagged (Nov 2026) for: no creator on screen, relying on still images/screenshots, stills covering >50% of the screen, no real usage or first-hand experience. For basket-linked TikTok Shop videos:
+- The video must be built on **real footage the user films**: their face/hands on screen, the actual product being opened/used/demonstrated, ideally their own voice sharing real experience.
+- Our job becomes **editing**: cut the clips, captions, small corner callouts (keep overlays well under 50% of the frame), price tag, basket CTA, music/SFX. Give the user a shot list (hook to camera → unboxing → setup → feature demos in motion → real result → personal verdict + point to basket).
+- Never try to dodge the review (e.g. adding fake motion, stock "hands", re-uploading the same clip). Don't advise appealing when the clip really matches the rule.
+- The photo/graphics template below is still fine for teasers without a basket, or other platforms after checking their rules.
+
 ## 2. Honesty & compliance rules (non-negotiable)
 
 - **Never invent** specs, test results, sales numbers, ratings, reviews or quotes. Every feature line must come from the spec/page or the owner's notes; mark spec-based claims `"source": "spec"` (renders "* ตามสเปกผู้ผลิต").
