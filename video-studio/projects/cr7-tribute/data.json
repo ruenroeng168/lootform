@@ -1,0 +1,200 @@
+{
+  "accent": "#d4122b",
+  "accent2": "#0a7a3e",
+  "gold": "#f2c14e",
+  "images": {
+    "2007": "assets/2007.jpg",
+    "2011": "assets/2011.jpg",
+    "2013": "assets/2013.jpg",
+    "2016": "assets/2016.jpg",
+    "2016fans": "assets/2016fans.jpg",
+    "2025": "assets/2025.jpg",
+    "2026": "assets/2026.jpg",
+    "2026b": "assets/2026b.jpg"
+  },
+  "focus": {
+    "2007": [
+      0.6,
+      0.55
+    ],
+    "2011": [
+      0.36,
+      0.45
+    ],
+    "2013": [
+      0.45,
+      0.35
+    ],
+    "2016": [
+      0.5,
+      0.35
+    ],
+    "2016fans": [
+      0.5,
+      0.4
+    ],
+    "2025": [
+      0.5,
+      0.3
+    ],
+    "2026": [
+      0.5,
+      0.3
+    ],
+    "2026b": [
+      0.62,
+      0.42
+    ]
+  },
+  "credits": [
+    {
+      "key": "2007",
+      "author": "wonker",
+      "license": "CC BY 2.0",
+      "year": "2007"
+    },
+    {
+      "key": "2011",
+      "author": "Fanny Schertzer",
+      "license": "CC BY 3.0",
+      "year": "2011"
+    },
+    {
+      "key": "2013",
+      "author": "Fanny Schertzer",
+      "license": "CC BY-SA 3.0",
+      "year": "2013"
+    },
+    {
+      "key": "2016",
+      "author": "Chensiyuan",
+      "license": "CC BY-SA 4.0",
+      "year": "2016"
+    },
+    {
+      "key": "2016fans",
+      "author": "Jules Verne Times Two",
+      "license": "CC BY-SA 4.0",
+      "year": "2016"
+    },
+    {
+      "key": "2025",
+      "author": "YantsImages",
+      "license": "CC BY-SA 4.0",
+      "year": "2025"
+    },
+    {
+      "key": "2026",
+      "author": "Bryan Berlin",
+      "license": "CC BY-SA 4.0",
+      "year": "2026"
+    },
+    {
+      "key": "2026b",
+      "author": "Bryan Berlin",
+      "license": "CC BY-SA 4.0",
+      "year": "2026"
+    }
+  ],
+  "segments": [
+    {
+      "cue": "hook",
+      "img": "2026b",
+      "kb": "in",
+      "statsMode": "swap",
+      "stats": [
+        {
+          "value": 23,
+          "label": "ปี"
+        },
+        {
+          "value": 234,
+          "label": "นัด"
+        },
+        {
+          "value": 146,
+          "label": "ประตู"
+        }
+      ],
+      "title": "CR7 อำลาทีมชาติ",
+      "sub": "ประกาศ 5 พ.ย. 2026 ผ่านโซเชียลมีเดีย"
+    },
+    {
+      "cue": "start",
+      "img": "2007",
+      "kb": "right",
+      "year": "2003",
+      "title": "จุดเริ่มต้น",
+      "sub": "ติดทีมชาติชุดใหญ่ ส.ค. 2003 · วัย 18 ปี"
+    },
+    {
+      "cue": "euro",
+      "img": "2016",
+      "img2": "2016fans",
+      "img2At": 1,
+      "kb": "in",
+      "year": "2016",
+      "title": "แชมป์ยูโร 2016",
+      "sub": "แชมป์รายการใหญ่ครั้งแรกของโปรตุเกส"
+    },
+    {
+      "cue": "nl",
+      "img": "2025",
+      "kb": "out",
+      "year": "×2",
+      "title": "แชมป์เนชันส์ลีก 2 สมัย",
+      "sub": "2019 · 2025"
+    },
+    {
+      "cue": "records",
+      "img": "2011",
+      "kb": "left",
+      "statsMode": "stack",
+      "stats": [
+        {
+          "value": 146,
+          "label": "ประตู",
+          "note": "มากที่สุดตลอดกาล (ทีมชาติชาย)"
+        },
+        {
+          "value": 234,
+          "label": "นัด",
+          "note": "ลงเล่นมากที่สุด (ทีมชาติชาย)"
+        },
+        {
+          "value": 6,
+          "label": "ฟุตบอลโลก",
+          "note": "ยิงได้ทุกครั้ง · คนแรกของโลก"
+        }
+      ],
+      "statsFrom": 1
+    },
+    {
+      "cue": "wc",
+      "img": "2026",
+      "kb": "in",
+      "year": "2026",
+      "title": "ฟุตบอลโลกครั้งสุดท้าย",
+      "sub": "ตกรอบ 16 ทีม · แพ้สเปน 0-1"
+    },
+    {
+      "cue": "context",
+      "img": "2013",
+      "kb": "out",
+      "title": "ฉากจบที่ไม่ง่าย",
+      "sub": "หลังเกิดประเด็นกับกุนซือ ฆอร์เก้ เฆซุส"
+    },
+    {
+      "cue": "thanks",
+      "img": "2026b",
+      "kb": "out",
+      "title": "ขอบคุณ CR7",
+      "sub": "2003 – 2026 · เสื้อหมายเลข 7"
+    }
+  ],
+  "end_credits": [
+    "ภาพ: wonker · Fanny Schertzer · Chensiyuan · Jules Verne Times Two",
+    "YantsImages · Bryan Berlin — CC BY / CC BY-SA, Wikimedia Commons (ครอป/ปรับสี)",
+    "ข้อมูล: AP · ESPN · PBS · Al Jazeera · Sky Sports · สยามสปอร์ต"
+  ]
+}

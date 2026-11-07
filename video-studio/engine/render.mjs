@@ -26,6 +26,13 @@ if (tl.data && Array.isArray(tl.data.images)) {
     return typeof entry === "string" ? url : { ...entry, src: url };
   });
 }
+if (tl.data && tl.data.images && !Array.isArray(tl.data.images)) {  // {key: path} map (photo-story)
+  for (const [k, src] of Object.entries(tl.data.images)) {
+    const file = path.join(project, src);
+    const mime = MIME[path.extname(file).toLowerCase()] || "image/png";
+    tl.data.images[k] = `data:${mime};base64,` + readFileSync(file).toString("base64");
+  }
+}
 const stills = args.includes("--stills");
 const range = (args.find((a) => a.startsWith("--frames=")) || "").slice(9);
 

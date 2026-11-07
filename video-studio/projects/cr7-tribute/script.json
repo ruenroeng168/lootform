@@ -1,0 +1,32 @@
+{
+  "title": "ขอบคุณ CR7 — โรนัลโด้อำลาทีมชาติโปรตุเกส",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "bpm": 70,
+  "duck": 0.45,
+  "tail": 3.4,
+  "sources": [
+    "https://www.nbcmiami.com/news/sports/soccer/portugal-cristiano-ronaldo-announces-retirement-international-soccer/3884104/",
+    "https://www.espn.com/soccer/story/_/id/49266866/cristiano-ronaldo-portugal-jorge-jesus-retires-international",
+    "https://www.pbs.org/newshour/nation/cristiano-ronaldo-announces-his-international-retirement-from-portugal",
+    "https://www.aljazeera.com/sports/2026/6/23/ronaldo-scores-twice-as-portugal-thrash-uzbekistan-5-0-at-world-cup-2026",
+    "https://www.nbcdfw.com/world-cup/spain-portugal-score-cristiano-ronaldo/4045474/",
+    "https://www.skysports.com/football/news/13608374/cristiano-ronaldo-portugal-captains-retirement-ends-extraordinary-record-breaking-international-career-which-will-be-debated-for-years-to-come",
+    "https://www.siamsport.co.th/football-international/other/111696/"
+  ],
+  "tts": {
+    "voice": "Puck",
+    "style": "Warm, emotional, respectful Thai sports-documentary narrator paying tribute to a legend; measured pace, heartfelt but not melodramatic"
+  },
+  "lines": [
+    { "cue": "hook",    "at": 0.9, "text": "ยี่สิบสามปี | สองร้อยสามสิบสี่นัด | หนึ่งร้อยสี่สิบหกประตู | วันนี้ คริสเตียโน โรนัลโด้ ประกาศอำลาทีมชาติโปรตุเกสแล้ว" },
+    { "cue": "start",   "gap": 0.9, "text": "เส้นทางเริ่มต้นเมื่อเดือนสิงหาคม ปีสองพันสาม ตอนเขาอายุเพียงสิบแปดปี" },
+    { "cue": "euro",    "gap": 0.8, "text": "จุดสูงสุด คือแชมป์ยูโร สองพันสิบหก | แชมป์รายการใหญ่ครั้งแรกในประวัติศาสตร์ของโปรตุเกส" },
+    { "cue": "nl",      "gap": 0.8, "text": "ตามด้วยแชมป์ยูฟ่าเนชันส์ลีกอีกสองสมัย ในปีสองพันสิบเก้า และสองพันยี่สิบห้า" },
+    { "cue": "records", "gap": 0.8, "text": "เขาจากไปพร้อมสถิติโลก | ยิงมากที่สุดในประวัติศาสตร์ทีมชาติชาย หนึ่งร้อยสี่สิบหกประตู | ลงเล่นมากที่สุด สองร้อยสามสิบสี่นัด | และเป็นคนแรกที่ยิงได้ในฟุตบอลโลกถึงหกครั้ง" },
+    { "cue": "wc",      "gap": 0.8, "text": "ฟุตบอลโลกครั้งสุดท้ายของเขาจบที่รอบสิบหกทีม หลังแพ้สเปน หนึ่งต่อศูนย์" },
+    { "cue": "context", "gap": 0.8, "text": "ฉากจบอาจไม่ง่าย หลังเกิดประเด็นกับกุนซือ | แต่สหพันธ์ฟุตบอลโปรตุเกสเตรียมจัดงานเชิดชูเกียรติให้เขา" },
+    { "cue": "thanks",  "gap": 1.0, "text": "ขอบคุณสำหรับยี่สิบสามปี | คุณประทับใจโมเมนต์ไหนของโรนัลโด้ในเสื้อทีมชาติที่สุด คอมเมนต์บอกกันหน่อยครับ" }
+  ]
+}

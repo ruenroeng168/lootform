@@ -44,3 +44,4 @@ Add it to the environment's Network secrets: Host `generativelanguage.googleapis
 - Skills for Claude sessions live in `../.claude/skills/`: `product-review-video` (workflow + honesty/compliance rules) and `sports-news-clip` (news research + clip workflow).
 - `data.json` in any project is passed to `scene.js` as `TL.data`; image paths in `data.images` are inlined at render time.
 - `engine/cutout.py`: local AI background removal (BiRefNet; `--fast` uses ISNet) that writes transparent PNGs for floating product shots. Models are downloaded into `models/` (gitignored). Requires `pip install "rembg[cpu]"`.
+- **photo-story** (`projects/_templates/photo-story`): a cinematic tribute or recap built from full-screen photos (Ken Burns), year stamps, count-up stats, and a per-photo CC credit with the year the photo was taken. Example: `projects/cr7-tribute`. Photos come from Wikimedia Commons (CC BY / BY-SA); put the author, license and year in `data.json → credits`.
