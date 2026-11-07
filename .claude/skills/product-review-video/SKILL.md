@@ -24,7 +24,7 @@ This environment usually can't open shop pages (network policy) — ask the user
 
 - **Never invent** specs, test results, sales numbers, ratings, reviews or quotes. Every feature line must come from the spec/page or the owner's notes; mark spec-based claims `"source": "spec"` (renders "* ตามสเปกผู้ผลิต").
 - **No fake first-hand experience.** The AI voice must not say "ผมใช้มาแล้ว/ลองมาแล้ว" unless the owner actually tested it and gave notes. Default framing: "สเปกบอกว่า…", "ตามหน้าร้าน…".
-- **Always show the disclosure** tag (`data.json → disclosure`, default "โฆษณา · ลิงก์ Affiliate") and include cons/ข้อควรรู้ — honest reviews convert better and protect the account.
+- **Disclosure:** the owner chose **no on-screen ad tag** (template default `"disclosure": ""`). Disclosure still has to happen: every hand-over must remind the user to switch on the platform's commercial-content / paid-partnership disclosure when posting and to put #โฆษณา (or #affiliate) in the caption. Set `disclosure` to text only if the user asks for the tag back. Always include cons/ข้อควรรู้ — honest reviews convert better and protect the account.
 - **Health / beauty / food / supplements:** no cure, treat, prevent, whiten-guarantee or weight-loss promises; use only wording on the label/อย. registration. Flag anything that needs an อย. number and ask the user to confirm it.
 - **Electrical / kids' products:** mention มอก./safety marks only if the user confirms them.
 - **Price:** say "ราคา ณ วันที่ทำคลิป อาจเปลี่ยนตามโปรร้าน"; never invent a discount or "เหลือชิ้นสุดท้าย"-style scarcity.
@@ -66,10 +66,10 @@ python3 video-studio/engine/build.py video-studio/projects/<slug>            # f
 5. **Price** — normal → now, with the note.
 6. **CTA** — "กดตะกร้าด้านล่าง" + price-may-change line.
 
-Give the user: 3 hook options, the script, caption ×2, 5–8 hashtags (#รีวิว #ปักตะกร้า #TikTokShop + category tags), and the AI-label reminder.
+Give the user: 3 hook options, the script, caption ×2 (each with #โฆษณา), 5–8 hashtags (#รีวิว #ปักตะกร้า #TikTokShop + category tags), and the AI-label + disclosure-toggle reminder.
 
 ## 6. Check before handing over
 
 - Look at `out/stills` contact sheet: no overlap, text inside safe zone (x 60–940, y 150–1500; bottom/right are covered by app UI).
 - Voice split check runs automatically (per-line transcription); if a line shows ⚠, look at `out/vo_lines/`.
-- Every claim on screen traceable to the spec/notes; disclosure visible; `demo` is `false`.
+- Every claim on screen traceable to the spec/notes; `demo` is `false`; caption includes #โฆษณา and the reply reminds about the platform disclosure toggle.
