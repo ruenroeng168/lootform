@@ -101,7 +101,66 @@ def marks_for(parts, x, start):
     return marks
 
 
-def split_take(x, n, expected=None, min_gap=0.15):
+def _norm(s):
+    import re
+    return re.sub(r"[\s\d\-–.,!?'\"()]+", "", s)
+
+
+def asr_boundaries(wav, texts, out):
+    """Find where each paragraph starts (seconds) by matching a timestamped transcript to the script."""
+    import base64, difflib, os, urllib.request
+    cache = out / "vo" / (Path(wav).stem + ".phrases.json")
+    if cache.exists():
+        phrases = json.loads(cache.read_text())
+    else:
+        mp3 = subprocess.run(["ffmpeg", "-v", "error", "-i", str(wav), "-ac", "1", "-b:a", "64k", "-f", "mp3", "-"],
+                             capture_output=True, check=True).stdout
+        prompt = ("Transcribe this Thai narration verbatim as short phrases (2-6 words each), covering the whole "
+                  "audio in order. Return only a JSON array of objects {\"t\": start time in seconds (decimal), "
+                  "\"text\": the phrase}.")
+        body = {"contents": [{"parts": [{"text": prompt},
+                                        {"inlineData": {"mimeType": "audio/mp3", "data": base64.b64encode(mp3).decode()}}]}],
+                "generationConfig": {"responseMimeType": "application/json", "temperature": 0}}
+        key = os.environ.get("GEMINI_API_KEY", "proxy-injected")
+        phrases = None
+        for model in ("gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest"):
+            try:
+                req = urllib.request.Request(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                    data=json.dumps(body).encode(), headers={"Content-Type": "application/json", "x-goog-api-key": key})
+                with urllib.request.urlopen(req, timeout=240) as r:
+                    phrases = json.loads(json.load(r)["candidates"][0]["content"]["parts"][0]["text"])
+                break
+            except Exception as e:
+                log(f"transcribe via {model} failed: {e}")
+        if not phrases:
+            return None
+        cache.write_text(json.dumps(phrases, ensure_ascii=False))
+    dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(wav)],
+                               capture_output=True, text=True).stdout)
+
+    def secs(t):  # models sometimes write 1:00.6 as 100.6
+        t = float(t)
+        return (t // 100) * 60 + t % 100 if t > dur + 1 and t % 100 < 60 else t
+    P = [(_norm(p["text"]), secs(p["t"])) for p in phrases]
+    # running transcript (normalized) with the time at which each phrase begins
+    starts, j0 = [0.0], 0
+    for tx in texts[1:]:
+        head = _norm(tx)[:14]
+        best, bj = -1, None
+        for j in range(j0 + 1, len(P)):
+            window = "".join(p[0] for p in P[j:j + 3])[: len(head) + 4]
+            r = difflib.SequenceMatcher(None, head, window).ratio()
+            if r > best:
+                best, bj = r, j
+        if bj is None:
+            return None
+        starts.append(P[bj][1]); j0 = bj
+    log("transcript paragraph starts:", ", ".join(f"{t:.1f}" for t in starts))
+    return starts
+
+
+def split_take(x, n, expected=None, min_gap=0.15, starts=None):
     """Split one continuous take into n paragraphs.
 
     Picks n-1 ordered pauses that are long AND close to the expected boundaries
@@ -126,10 +185,13 @@ def split_take(x, n, expected=None, min_gap=0.15):
             i += 1
     if len(gaps) < n - 1:
         raise RuntimeError(f"take has {len(gaps)} pauses, need {n - 1}; set tts.batch=false")
-    w = np.array(expected if expected else [1] * n, dtype=float)
-    exp = np.cumsum(w)[:-1] / w.sum() * dur
+    if starts:  # boundaries heard by ASR: trust position strongly
+        exp, lam = np.array(starts[1:], dtype=float) - 0.15, 0.6
+    else:
+        w = np.array(expected if expected else [1] * n, dtype=float)
+        exp, lam = np.cumsum(w)[:-1] / w.sum() * dur, 0.12
     G, K = len(gaps), n - 1
-    score = lambda k, g: gaps[g][1] - 0.12 * abs(gaps[g][0] - exp[k])
+    score = lambda k, g: gaps[g][1] - lam * abs(gaps[g][0] - exp[k])
     dp = np.full((K, G), -1e9); back = np.zeros((K, G), dtype=int)
     for g in range(G):
         dp[0, g] = score(0, g)
@@ -158,6 +220,46 @@ def estimate_lengths(texts, out):
     except Exception as e:  # fall back to character counts
         log("length estimate fallback:", e)
         return [len(t.replace(" ", "")) for t in texts]
+
+
+def best_split(x, wav, texts, out):
+    """Try candidate splits (length-estimate DP, transcript DP); keep the one whose clips,
+    transcribed one by one, best match the script lines."""
+    import difflib, hashlib
+    from concurrent.futures import ThreadPoolExecutor
+    import verify_vo
+    est = estimate_lengths(texts, out)
+    cands = [("estimate", split_take(x, len(texts), est))]
+    if "--no-verify" in sys.argv:
+        return cands[0][1]
+    starts = asr_boundaries(wav, texts, out)
+    if starts:
+        alt = split_take(x, len(texts), est, starts=starts)
+        if [len(c) for c in alt] != [len(c) for c in cands[0][1]]:
+            cands.append(("transcript", alt))
+    tdir = out / "vo" / "verify"; tdir.mkdir(parents=True, exist_ok=True)
+
+    def heard(chunk):
+        h = hashlib.sha1(chunk.tobytes()).hexdigest()[:16]
+        txt = tdir / f"{h}.txt"
+        if not txt.exists():
+            w = tdir / f"{h}.wav"; write_wav(w, chunk)
+            got = verify_vo.transcribe(w)
+            if got is None:
+                return ""
+            txt.write_text(got)
+        return txt.read_text()
+
+    best = None
+    for name, chunks in cands:
+        with ThreadPoolExecutor(2) as ex:
+            got = list(ex.map(heard, chunks))
+        r = [difflib.SequenceMatcher(None, _norm(t), _norm(h)).ratio() for t, h in zip(texts, got)]
+        log(f"split '{name}': match per line", " ".join(f"{v:.2f}" for v in r))
+        if best is None or min(r) + np.mean(r) > best[0]:
+            best = (min(r) + np.mean(r), name, chunks, r)
+    log(f"using split '{best[1]}'" + ("" if min(best[3]) > 0.6 else "  ⚠ some lines may be mis-split — check vo_lines/"))
+    return best[2]
 
 
 def main(project):
@@ -190,7 +292,7 @@ def main(project):
         cfg = {**base_voice, "style": base_voice.get("style", "") +
                " Read each paragraph below in order, leaving a clear pause of about one second between paragraphs."}
         wav = tts.synth("\n\n".join(texts), cfg, out / "vo", pmodel, log)
-        batched = split_take(load_audio(wav), len(texts), estimate_lengths(texts, out))
+        batched = best_split(load_audio(wav), wav, texts, out)
     clips, cues, t = [], {}, 0.0
     for li, ln in enumerate(spec["lines"]):
         cfg = {**base_voice, **{k: ln[k] for k in ("voice", "style", "engine", "speed") if k in ln}}

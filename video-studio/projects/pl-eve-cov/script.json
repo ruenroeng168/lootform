@@ -1,0 +1,29 @@
+{
+  "title": "เอฟเวอร์ตัน 3-1 โคเวนทรี | พรีเมียร์ลีก 6 พ.ย. 2569",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "bpm": 118,
+  "duck": 0.55,
+  "tail": 3.2,
+  "sources": [
+    "https://www.espn.com/soccer/report/_/gameId/401879242",
+    "https://news.bet365.com/en-gb/article/everton-coventry-city-match-stats-and-timeline/2026110621275574086",
+    "https://www.vavel.com/en-us/soccer/2026/11/06/1277974-everton-vs-coventry-city-live-score-premier-league.html",
+    "https://newscord.org/article/everton-beat-coventry-3-1-as-frank-lampard-cites-var-decisions-after-hair-pull-a--Story_20261106_Lampardfeelshairpull5343ae07"
+  ],
+  "tts": {
+    "voice": "Puck",
+    "style": "Speak in Thai as an energetic, passionate football analyst on a YouTube sports channel: lively and punchy, excited on the goals, but clear and smooth:"
+  },
+  "lines": [
+    { "cue": "hook",   "at": 1.6, "text": "พรีเมียร์ลีกเมื่อคืน | เอฟเวอร์ตันโดนยิงนำก่อน | แต่พลิกกลับมาชนะโคเวนทรีได้ | สามต่อหนึ่ง!" },
+    { "cue": "goals1", "gap": 0.8, "text": "ครึ่งแรกยังเสมอศูนย์ศูนย์ | นาทีที่ห้าสิบสอง ยานน์ กโบโฮ ยิงให้โคเวนทรีออกนำ | แต่ไม่กี่นาทีต่อมา ติเยร์โน บาร์รี โขกตีเสมอ จากบอลเปิดของมิโคเลนโก" },
+    { "cue": "goals2", "gap": 0.4, "text": "นาทีที่หกสิบเอ็ด บาร์รียิงอีกลูก พลิกขึ้นนำ | และนาทีที่แปดสิบเอ็ด ดิวส์บิวรี-ฮอลล์ ปิดเกม จากการจ่ายของบาร์รี" },
+    { "cue": "a1",     "gap": 0.9, "text": "มาวิเคราะห์หลังเกมกันครับ | ข้อแรก บาร์รีคือตัวเปลี่ยนเกม | ยิงสอง จ่ายหนึ่ง มีส่วนกับทั้งสามประตู" },
+    { "cue": "a2",     "gap": 0.8, "text": "ข้อสอง เกมสูสีกว่าสกอร์ | ครองบอลพอๆกัน ยิงสิบหกต่อสิบห้า | แต่ยิงตรงกรอบ เอฟเวอร์ตันเจ็ด โคเวนทรีแค่สี่ | ความคมคือสิ่งที่ตัดสินเกม" },
+    { "cue": "a3",     "gap": 0.8, "text": "ข้อสาม วาร์คือประเด็นร้อน | แฟรงค์ แลมพาร์ด มองว่าทีมควรได้จุดโทษ จากจังหวะที่ทาร์คอฟสกีดึงผม | และบาร์รีแฮนด์บอลก่อนยิงประตูที่สอง | แต่วาร์ ให้ประตูเป็นไปตามเดิม" },
+    { "cue": "table",  "gap": 0.8, "text": "ผลนี้ส่งเอฟเวอร์ตันของเดวิด มอยส์ | ขึ้นไปอยู่อันดับห้าของตาราง" },
+    { "cue": "cta",    "gap": 0.8, "text": "แล้วคุณล่ะ เห็นด้วยกับแลมพาร์ดไหม | ว่าวาร์ตัดสินพลาด | คอมเมนต์บอกกันหน่อยครับ" }
+  ]
+}
