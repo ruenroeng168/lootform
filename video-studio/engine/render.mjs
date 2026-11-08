@@ -33,6 +33,8 @@ if (tl.data && tl.data.images && !Array.isArray(tl.data.images)) {  // {key: pat
     tl.data.images[k] = `data:${mime};base64,` + readFileSync(file).toString("base64");
   }
 }
+const styleArg = args.find((a) => a.startsWith("--style="));
+if (styleArg) { tl.data = tl.data || {}; tl.data.style = styleArg.slice(8); }   // try a visual style without editing data.json
 const stills = args.includes("--stills");
 const range = (args.find((a) => a.startsWith("--frames=")) || "").slice(9);
 
@@ -107,6 +109,14 @@ const frameAt = (i) => page.evaluate((i) => {
   return document.getElementById("c").toDataURL("image/jpeg", 0.95).slice(23);
 }, i);
 
+const stillArg = args.find((a) => a.startsWith("--still="));
+if (stillArg) {   // one PNG frame: --still=<frame> [--style=x] -> out/still_<style>_<frame>.png
+  const f = Number(stillArg.slice(8));
+  // fast-forward so time-based reveals are complete at that frame
+  const png = await page.evaluate((i) => { window.scene.draw(i / window.TL.fps, i); return document.getElementById("c").toDataURL("image/png").slice(22); }, f);
+  const outp = path.join(out, `still_${(tl.data && tl.data.style) || "ink"}_${f}.png`);
+  writeFileSync(outp, Buffer.from(png, "base64")); await browser.close(); console.log(outp); process.exit(0);
+}
 if (stills) {
   // contact sheet frames for review: one every 1.5 s
   mkdirSync(path.join(out, "stills"), { recursive: true });

@@ -2,7 +2,7 @@
 // hand-drawn coloured characters, living details (clouds, stars, steam, sound waves), no host.
 (function () {
   const { clamp, lerp, prog, ease, rng, noise1, hexA } = window.L;
-  const { P, Board, drawHand } = window.SK;
+  const { P, Board, drawHand, STYLE_BG } = window.SK;
   const W = 1080, H = 1920;
   const INK = "#2a2420", RED = "#e0483e", ORANGE = "#f08a24", MUTED = "#6b6258", CREAM = "#fff8ec";
   const F = {
@@ -14,13 +14,14 @@
     skin: "#f1c4a0", skinD: "#c98f6a", wood: "#c8915a", woodD: "#8a5a32", roof: "#9b3d1a", leaf: "#3f9a4a",
     leafD: "#2a6e33", field: "#8cc56b", fieldD: "#6fa64f", straw: "#e8c66a",
   };
-  let g, TL, C, b, paper;
+  let g, TL, C, b, paper, STYLE = "ink";
   const M = (cue, k) => (k === 0 ? C[cue].start : C[cue].marks[k - 1] ?? C[cue].end);
   const crows = [], crashes = [], pops = [];
 
   function setup(canvas, tl) {
     g = canvas.getContext("2d"); TL = tl; C = tl.cues;
-    b = new Board(g, { speed: 2100, writeSpeed: 1100 });
+    STYLE = (tl.data && tl.data.style) || "ink";
+    b = new Board(g, { speed: 2100, writeSpeed: 1100, style: STYLE });
     paper = document.createElement("canvas"); paper.width = paper.height = 512;
     const pg = paper.getContext("2d"); pg.fillStyle = "#f6efe2"; pg.fillRect(0, 0, 512, 512);
     const r = rng(2);
@@ -38,6 +39,7 @@
       night: ["#0b1633", "#1b2f5e", "#2c4a7a"], noon: ["#4fb3ef", "#a9dcfb", "#f2fbff"], room: ["#f6d9a8", "#f9e7c5", "#fdf3df"],
       evening: ["#e8875a", "#f6b98a", "#fde3c2"], storm: ["#3d4654", "#5d6877", "#8a95a3"],
     }[kind];
+    const palS = STYLE_BG.palette(STYLE, kind, pal); pal.splice(0, 3, ...palS);
     const gr = g.createLinearGradient(0, 0, 0, 1350);
     gr.addColorStop(0, pal[0]); gr.addColorStop(0.6, pal[1]); gr.addColorStop(1, pal[2]);
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
@@ -58,34 +60,44 @@
     else if (kind !== "night" && kind !== "room") clouds(g, t, kind === "dawn" || kind === "evening" ? 0.7 : 1);
     if (kind !== "room") {
       // distant hills + field
-      g.fillStyle = kind === "night" ? "#22406a" : kind === "storm" ? "#5b7466" : kind === "evening" ? "#c9a46a" : "#9fd38a";
+      g.fillStyle = STYLE === "silhouette" ? "#2a1f2e" : STYLE === "chalk" ? "#2c4a42" : kind === "night" ? "#22406a" : kind === "storm" ? "#5b7466" : kind === "evening" ? "#c9a46a" : "#9fd38a";
+      if (STYLE === "paper") { g.shadowColor = "rgba(80,40,10,0.35)"; g.shadowBlur = 16; g.shadowOffsetY = -6; }
       g.beginPath(); g.moveTo(0, 1250); g.quadraticCurveTo(250, 1120, 520, 1230); g.quadraticCurveTo(800, 1110, 1080, 1220); g.lineTo(1080, 1400); g.lineTo(0, 1400); g.fill();
       const fg = g.createLinearGradient(0, 1300, 0, H);
       const road = kind === "evening" || kind === "storm";   // market lane instead of rice field
       fg.addColorStop(0, kind === "night" ? "#2d5a4a" : road ? (kind === "storm" ? "#6e6a66" : "#c9b394") : COL.field);
       fg.addColorStop(1, kind === "night" ? "#1c3b33" : road ? (kind === "storm" ? "#4e4a47" : "#a8916f") : COL.fieldD);
-      g.fillStyle = fg; g.fillRect(0, 1320, W, H - 1320);
+      const gc = STYLE_BG.ground(STYLE, null);
+      if (gc) { const f2 = g.createLinearGradient(0, 1300, 0, H); f2.addColorStop(0, gc[0]); f2.addColorStop(1, gc[1]); g.fillStyle = f2; } else g.fillStyle = fg;
+      g.fillRect(0, 1320, W, H - 1320);
       g.strokeStyle = kind === "night" ? "rgba(255,255,255,0.05)" : "rgba(40,90,30,0.18)"; g.lineWidth = 4;
       for (let i = 0; i < 14; i++) { g.beginPath(); g.moveTo(-200 + i * 110, H); g.lineTo(380 + i * 30, 1330); g.stroke(); }
     } else {
       g.fillStyle = "#c89a62"; g.fillRect(0, 1380, W, H - 1380);
       g.fillStyle = "rgba(120,80,40,0.25)"; for (let x = 0; x < W; x += 120) g.fillRect(x, 1380, 4, H - 1380);
     }
+    STYLE_BG.overlay(g, STYLE, W, H, t);
     g.restore();
   }
   function sun(g, x, y, r, col, t) {
+    if (STYLE === "chalk") { g.save(); g.strokeStyle = "rgba(255,214,150,0.85)"; g.lineWidth = 6; g.setLineDash([14, 5]); g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke();
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; g.beginPath(); g.moveTo(x + Math.cos(a) * (r + 18), y + Math.sin(a) * (r + 18)); g.lineTo(x + Math.cos(a) * (r + 48), y + Math.sin(a) * (r + 48)); g.stroke(); } g.restore(); return; }
+    if (STYLE === "paper") { g.save(); g.shadowColor = "rgba(80,40,10,0.35)"; g.shadowBlur = 14; g.shadowOffsetY = 8; g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore(); return; }
     const gl = g.createRadialGradient(x, y, r * 0.4, x, y, r * 2.4);
     gl.addColorStop(0, hexA(col.length === 7 ? col : "#ffe27a", 0.55)); gl.addColorStop(1, "rgba(255,240,180,0)");
     g.fillStyle = gl; g.beginPath(); g.arc(x, y, r * 2.4, 0, 7); g.fill();
     g.fillStyle = col; g.beginPath(); g.arc(x, y, r * (1 + 0.02 * Math.sin(t * 2)), 0, 7); g.fill();
   }
   function clouds(g, t, a) {
-    g.fillStyle = `rgba(255,255,255,${0.85 * a})`;
+    g.fillStyle = STYLE === "silhouette" ? "rgba(255,190,170,0.55)" : `rgba(255,255,255,${0.85 * a})`;
+    if (STYLE === "chalk") { g.strokeStyle = "rgba(240,240,230,0.7)"; g.lineWidth = 5; g.setLineDash([12, 5]); g.fillStyle = "rgba(0,0,0,0)"; }
+    if (STYLE === "paper") { g.shadowColor = "rgba(80,40,10,0.25)"; g.shadowBlur = 10; g.shadowOffsetY = 6; }
     [[120, 330, 1], [620, 420, 0.8], [980, 560, 0.7]].forEach(([x, y, s], i) => {
       const cx = ((x + t * (12 + i * 5)) % 1300) - 110;
       g.beginPath(); g.ellipse(cx, y, 110 * s, 42 * s, 0, 0, 7); g.ellipse(cx + 60 * s, y - 30 * s, 70 * s, 50 * s, 0, 0, 7);
-      g.ellipse(cx - 60 * s, y - 14 * s, 60 * s, 38 * s, 0, 0, 7); g.fill();
+      g.ellipse(cx - 60 * s, y - 14 * s, 60 * s, 38 * s, 0, 0, 7); g.fill(); if (STYLE === "chalk") g.stroke();
     });
+    g.setLineDash([]); g.shadowColor = "transparent";
   }
 
   // ------------------------------------------------------------ characters & props (coloured strokes)
@@ -469,9 +481,9 @@
     for (const c of crashes) { const e = t - c; if (e > 0 && e < 0.5) { sx += noise1(t * 50, 1) * 14 * (1 - e / 0.5); sy += noise1(t * 50, 2) * 14 * (1 - e / 0.5); } }
     g.save(); g.translate(sx, sy);
     b.draw(t, "world", cam);
-    const h = b.hand(t, cam);
-    drawHand(g, h.pos[0], h.pos[1], h.down, t, "#2a2420");
+    if (b.showHand) { const h = b.hand(t, cam); drawHand(g, h.pos[0], h.pos[1], h.down, t, "#2a2420"); }
     g.restore();
+    STYLE_BG.frame(g, STYLE, W, H);
     captions(t);
     const vg = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(40,25,10,0.28)");

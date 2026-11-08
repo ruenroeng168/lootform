@@ -2,7 +2,7 @@
 // highlighter, live (procedural) elements, a drawing hand that follows the pen tip,
 // and a camera that pans between boards. Pure function of time.
 (function () {
-  const { clamp, lerp, prog, ease, noise1 } = window.L;
+  const { clamp, lerp, prog, ease, noise1, rng } = window.L;
   const NS = "http://www.w3.org/2000/svg";
   let pathEl;
   function sampler() {
@@ -48,6 +48,140 @@
     return P.poly(pts);
   };
 
+  // ---- visual styles ---------------------------------------------------
+  const hex = (c) => (typeof c === "string" && c[0] === "#" && c.length === 7 ? [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)) : null);
+  const rgb = (a) => `rgb(${a.map((v) => Math.round(Math.max(0, Math.min(255, v)))).join(",")})`;
+  const tint = (c, k) => { const h = hex(c); return h ? rgb(h.map((v) => v + (255 - v) * k)) : c; };   // toward white
+  const shade = (c, k) => { const h = hex(c); return h ? rgb(h.map((v) => v * (1 - k))) : c; };         // toward black
+  const lum = (c) => { const h = hex(c); return h ? (0.299 * h[0] + 0.587 * h[1] + 0.114 * h[2]) / 255 : 0.5; };
+  let halftone = null;
+  function halftonePattern(g) {
+    if (!halftone) {
+      const c = document.createElement("canvas"); c.width = c.height = 14; const x = c.getContext("2d");
+      x.fillStyle = "rgba(0,0,0,0.9)"; x.beginPath(); x.arc(7, 7, 2.6, 0, 7); x.fill(); halftone = c;
+    }
+    return g.createPattern(halftone, "repeat");
+  }
+  function partialPath(g, it, p) {           // trace the first p of the stroke
+    let rem = p * it.len;
+    g.beginPath();
+    for (const s of it.subs) {
+      if (rem <= 0) break;
+      g.moveTo(s.pts[0][0], s.pts[0][1]);
+      for (let j = 1; j < s.pts.length; j++) {
+        if (s.cum[j] > rem) { const k = (rem - s.cum[j - 1]) / (s.cum[j] - s.cum[j - 1] || 1);
+          g.lineTo(lerp(s.pts[j - 1][0], s.pts[j][0], k), lerp(s.pts[j - 1][1], s.pts[j][1], k)); break; }
+        g.lineTo(s.pts[j][0], s.pts[j][1]);
+      }
+      rem -= s.len;
+    }
+  }
+  function popIn(g, it, t, dur = 0.38) {     // scale-in around the item's centre; returns alpha
+    const x = prog(t, it.t0, it.t0 + Math.min(dur, it.dur + 0.15));
+    const k = ease.outBack(x, 1.8);
+    g.translate(it.cx, it.cy); g.scale(0.55 + 0.45 * k, 0.55 + 0.45 * k); g.translate(-it.cx, -it.cy);
+    return clamp(x * 2.2);
+  }
+  const STYLE_STROKE = {
+    watercolor(g, it, t, p) {
+      if (it.fill) {
+        const fa = prog(t, it.t0 + it.dur * 0.4, it.t0 + it.dur + 0.5) * it.fillAlpha;
+        g.save(); g.filter = "blur(3.5px)";
+        for (const [dx, dy, a] of [[-5, 3, 0.42], [5, -3, 0.38], [0, 0, 0.5], [2, 5, 0.25]]) {
+          g.save(); g.translate(dx, dy); g.globalAlpha = fa * a; g.fillStyle = tint(it.fill, 0.08); g.fill(it.path2d); g.restore();
+        }
+        g.restore();
+        g.globalAlpha = fa * 0.5; g.strokeStyle = shade(it.fill, 0.25); g.lineWidth = 3; g.stroke(it.path2d); g.globalAlpha = 1;
+      }
+      g.strokeStyle = it.fill ? shade(it.fill, 0.5) : it.color; g.globalAlpha = 0.5;
+      g.lineWidth = Math.max(2, it.w * 0.4); g.lineCap = "round"; g.lineJoin = "round";
+      partialPath(g, it, p); g.stroke();
+    },
+    paper(g, it, t) {
+      const a = popIn(g, it, t); g.globalAlpha = a;
+      g.shadowColor = "rgba(40,25,10,0.45)"; g.shadowBlur = 14; g.shadowOffsetY = 10;
+      if (it.fill) { g.fillStyle = it.fill; g.fill(it.path2d); g.shadowColor = "transparent"; g.strokeStyle = "rgba(255,255,255,0.55)"; g.lineWidth = 2.5; g.stroke(it.path2d); }
+      else { g.strokeStyle = it.color; g.lineWidth = it.w * 1.25; g.lineCap = "round"; g.lineJoin = "round"; partialPath(g, it, 1); g.stroke(); }
+    },
+    silhouette(g, it, t) {
+      g.globalAlpha = prog(t, it.t0, it.t0 + Math.max(0.3, it.dur));
+      const c = "#16121c";
+      if (it.fill) { g.fillStyle = c; g.fill(it.path2d); g.strokeStyle = c; g.lineWidth = 3; g.stroke(it.path2d); }
+      else { g.strokeStyle = c; g.lineWidth = it.w; g.lineCap = "round"; g.lineJoin = "round"; partialPath(g, it, 1); g.stroke(); }
+    },
+    flat(g, it, t) {
+      const a = popIn(g, it, t, 0.32); g.globalAlpha = a;
+      if (it.fill) { g.fillStyle = it.fill; g.fill(it.path2d); g.fillStyle = "rgba(0,0,0,0.08)"; g.save(); g.clip(it.path2d); g.translate(10, 12); g.fill(it.path2d); g.restore(); }
+      else { g.strokeStyle = it.color; g.lineWidth = it.w; g.lineCap = "round"; g.lineJoin = "round"; partialPath(g, it, 1); g.stroke(); }
+    },
+    comic(g, it, t, p) {
+      if (it.fill && p >= 1) {
+        g.globalAlpha = prog(t, it.t0 + it.dur, it.t0 + it.dur + 0.2) * it.fillAlpha;
+        g.fillStyle = it.fill; g.fill(it.path2d);
+        g.save(); g.clip(it.path2d); g.globalAlpha *= 0.16; g.fillStyle = halftonePattern(g); g.fill(it.path2d); g.restore();
+        g.globalAlpha = 1;
+      }
+      g.strokeStyle = "#111"; g.lineWidth = it.w * 1.6; g.lineCap = "round"; g.lineJoin = "round";
+      partialPath(g, it, p); g.stroke();
+    },
+    chalk(g, it, t, p) {
+      const c = lum(it.color) < 0.45 ? "#f2efe6" : tint(it.color, 0.35);
+      if (it.fill && p >= 1) { g.globalAlpha = prog(t, it.t0 + it.dur, it.t0 + it.dur + 0.4) * 0.38; g.fillStyle = tint(it.fill, 0.3); g.fill(it.path2d); g.globalAlpha = 1; }
+      g.lineCap = "round"; g.lineJoin = "round";
+      for (const [dx, dy, a, w] of [[0, 0, 0.9, 1], [1.5, -1, 0.35, 0.6]]) {
+        g.save(); g.translate(dx, dy); g.globalAlpha = a; g.strokeStyle = c; g.lineWidth = it.w * w;
+        g.setLineDash([it.w * 2.2, it.w * 0.5]); partialPath(g, it, p); g.stroke(); g.restore();
+      }
+    },
+  };
+  const STYLE_WRITE = {
+    paper(g, it, t) { const a = prog(t, it.t0, it.t0 + 0.3); g.globalAlpha = a; g.font = it.font; g.fillStyle = it.color; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(it.str, it.left, it.y); },
+    flat(g, it, t) { STYLE_WRITE.paper(g, it, t); },
+    silhouette(g, it, t) { g.globalAlpha = prog(t, it.t0, it.t0 + 0.4); g.font = it.font; g.fillStyle = lum(it.color) < 0.5 ? "#fff7e8" : it.color; g.textAlign = "left"; g.textBaseline = "middle"; g.shadowColor = "rgba(0,0,0,0.5)"; g.shadowBlur = 12; g.fillText(it.str, it.left, it.y); },
+    comic(g, it, t, p) { g.beginPath(); g.rect(it.left - 20, it.y - it.size * 1.4, (it.w + 40) * p + 1, it.size * 2.8); g.clip(); g.font = it.font; g.textAlign = "left"; g.textBaseline = "middle"; g.lineWidth = 8; g.strokeStyle = "#fff"; g.lineJoin = "round"; g.strokeText(it.str, it.left, it.y); g.fillStyle = it.color; g.fillText(it.str, it.left, it.y); },
+    chalk(g, it, t, p) { g.beginPath(); g.rect(it.left - 20, it.y - it.size * 1.4, (it.w + 40) * p + 1, it.size * 2.8); g.clip(); g.font = it.font; g.textAlign = "left"; g.textBaseline = "middle"; g.globalAlpha = 0.92; g.fillStyle = lum(it.color) < 0.45 ? "#f2efe6" : tint(it.color, 0.35); g.fillText(it.str, it.left, it.y); },
+    watercolor(g, it, t, p) { g.beginPath(); g.rect(it.left - 20, it.y - it.size * 1.4, (it.w + 40) * p + 1, it.size * 2.8); g.clip(); g.font = it.font; g.textAlign = "left"; g.textBaseline = "middle"; g.fillStyle = it.color; g.globalAlpha = 0.9; g.fillText(it.str, it.left, it.y); },
+  };
+
+  // Background helpers for scenes: palette swap, texture overlay, frame.
+  const STYLE_BG = {
+    palette(style, kind, pal) {
+      if (style === "silhouette") return kind === "storm" || kind === "night" ? ["#24163a", "#5b2f63", "#c4566a"] : ["#ff6f61", "#ffa36c", "#ffd59a"];
+      if (style === "chalk") return ["#1f3a30", "#22403a", "#26463e"];
+      if (style === "flat") return pal.map((c) => tint(c, 0.05));
+      return pal;
+    },
+    ground(style, base) {
+      if (style === "silhouette") return ["#16121c", "#16121c"];
+      if (style === "chalk") return ["#22403a", "#1c362f"];
+      return base;
+    },
+    overlay(g, style, W, H, t) {
+      if (style === "watercolor") {
+        g.save(); g.globalCompositeOperation = "multiply";
+        const r = rng(17);
+        for (let i = 0; i < 30; i++) { const x = r() * W, y = r() * H, rad = 120 + r() * 260; const gr = g.createRadialGradient(x, y, 10, x, y, rad); gr.addColorStop(0, `rgba(170,140,110,${0.08 + r() * 0.08})`); gr.addColorStop(1, "rgba(170,140,110,0)"); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+        g.restore();
+      } else if (style === "comic") {
+        g.save(); g.globalAlpha = 0.07; g.fillStyle = halftonePattern(g); g.fillRect(0, 0, W, H); g.restore();
+      } else if (style === "chalk") {
+        g.save(); const r = rng(23); g.fillStyle = "rgba(255,255,255,0.035)";
+        for (let i = 0; i < 40; i++) { g.beginPath(); g.ellipse(r() * W, r() * H, 80 + r() * 200, 20 + r() * 50, r() * 3, 0, 7); g.fill(); }
+        g.restore();
+      } else if (style === "paper") {
+        g.save(); const r = rng(29); g.fillStyle = "rgba(120,90,50,0.05)";
+        for (let i = 0; i < 1600; i++) g.fillRect(r() * W, r() * H, 2, 2);
+        g.restore();
+      }
+    },
+    frame(g, style, W, H) {   // screen-space frame (comic panel border)
+      if (style !== "comic") return;
+      g.save(); g.strokeStyle = "#111"; g.lineWidth = 14; g.strokeRect(40, 40, W - 80, H - 80);
+      g.fillStyle = "#fffdf6"; g.fillRect(0, 0, W, 33); g.fillRect(0, H - 33, W, 33); g.fillRect(0, 0, 33, H); g.fillRect(W - 33, 0, 33, H);
+      g.restore();
+    },
+  };
+
   // ---- Board ---------------------------------------------------------
   class Board {
     constructor(g, opts = {}) {
@@ -57,6 +191,9 @@
       this.color = opts.color || "#1f2430";
       this.width = opts.width || 6;
       this.space = "world";
+      // visual style: ink | watercolor | paper | silhouette | flat | comic | chalk
+      this.style = opts.style || "ink";
+      this.showHand = ["ink", "chalk"].includes(this.style);
       this.scenes = [];   // [{t, x, y}] camera keys
       this.pops = [];
     }
@@ -95,8 +232,10 @@
         return { pts, cum, len: cum[cum.length - 1] };
       });
       const len = subs.reduce((a, b) => a + b.len, 0);
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      for (const sb of subs) for (const [px, py] of sb.pts) { x0 = Math.min(x0, px); y0 = Math.min(y0, py); x1 = Math.max(x1, px); y1 = Math.max(y1, py); }
       const path2d = o.fill ? (() => { const p = new Path2D(); p.addPath(new Path2D(d), new DOMMatrix([s, 0, 0, s, x, y])); return p; })() : null;
-      return this._place({ type: "stroke", subs, len, path2d, color: o.color || this.color, w: o.w || this.width,
+      return this._place({ type: "stroke", subs, len, path2d, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, color: o.color || this.color, w: o.w || this.width,
         fill: o.fill, fillAlpha: o.fillAlpha ?? 1, t0: o.t0, gapAfter: o.gapAfter, space: o.space, pop: o.pop },
       o.dur ?? clamp(len / this.speed, 0.18, 2.2));
     }
@@ -154,6 +293,7 @@
       return it.type === "write" ? x : 0.25 * x + 0.75 * ease.inOutCubic(x);
     }
     penIntervals() {
+      if (!this.showHand) return [];
       return this.items.filter((it) => !it.nopen).map((it) => [it.t0, it.t0 + it.dur, it.type])
         .sort((a, b) => a[0] - b[0]);
     }
@@ -183,7 +323,11 @@
       if (t < it.t0) return;
       const p = this.progress(it, t);
       g.save();
-      if (it.type === "stroke") {
+      if (it.type === "stroke" && this.style !== "ink") {
+        STYLE_STROKE[this.style](g, it, t, p, this);
+      } else if (it.type === "write" && this.style !== "ink" && STYLE_WRITE[this.style]) {
+        STYLE_WRITE[this.style](g, it, t, p, this);
+      } else if (it.type === "stroke") {
         if (it.fill && p >= 1) {
           const fa = prog(t, it.t0 + it.dur, it.t0 + it.dur + 0.35);
           g.globalAlpha = fa * it.fillAlpha; g.fillStyle = it.fill; g.fill(it.path2d); g.globalAlpha = 1;
@@ -264,5 +408,5 @@
     g.restore();
   }
 
-  window.SK = { P, Board, drawHand };
+  window.SK = { P, Board, drawHand, STYLE_BG };
 })();
