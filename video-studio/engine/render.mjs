@@ -46,7 +46,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 @font-face{font-family:"Sriracha";font-weight:400;src:url(../../../assets/fonts/Sriracha-Regular.ttf)}
 @font-face{font-family:"Mali";font-weight:600;src:url(../../../assets/fonts/Mali-SemiBold.ttf)}
 @font-face{font-family:"Mali";font-weight:700;src:url(../../../assets/fonts/Mali-Bold.ttf)}
-html,body{margin:0;background:#000}</style></head><body>
+html,body{margin:0;background:${args.some((x) => x.startsWith("--overlay")) ? "transparent" : "#000"}}</style></head><body>
 <canvas id="c" width="${tl.width}" height="${tl.height}"></canvas>
 <script src="../../../engine/lib.js"></script>
 <script src="../../../engine/sketch.js"></script>
@@ -74,6 +74,32 @@ if (args.includes("--events")) {
   writeFileSync(path.join(out, "events.json"), JSON.stringify(ev));
   await browser.close();
   process.exit(0);
+}
+
+// Overlay mode: transparent PNG frames composited on top of real footage (out/base.mp4),
+// voice/music mix + the footage's own sound (out/footage.wav).
+const overlayArg = args.find((a) => a.startsWith("--overlay"));
+if (overlayArg) {
+  const base = path.join(out, "base.mp4"), fa = path.join(out, "footage.wav");
+  const vol = (args.find((a) => a.startsWith("--footage-vol=")) || "--footage-vol=0.35").slice(14);
+  const mp4o = path.join(out, "video.mp4");
+  const ffo = spawn("ffmpeg", [
+    "-v", "error", "-y", "-i", base, "-f", "image2pipe", "-framerate", String(tl.fps), "-c:v", "png", "-i", "-",
+    "-i", path.join(out, "mix.wav"), "-i", fa,
+    "-filter_complex", `[0:v][1:v]overlay=0:0:format=auto,format=yuv420p[v];[3:a]volume=${vol}[fa];[2:a][fa]amix=inputs=2:normalize=0,alimiter=limit=0.9[a]`,
+    "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-profile:v", "high",
+    "-c:a", "aac", "-b:a", "192k", "-t", String(tl.duration), "-movflags", "+faststart", mp4o,
+  ], { stdio: ["pipe", "inherit", "inherit"] });
+  for (let i = 0; i < tl.frames; i++) {
+    const png = await page.evaluate((i) => {
+      window.scene.draw(i / window.TL.fps, i);
+      return document.getElementById("c").toDataURL("image/png").slice(22);
+    }, i);
+    if (!ffo.stdin.write(Buffer.from(png, "base64"))) await new Promise((r) => ffo.stdin.once("drain", r));
+    if (i % 90 === 0) process.stdout.write(`\r[studio] overlay frame ${i}/${tl.frames}`);
+  }
+  ffo.stdin.end(); await new Promise((r) => ffo.on("close", r)); await browser.close();
+  console.log(`\n[studio] wrote ${mp4o}`); process.exit(0);
 }
 
 const frameAt = (i) => page.evaluate((i) => {

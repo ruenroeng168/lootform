@@ -28,6 +28,12 @@ This environment usually can't open shop pages (network policy) — ask the user
 - Never try to dodge the review (e.g. adding fake motion, stock "hands", re-uploading the same clip). Don't advise appealing when the clip really matches the rule.
 - The photo/graphics template below is still fine for teasers without a basket, or other platforms after checking their rules.
 
+### Editing the user's footage (pipeline)
+1. Copy clips to `projects/<slug>/assets/` (mp4s are gitignored per project) and look at sampled frames.
+2. `script.json`: voice lines per beat; `data.json → edl`: `{cue, clip, in, out, blur?}` per line, plus a cut-out product image for a spec card.
+3. `build.py <proj> --audio-only` → `engine/footage.py <proj>` → `node engine/render.mjs <proj> --overlay [--footage-vol=0.35]`.
+4. `scene.js` (see `projects/winch-review`) draws only small overlays on a cleared canvas: hook pill, callout chips, result badge, spec card ≤ ~25% of the frame, CTA button + basket arrow, safety notes, captions.
+
 ## 2. Honesty & compliance rules (non-negotiable)
 
 - **Never invent** specs, test results, sales numbers, ratings, reviews or quotes. Every feature line must come from the spec/page or the owner's notes; mark spec-based claims `"source": "spec"` (renders "* ตามสเปกผู้ผลิต").

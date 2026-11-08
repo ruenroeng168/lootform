@@ -1,0 +1,11 @@
+{
+  "images": [{ "src": "assets/cut/winch_side.png", "cutout": true }],
+  "edl": [
+    { "cue": "hook",   "clip": "assets/clip3_truck.mp4", "in": 0.0,  "out": 3.4 },
+    { "cue": "intro",  "clip": "assets/clip2_ruts.mp4",  "in": 0.0,  "out": 3.98 },
+    { "cue": "setup",  "clip": "assets/clip1_tree.mp4",  "in": 0.0,  "out": 5.34 },
+    { "cue": "result", "clip": "assets/clip3_truck.mp4", "in": 3.6,  "out": 11.0 },
+    { "cue": "spec",   "clip": "assets/clip1_tree.mp4",  "in": 0.0,  "out": 5.34, "blur": true },
+    { "cue": "cta",    "clip": "assets/clip3_truck.mp4", "in": 10.6, "out": 13.37 }
+  ]
+}
