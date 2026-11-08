@@ -1,0 +1,32 @@
+{
+  "title": "เมสซี่ vs โรนัลโด้ — เทียบกันด้วยตัวเลขล้วน ๆ",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "bpm": 120,
+  "duck": 0.5,
+  "tail": 2.8,
+  "sources": [
+    "https://www.skysports.com/football/news/13608374/cristiano-ronaldo-portugal-captains-retirement-ends-extraordinary-record-breaking-international-career-which-will-be-debated-for-years-to-come",
+    "https://www.espn.com/soccer/story/_/id/49266866/cristiano-ronaldo-portugal-jorge-jesus-retires-international",
+    "https://www.aljazeera.com (Messi international retirement, Aug 2026: 207 caps / 125 goals)",
+    "https://www.skysports.com (Messi international retirement, Aug 2026)",
+    "https://en.wikipedia.org/wiki/Lionel_Messi (208 caps / 126 goals — counted differently)",
+    "Career goals: statistics sites, as of Nov 2026"
+  ],
+  "tts": {
+    "voice": "Puck",
+    "style": "Energetic Thai boxing-match commentator calling a head-to-head stats showdown round by round; punchy, confident, exciting but clear, short dramatic pauses before each number"
+  },
+  "lines": [
+    { "cue": "hook",    "at": 0.8, "text": "สองตำนาน อำลาทีมชาติในปีเดียวกัน | ใครแน่กว่ากัน? | วันนี้ เทียบกันด้วยตัวเลขล้วน ๆ หกยก!" },
+    { "cue": "r1",      "gap": 0.9, "text": "ยกที่หนึ่ง ประตูในนามทีมชาติ | เมสซี่ หนึ่งร้อยยี่สิบห้าประตู | โรนัลโด้ หนึ่งร้อยสี่สิบหกประตู | ยกแรก โรนัลโด้เก็บไป!" },
+    { "cue": "r2",      "gap": 0.9, "text": "ยกที่สอง จำนวนนัดที่ลงเล่นให้ทีมชาติ | เมสซี่ สองร้อยเจ็ดนัด | โรนัลโด้ สองร้อยสามสิบสี่นัด | โรนัลโด้ ชนะอีกยก!" },
+    { "cue": "r3",      "gap": 0.9, "text": "ยกที่สาม ประตูรวมตลอดอาชีพ | เมสซี่ เก้าร้อยสามสิบเจ็ดประตู | โรนัลโด้ เก้าร้อยแปดสิบห้าประตู | สามยกรวด เป็นของโรนัลโด้!" },
+    { "cue": "r4",      "gap": 0.9, "text": "ยกที่สี่ รางวัลบัลลงดอร์ | เมสซี่ แปดรางวัล | โรนัลโด้ ห้ารางวัล | ยกนี้ เมสซี่ชนะขาด!" },
+    { "cue": "r5",      "gap": 0.9, "text": "ยกที่ห้า แชมป์ยูฟ่าแชมเปียนส์ลีก | เมสซี่ สี่สมัย | โรนัลโด้ ห้าสมัย | โรนัลโด้ ตีกลับ!" },
+    { "cue": "r6",      "gap": 0.9, "text": "ยกสุดท้าย แชมป์รายการใหญ่กับทีมชาติ | เมสซี่ ฟุตบอลโลก กับโคปาอเมริกาสองสมัย | โรนัลโด้ ยูโร กับเนชันส์ลีกสองสมัย | แต่ถ้วยฟุตบอลโลก มีแค่เมสซี่!" },
+    { "cue": "summary", "gap": 1.0, "text": "สรุปตามตัวเลข | โรนัลโด้ชนะสี่ยก เมสซี่สองยก | แต่ตัวเลข บอกได้ไม่หมด" },
+    { "cue": "cta",     "gap": 0.8, "text": "สำหรับคุณ ใครคือที่สุด? | คอมเมนต์ เอ็ม หรือ อาร์ มาเลย!" }
+  ]
+}

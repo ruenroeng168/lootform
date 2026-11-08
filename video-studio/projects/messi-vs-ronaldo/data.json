@@ -1,0 +1,295 @@
+{
+ "colorM": "#6cc4f0",
+ "colorR": "#e0283c",
+ "gold": "#f2c14e",
+ "images": {
+  "m2011": "assets/m2011.jpg",
+  "m2026a": "assets/m2026a.jpg",
+  "m2026b": "assets/m2026b.jpg",
+  "m2026c": "assets/m2026c.jpg",
+  "m2026d": "assets/m2026d.jpg",
+  "m2026e": "assets/m2026e.jpg",
+  "r2011": "assets/r2011.jpg",
+  "r2013": "assets/r2013.jpg",
+  "r2016": "assets/r2016.jpg",
+  "r2025": "assets/r2025.jpg",
+  "r2026": "assets/r2026.jpg",
+  "r2026b": "assets/r2026b.jpg"
+ },
+ "focus": {
+  "m2011": [
+   0.42,
+   0.35
+  ],
+  "m2026a": [
+   0.5,
+   0.25
+  ],
+  "m2026b": [
+   0.45,
+   0.25
+  ],
+  "m2026c": [
+   0.55,
+   0.3
+  ],
+  "m2026d": [
+   0.48,
+   0.35
+  ],
+  "m2026e": [
+   0.55,
+   0.35
+  ],
+  "r2011": [
+   0.42,
+   0.45
+  ],
+  "r2013": [
+   0.48,
+   0.3
+  ],
+  "r2016": [
+   0.35,
+   0.35
+  ],
+  "r2025": [
+   0.5,
+   0.3
+  ],
+  "r2026": [
+   0.5,
+   0.3
+  ],
+  "r2026b": [
+   0.55,
+   0.4
+  ]
+ },
+ "credits": [
+  {
+   "key": "m2011",
+   "author": "Fanny Schertzer (derivative: CHUCAO)",
+   "license": "CC BY-SA 3.0",
+   "year": "2011"
+  },
+  {
+   "key": "m2026a",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "m2026b",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "m2026c",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "m2026d",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "m2026e",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "r2011",
+   "author": "Fanny Schertzer",
+   "license": "CC BY 3.0",
+   "year": "2011"
+  },
+  {
+   "key": "r2013",
+   "author": "Fanny Schertzer",
+   "license": "CC BY-SA 3.0",
+   "year": "2013"
+  },
+  {
+   "key": "r2016",
+   "author": "Chensiyuan",
+   "license": "CC BY-SA 4.0",
+   "year": "2016"
+  },
+  {
+   "key": "r2025",
+   "author": "YantsImages",
+   "license": "CC BY-SA 4.0",
+   "year": "2025"
+  },
+  {
+   "key": "r2026",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "r2026b",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  }
+ ],
+ "rounds": [
+  {
+   "cue": "r1",
+   "n": 1,
+   "title": "ประตูทีมชาติ",
+   "m": 125,
+   "r": 146,
+   "unit": "ประตู",
+   "win": "R",
+   "imgM": "m2026c",
+   "imgR": "r2025",
+   "note": "*เมสซี่ 125 ประตู ตาม Sky Sports / Al Jazeera (บางแหล่งนับ 126)"
+  },
+  {
+   "cue": "r2",
+   "n": 2,
+   "title": "ลงเล่นทีมชาติ",
+   "m": 207,
+   "r": 234,
+   "unit": "นัด",
+   "win": "R",
+   "imgM": "m2011",
+   "imgR": "r2011",
+   "note": "*เมสซี่ 207 นัด ตาม Sky Sports / Al Jazeera (บางแหล่งนับ 208)"
+  },
+  {
+   "cue": "r3",
+   "n": 3,
+   "title": "ประตูรวมตลอดอาชีพ",
+   "m": 937,
+   "r": 985,
+   "unit": "ประตู",
+   "win": "R",
+   "imgM": "m2026e",
+   "imgR": "r2026b",
+   "note": "*ข้อมูล ณ พ.ย. 2026 จากเว็บสถิติ ตัวเลขอาจต่างกันตามแหล่ง"
+  },
+  {
+   "cue": "r4",
+   "n": 4,
+   "title": "บัลลงดอร์",
+   "m": 8,
+   "r": 5,
+   "unit": "รางวัล",
+   "win": "M",
+   "imgM": "m2026a",
+   "imgR": "r2013"
+  },
+  {
+   "cue": "r5",
+   "n": 5,
+   "title": "แชมป์ UCL",
+   "m": 4,
+   "r": 5,
+   "unit": "สมัย",
+   "win": "R",
+   "imgM": "m2026d",
+   "imgR": "r2026"
+  },
+  {
+   "cue": "r6",
+   "n": 6,
+   "title": "แชมป์ใหญ่กับทีมชาติ",
+   "win": "M",
+   "imgM": "m2026b",
+   "imgR": "r2016",
+   "listM": [
+    "ฟุตบอลโลก 2022",
+    "โคปา อเมริกา ×2"
+   ],
+   "listR": [
+    "ยูโร 2016",
+    "เนชันส์ลีก ×2"
+   ],
+   "winText": "ฟุตบอลโลก"
+  }
+ ],
+ "hook": {
+  "imgM": "m2026b",
+  "imgR": "r2026"
+ },
+ "end": {
+  "imgM": "m2026c",
+  "imgR": "r2025"
+ },
+ "capfix": [
+  [
+   "หนึ่งร้อยยี่สิบห้า",
+   "125 "
+  ],
+  [
+   "หนึ่งร้อยสี่สิบหก",
+   "146 "
+  ],
+  [
+   "สองร้อยเจ็ด",
+   "207 "
+  ],
+  [
+   "สองร้อยสามสิบสี่",
+   "234 "
+  ],
+  [
+   "เก้าร้อยสามสิบเจ็ด",
+   "937 "
+  ],
+  [
+   "เก้าร้อยแปดสิบห้า",
+   "985 "
+  ],
+  [
+   "แปดรางวัล",
+   "8 รางวัล"
+  ],
+  [
+   "ห้ารางวัล",
+   "5 รางวัล"
+  ],
+  [
+   "สี่สมัย",
+   "4 สมัย"
+  ],
+  [
+   "ห้าสมัย",
+   "5 สมัย"
+  ],
+  [
+   "สองสมัย",
+   " 2 สมัย"
+  ],
+  [
+   "ชนะสี่ยก",
+   "ชนะ 4 ยก"
+  ],
+  [
+   "เมสซี่สองยก",
+   "เมสซี่ 2 ยก"
+  ],
+  [
+   "หกยก",
+   "6 ยก"
+  ],
+  [
+   "เอ็ม หรือ อาร์",
+   "M หรือ R"
+  ]
+ ],
+ "end_credits": [
+  "ภาพ: Bryan Berlin, Fanny Schertzer, CHUCAO, Chensiyuan, YantsImages",
+  "Wikimedia Commons · CC BY / CC BY-SA",
+  "สถิติ: Sky Sports, ESPN, Al Jazeera, Wikipedia · ณ พ.ย. 2026"
+ ]
+}
