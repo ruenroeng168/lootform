@@ -1,0 +1,64 @@
+{
+  "images": [
+    {
+      "src": "assets/cut/drill_hero.png",
+      "cutout": true
+    },
+    {
+      "src": "assets/cut/drill_body.png",
+      "cutout": true
+    }
+  ],
+  "edl": [
+    {
+      "cue": "hook",
+      "clip": "assets/B_post.mp4",
+      "in": 0.0,
+      "out": 3.4,
+      "vol": 0.9
+    },
+    {
+      "cue": "intro",
+      "clip": "assets/A_show.mp4",
+      "in": 0.0,
+      "out": 4.6,
+      "vol": 0.15
+    },
+    {
+      "cue": "modes",
+      "clip": "assets/A_show.mp4",
+      "in": 5.9,
+      "out": 9.6,
+      "vol": 0.15
+    },
+    {
+      "cue": "test",
+      "clip": "assets/B_post.mp4",
+      "in": 3.4,
+      "out": 10.7,
+      "vol": 0.8
+    },
+    {
+      "cue": "chisel",
+      "clip": "assets/C_chisel.mp4",
+      "in": 1.0,
+      "out": 5.5,
+      "vol": 0.8
+    },
+    {
+      "cue": "spec",
+      "clip": "assets/B_post.mp4",
+      "in": 4.0,
+      "out": 10.7,
+      "vol": 0.2,
+      "blur": true
+    },
+    {
+      "cue": "cta",
+      "clip": "assets/C_chisel.mp4",
+      "in": 3.0,
+      "out": 8.88,
+      "vol": 0.3
+    }
+  ]
+}
