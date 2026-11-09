@@ -1,0 +1,4 @@
+{
+  "images": { "mod": "assets/cut/mod.png", "photo": "assets/mod.jpg", "logo": "assets/cut/logo.png", "A": "assets/sceneA.jpg", "B": "assets/sceneB.jpg" },
+  "capfix": [["สี่สิบเก้า", "49"]]
+}
