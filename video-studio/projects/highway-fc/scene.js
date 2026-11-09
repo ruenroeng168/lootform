@@ -1,6 +1,6 @@
 // Highway FC match-night promo — overlay on out/base.mp4 (render.mjs --overlay).
 // Logo intro with lightning + light sweep, MATCH NIGHT card, slow-mo tag, interview lower third + Isan captions,
-// "ยิงไปกิโล" gag (ball flying off + green highway distance sign), logo outro with follow button.
+// "ยิงไปกี่ลูก?" gag (goal counter spins, lands on "?"), logo outro with follow button.
 (function () {
   const { clamp, lerp, prog, ease, rng } = window.L;
   const W = 1080, H = 1920, GOLD = "#f5c542", BLUE = "#1e8bff", NAVY = "#050b1f", INK = "#0b0d14";
@@ -128,32 +128,25 @@
     g.restore();
   }
 
-  function gag(t) {
-    const t0 = D.gag;
-    if (t < t0 - 0.05 || t > t0 + 2.2) return;
-    // ball flying away to the top-right with a trail
-    const p = prog(t, t0, t0 + 0.9);
-    if (p < 1) {
-      for (let k = 6; k >= 0; k--) {
-        const q = Math.max(0, p - k * 0.04), x = lerp(540, 1120, ease.inCubic(q)), y = lerp(1300, -80, ease.outCubic(q)), r = lerp(60, 12, q);
-        g.globalAlpha = k ? 0.25 - k * 0.03 : 1; g.fillStyle = "#ffffff"; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-        if (!k) { g.lineWidth = 4; g.strokeStyle = INK; g.stroke(); }
-      }
-      g.globalAlpha = 1;
-    }
-    // highway distance sign + caption
-    const s = ease.outBack(prog(t, t0 + 0.75, t0 + 1.05), 2.2) * (1 - prog(t, t0 + 1.9, t0 + 2.2));
-    if (s > 0) {
-      g.save(); g.translate(860, 330); g.rotate(0.06); g.scale(s * 0.85, s * 0.85);
-      g.fillStyle = "#c9ccd2"; g.fillRect(-12, 60, 24, 260);
-      g.fillStyle = "#0f7a3d"; g.beginPath(); g.roundRect(-200, -110, 400, 190, 20); g.fill();
-      g.lineWidth = 8; g.strokeStyle = "#ffffff"; g.beginPath(); g.roundRect(-188, -98, 376, 166, 14); g.stroke();
-      txt("ประตู", 0, -50, F.b(44), "#ffffff"); txt("1 กม.", 0, 18, F.d(70), "#ffffff");
-      g.restore();
-      g.save(); g.translate(W / 2, 980); g.rotate(-0.06); g.scale(s, s);
-      outlined("ยิงไปกิโล!", 0, 0, F.b(120), GOLD, 18);
-      g.restore();
-    }
+  function gag(t) {   // "ยิงไปกี่ลูก?" -> goal counter spins -> "ยิงลูกไหน?" lands on "?"
+    const q = D.gag - 1.2, ans = D.gag;
+    if (t < q - 0.05 || t > ans + 2.0) return;
+    const pin = ease.outBack(prog(t, q, q + 0.3), 2), out = prog(t, ans + 1.6, ans + 2.0);
+    g.save(); g.globalAlpha = 1 - out; g.translate(830, 360); g.rotate(0.05); g.scale(pin, pin);
+    g.shadowColor = "rgba(30,139,255,0.8)"; g.shadowBlur = 30;
+    g.fillStyle = "rgba(5,11,31,0.92)"; g.beginPath(); g.roundRect(-170, -150, 340, 300, 26); g.fill(); g.shadowBlur = 0;
+    g.lineWidth = 6; g.strokeStyle = GOLD; g.stroke();
+    txt("GOALS", 0, -100, F.d(46), GOLD, "center", 8);
+    const landed = t >= ans, wob = landed ? Math.sin((t - ans) * 30) * Math.exp(-(t - ans) * 5) * 0.25 : 0;
+    g.save(); g.translate(0, 30); g.rotate(wob);
+    if (!landed) {   // rolling digits
+      const k = Math.floor(t * 22) % 10, f = (t * 22) % 1;
+      g.beginPath(); g.rect(-120, -90, 240, 180); g.clip();
+      txt(String(k), 0, -f * 150, F.d(170), "#ffffff"); txt(String((k + 1) % 10), 0, 150 - f * 150, F.d(170), "#ffffff");
+    } else txt("?", 0, 0, F.d(190), "#ffe066");
+    g.restore(); g.restore();
+    const a = ease.outBack(prog(t, ans + 0.05, ans + 0.35), 2.2) * (1 - out);
+    if (a > 0) { g.save(); g.translate(W / 2, 1270); g.rotate(-0.06); g.scale(a, a); outlined("ยิงลูกไหน!?", 0, 0, F.b(124), GOLD, 18); g.restore(); }
   }
 
   function captions(t) {

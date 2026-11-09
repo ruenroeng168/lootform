@@ -1,5 +1,5 @@
 """Match-night promo bed: driving drums/bass/synth stabs; thunder + boom on the logo, whooshes on cuts,
-music ducks right down for the interview, comedy 'fiiiiw… thud' on the punchline, riser into the outro."""
+music ducks right down for the interview, spinning goal-counter ticks + boing on the punchline, riser into the outro."""
 import numpy as np
 import synth as S
 
@@ -11,10 +11,10 @@ def thunder(dur=3.0):
     return crack + rumble
 
 
-def fiiw(dur=0.9):   # descending cartoon whistle (ball flies off into the distance)
+def boing(dur=0.7):   # cartoon spring
     t = S.tt(dur)
-    f = 2400 * np.exp(-t * 1.6) + 300
-    return np.sin(2 * np.pi * np.cumsum(f) / S.SR) * np.minimum(1, t / 0.02) * np.exp(-t * 1.2) * 0.5
+    f = 180 + 160 * np.sin(2 * np.pi * 9 * t) * np.exp(-t * 4)
+    return np.sin(2 * np.pi * np.cumsum(f) / S.SR) * np.exp(-t * 4) * 0.6
 
 
 def build(c, duration, spec, events):
@@ -48,8 +48,11 @@ def build(c, duration, spec, events):
     for t in (c1, c2, c2e):
         fx.add(t - 0.35, S.whoosh(0.5), 0.22)
     fx.add(c1, S.boom(1.8), 0.25)
-    fx.add(gag - 0.05, fiiw(), 0.32)
-    fx.add(gag + 0.85, S.thump(0.35), 0.45)
+    t = gag - 1.15                      # counter spinning while the question is asked
+    while t < gag - 0.05:
+        fx.add(t, S.click(0.03), 0.25); t += 0.05
+    fx.add(gag, boing(), 0.4)           # lands on "?"
+    fx.add(gag, S.pop(0.14), 0.3)
     fx.add(c2e - 1.0, S.riser(1.0), 0.22)
     fx.add(c2e + 0.05, thunder(2.4), 0.35)
     fx.add(c2e + 0.1, S.sparkle(1.4), 0.14)
