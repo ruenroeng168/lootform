@@ -1,0 +1,13 @@
+{
+  "title": "คืนนี้ ฉลามทางหลวงลงสนาม — ทางหลวง FC",
+  "fps": 30, "width": 1080, "height": 1920, "bpm": 120, "duck": 0.55, "tail": 1.3,
+  "tts": {
+    "voice": "Puck",
+    "style": "Energetic, warm Thai sports-promo narrator hyping a local amateur football team's match night; punchy and proud, friendly, cinematic"
+  },
+  "lines": [
+    { "cue": "intro", "at": 0.9, "text": "ไฟสนามเปิดแล้ว… | ฉลามทางหลวง พร้อมลุย!" },
+    { "cue": "match", "at": 5.2, "text": "คืนนี้ พี่น้องทางหลวง เอฟซี ลงสนาม | วิ่งสุดใจ ทุกจังหวะ | มิตรภาพ เหงื่อ และเสียงหัวเราะ" },
+    { "cue": "outro", "at": 24.5, "text": "ทางหลวง เอฟซี | เตะเพื่อเพื่อน เตะเพื่อความสุข | กดติดตามไว้ แล้วเจอกันนัดหน้า!" }
+  ]
+}
