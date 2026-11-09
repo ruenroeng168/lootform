@@ -1,0 +1,72 @@
+{
+  "title": "8 ประตูบ้าคลั่ง! แมนยูรอดนาที 96 · หงส์แดงคืนชีพ",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "bpm": 128,
+  "duck": 0.5,
+  "tail": 2.6,
+  "sources": [
+    "https://www.skysports.com/football/manchester-united-vs-aston-villa/report/559541",
+    "https://www.espn.com/soccer/story/_/id/50421297/man-united-aston-villa-premier-league",
+    "https://www.espn.com/soccer/match/_/gameId/401879240",
+    "https://www.siamsport.co.th/football-international/premierleague/111815/",
+    "https://www.pptvhd36.com/sport/news/286732",
+    "https://www.skysports.com/football/crystal-palace-vs-liverpool/report/559536",
+    "https://www.liverpoolfc.com/news/crystal-palace-liverpool-premier-league-match-report",
+    "https://gulfnews.com/sport/football/wirtz-breaks-league-duck-as-liverpool-beat-palace-31-to-climb-into-top-four-1.500740666",
+    "https://sports.yahoo.com/articles/player-ratings-florian-wirtz-shines-161400534.html",
+    "https://www.thairath.co.th/sport/eurofootball/premierleague/2971232"
+  ],
+  "tts": {
+    "voice": "Puck",
+    "style": "Hyped, fun Thai football commentator recapping last night's matches for a TikTok audience; fast and punchy, playful, big energy on goals. Read every player name EXACTLY as written in the Thai text, syllable by syllable; never replace a name with a different or more famous player"
+  },
+  "lines": [
+    {
+      "cue": "hook",
+      "at": 0.7,
+      "text": "แปดประตู! | โดนนำสองลูก ถึงสองครั้ง | แต่แมนยู ยังไม่ตาย!"
+    },
+    {
+      "cue": "mu1",
+      "gap": 0.8,
+      "text": "เมื่อคืนที่โอลด์แทรฟฟอร์ด แอสตันวิลล่า เปิดเกมแค่สี่นาที นำไปแล้วสองต่อศูนย์ | ประตูแรกจาก อลีสซง | และ นิโคลาส แจ็คสัน"
+    },
+    {
+      "cue": "mu2",
+      "gap": 0.7,
+      "text": "แมนยูสู้กลับ | บรูโน่ แฟร์นันด์ส ยิงจุดโทษ | ก่อนหมดครึ่งแรก ยูรี่ ตีเลอม็องส์ ยิงใส่ทีมเก่า | ตีเสมอสองต่อสอง"
+    },
+    {
+      "cue": "mu3",
+      "gap": 0.7,
+      "text": "แต่ต้นครึ่งหลัง วิลล่าซัดเพิ่มอีกสองลูก | จาก จอห์น แม็คกินน์ | และ เลออน กอเร็ตซ์ก้า | สี่ต่อสอง ทุกคนคิดว่าจบแล้ว"
+    },
+    {
+      "cue": "mu4",
+      "gap": 0.7,
+      "text": "ทดเวลาบาดเจ็บนาทีที่สอง | โจชัว เซิร์กซี ยิงไล่มาเป็นสามต่อสี่ | ทดเจ็บนาทีที่หก ลูกเตะมุมลูกสุดท้าย | แพทริก ดอร์กู โขกตีเสมอ สี่ต่อสี่!"
+    },
+    {
+      "cue": "mu5",
+      "gap": 0.8,
+      "text": "แต่เสมอได้แค่หนึ่งแต้ม | แมนยูยังรั้งอันดับสิบแปด อยู่ในโซนตกชั้น"
+    },
+    {
+      "cue": "lfc1",
+      "gap": 0.9,
+      "text": "ส่วนอีกนัด ลิเวอร์พูล บุกไปชนะ คริสตัลพาเลซ สามต่อหนึ่ง | อเล็กซิส แม็คอัลลิสเตอร์ โขกเปิดสกอร์ก่อนพักครึ่ง | ฟลอเรียน เวิร์ตซ์ ยิงประตูแรกในลีกฤดูกาลนี้ | และ อเล็กซานเดอร์ อิซัค ปิดเกมช่วงท้าย"
+    },
+    {
+      "cue": "lfc2",
+      "gap": 0.7,
+      "text": "พาเลซได้แค่ลูกจุดโทษปลอบใจในทดเจ็บ | หงส์แดงกลับมาชนะ และขึ้นสู่ท็อปโฟร์ | ส่วนพาเลซ จมบ๊วยของตาราง"
+    },
+    {
+      "cue": "cta",
+      "gap": 0.8,
+      "text": "แมนยูจะรอดตกชั้นไหม? | คอมเมนต์ รอด หรือ ไม่รอด มาเลย!"
+    }
+  ]
+}

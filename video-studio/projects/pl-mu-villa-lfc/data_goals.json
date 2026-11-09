@@ -1,0 +1,25 @@
+{
+  "matches": {
+    "mu":  { "label": "โอลด์ แทรฟฟอร์ด · 8 พ.ย.", "home": { "code": "MUN", "color": "#da291c", "color2": "#ffe500" }, "away": { "code": "AVL", "color": "#670e36", "color2": "#95bfe5" } },
+    "lfc": { "label": "เซลเฮิร์สต์ พาร์ค · 8 พ.ย.", "home": { "code": "CRY", "color": "#1b458f", "color2": "#c4122e" }, "away": { "code": "LIV", "color": "#c8102e", "color2": "#00b2a9" } }
+  },
+  "goals": [
+    { "match": "mu", "cue": "mu1", "mark": 1, "team": "A", "th": "อลีสซง", "en": "Alysson" },
+    { "match": "mu", "cue": "mu1", "mark": 2, "team": "A", "th": "นิโคลาส แจ็คสัน", "en": "N. Jackson", "min": "4'" },
+    { "match": "mu", "cue": "mu2", "mark": 1, "team": "H", "th": "บรูโน่ แฟร์นันด์ส", "en": "B. Fernandes", "min": "16'", "note": "จุดโทษ" },
+    { "match": "mu", "cue": "mu2", "mark": 2, "team": "H", "th": "ยูรี่ ตีเลอม็องส์", "en": "Y. Tielemans", "min": "44'" },
+    { "match": "mu", "cue": "mu3", "mark": 1, "team": "A", "th": "จอห์น แม็คกินน์", "en": "J. McGinn" },
+    { "match": "mu", "cue": "mu3", "mark": 2, "team": "A", "th": "เลออน กอเร็ตซ์ก้า", "en": "L. Goretzka" },
+    { "match": "mu", "cue": "mu4", "mark": 1, "team": "H", "th": "โจชัว เซิร์กซี", "en": "J. Zirkzee", "min": "90+2'", "delay": 1.2 },
+    { "match": "mu", "cue": "mu4", "mark": 3, "team": "H", "th": "แพทริก ดอร์กู", "en": "P. Dorgu", "min": "90+6'", "note": "โหม่ง", "delay": 1.0, "big": "4-4!" },
+    { "match": "lfc", "cue": "lfc1", "mark": 1, "team": "A", "th": "อเล็กซิส แม็คอัลลิสเตอร์", "en": "A. Mac Allister", "min": "40'", "note": "โหม่ง" },
+    { "match": "lfc", "cue": "lfc1", "mark": 2, "team": "A", "th": "ฟลอเรียน เวิร์ตซ์", "en": "F. Wirtz", "min": "54'" },
+    { "match": "lfc", "cue": "lfc1", "mark": 3, "team": "A", "th": "อเล็กซานเดอร์ อิซัค", "en": "A. Isak" },
+    { "match": "lfc", "cue": "lfc2", "mark": 0, "team": "H", "th": "เอ็ดดี้ เอ็นเคเทียห์", "en": "E. Nketiah", "min": "90+5'", "note": "จุดโทษ", "delay": 0.4 }
+  ],
+  "capfix": [["สองต่อศูนย์","2-0"],["สองต่อสอง","2-2"],["สี่ต่อสอง","4-2"],["สามต่อสี่","3-4"],["สี่ต่อสี่","4-4"],["สามต่อหนึ่ง","3-1"],
+             ["สี่นาที","4 นาที"],["นาทีที่สอง","นาทีที่ 2"],["นาทีที่หก","นาทีที่ 6"],["อันดับสิบแปด","อันดับ 18"],["หนึ่งแต้ม","1 แต้ม"],
+             ["สองลูก","2 ลูก"],["สองครั้ง","2 ครั้ง"],["ท็อปโฟร์","ท็อป 4"]],
+  "end_credits": ["ข้อมูล: Sky Sports, ESPN, Liverpool FC, Gulf News, สยามสปอร์ต, PPTV, ไทยรัฐ",
+                  "ภาพ: Wikimedia Commons (CC BY / CC BY-SA) · ผลการแข่งขัน 8 พ.ย. 2026"]
+}
