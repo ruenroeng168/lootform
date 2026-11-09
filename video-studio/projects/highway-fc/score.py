@@ -35,7 +35,7 @@ def build(c, duration, spec, events):
         stab.add(t0 + beat * 1.5, S.pluck(S.midi(r + 28), 0.3, 1.3), 0.09)
     c1, c2, c2e, gag = events["clip1"], events["clip2"], events["clip2_end"], events["gag"]
     end = duration - 0.3
-    g = [(0, 0), (0.5, 0.6), (c1 - 0.1, 0.6), (c1, 1), (c2 - 0.4, 1), (c2, 0.12), (c2e - 0.3, 0.12), (c2e + 0.2, 1), (end - 0.6, 1), (end, 0), (duration + 1, 0)]
+    g = [(0, 0), (0.5, 0.6), (c1 - 0.1, 0.6), (c1, 1), (c2 - 0.4, 1), (c2, 0.12), (c2e - 0.3, 0.12), (c2e + 0.2, 0.75), (end - 0.6, 1), (end, 0), (duration + 1, 0)]
     for tr in (drums, bass, stab):
         tr.gate(g)
     pad.gate([(0, 0), (0.6, 1), (end, 0.8), (duration, 0)])
@@ -53,7 +53,13 @@ def build(c, duration, spec, events):
         fx.add(t, S.click(0.03), 0.25); t += 0.05
     fx.add(gag, boing(), 0.4)           # lands on "?"
     fx.add(gag, S.pop(0.14), 0.3)
-    fx.add(c2e - 1.0, S.riser(1.0), 0.22)
-    fx.add(c2e + 0.05, thunder(2.4), 0.35)
-    fx.add(c2e + 0.1, S.sparkle(1.4), 0.14)
+    fx.add(c2e - 0.35, S.whoosh(0.5), 0.2)          # into the results board
+    for t in events.get("sets", []):
+        fx.add(t, S.thump(0.3), 0.3); fx.add(t, S.click(0.03), 0.3)
+    if "summary" in events:
+        fx.add(events["summary"], S.boom(1.6), 0.3); fx.add(events["summary"], S.sparkle(1.3), 0.14)
+    o = events.get("outro", c2e)
+    fx.add(o - 1.0, S.riser(1.0), 0.22)
+    fx.add(o + 0.05, thunder(2.4), 0.35)
+    fx.add(o + 0.1, S.sparkle(1.4), 0.14)
     return music * 0.55, fx.buf

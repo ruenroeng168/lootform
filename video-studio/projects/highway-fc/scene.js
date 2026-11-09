@@ -101,10 +101,11 @@
     const p = ease.outCubic(prog(t, t0, t0 + 0.4)), o = prog(t, t1, t1 + 0.35);
     if (p <= 0 || o >= 1) return;
     g.save(); g.globalAlpha = 1 - o; g.translate((1 - p) * -400, 0);
-    g.fillStyle = "rgba(5,11,31,0.85)"; g.beginPath(); g.moveTo(0, 300); g.lineTo(720, 300); g.lineTo(680, 420); g.lineTo(0, 420); g.fill();
-    g.fillStyle = GOLD; g.fillRect(0, 300, 14, 120);
+    g.fillStyle = "rgba(5,11,31,0.85)"; g.beginPath(); g.moveTo(0, 300); g.lineTo(780, 300); g.lineTo(740, 470); g.lineTo(0, 470); g.fill();
+    g.fillStyle = GOLD; g.fillRect(0, 300, 14, 170);
     txt("MATCH NIGHT", 50, 340, F.d(64), "#ffffff", "left", 6);
-    txt("ทางหลวง FC · ไฟสนามเปิดแล้ว", 52, 395, F.m(32), GOLD, "left");
+    txt(`ทางหลวง FC  vs  ${D.opponent}`, 52, 397, F.b(38), GOLD, "left");
+    txt(D.venue, 52, 445, F.m(28), "#cfe3ff", "left");
     g.restore();
     // slow-motion tag while the 1/3-speed section plays
     const s0 = D.clip1 + 1.2, s1 = D.clip1 + 9.6, sa = prog(t, s0, s0 + 0.3) * (1 - prog(t, s1, s1 + 0.3));
@@ -165,12 +166,63 @@
     const a = prog(t, seg.s, seg.s + 0.1) * (1 - prog(t, seg.e - 0.08, seg.e));
     const fs = fit(seg.p, F.b, 56, 960);
     g.save(); g.globalAlpha = a;
-    outlined(seg.p.replace("…", "… "), W / 2, 1560, F.b(fs), seg.isan ? "#ffe066" : "#ffffff", 13);
+    let cp = seg.p.replace("…", "… "); (D.capfix || []).forEach(([a, b]) => (cp = cp.split(a).join(b)));
+    outlined(cp, W / 2, 1560, F.b(fs), seg.isan ? "#ffe066" : "#ffffff", 13);
+    g.restore();
+  }
+
+  function results(t) {   // 5-set results board (scores from the team), between the interview and the outro
+    const t0 = D.clip2_end, t1 = C.outro.start - 0.5;
+    const a = prog(t, t0 - 0.15, t0 + 0.3) * (1 - prog(t, t1 - 0.2, t1 + 0.1));
+    if (a <= 0) return;
+    stage(t, a);
+    g.save(); g.globalAlpha = a;
+    shield(t, 150, 190, 170, 1, -9);
+    const hp = ease.outCubic(prog(t, t0 + 0.1, t0 + 0.5));
+    g.save(); g.globalAlpha *= hp;
+    g.font = F.b(84); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+    g.lineWidth = 12; g.strokeStyle = "#0a1a40"; g.strokeText("ผลการแข่งขัน", W / 2 + 60, 175);
+    g.fillStyle = goldGrad(130, 220); g.fillText("ผลการแข่งขัน", W / 2 + 60, 175);
+    txt(D.venue, W / 2 + 60, 255, F.m(30), "#cfe3ff");
+    // header
+    g.fillStyle = "rgba(5,11,31,0.85)"; g.beginPath(); g.roundRect(70, 320, 940, 110, 22); g.fill();
+    g.fillStyle = "#e9b923"; g.beginPath(); g.roundRect(70, 320, 330, 110, [22, 0, 0, 22]); g.fill();
+    g.fillStyle = "#1c4fd8"; g.beginPath(); g.roundRect(680, 320, 330, 110, [0, 22, 22, 0]); g.fill();
+    txt("ทางหลวง FC", 235, 377, F.b(46), INK); txt(D.opponent, 845, 377, F.b(46), "#ffffff"); txt("VS", 540, 377, F.d(54), "#ffffff", "center", 4);
+    g.restore();
+    // set rows
+    D.sets.forEach(([h, o], i) => {
+      const ts = MK("results", i + 1) - 0.1, p = ease.outBack(prog(t, ts, ts + 0.35), 1.7);
+      if (p <= 0) return;
+      const y = 470 + i * 150, res = h > o ? "ชนะ" : h < o ? "แพ้" : "เสมอ";
+      const col = h > o ? "#1fae5b" : h < o ? "#e0263b" : "#6b7280";
+      g.save(); g.translate((1 - p) * -200, 0); g.globalAlpha *= clamp(p * 2);
+      g.fillStyle = "rgba(10,22,58,0.96)"; g.beginPath(); g.roundRect(70, y, 940, 126, 20); g.fill();
+      g.lineWidth = 3; g.strokeStyle = "rgba(245,197,66,0.5)"; g.stroke();
+      txt(`เซ็ต ${i + 1}`, 110, y + 64, F.b(46), "#cfe3ff", "left");
+      txt(`${h} - ${o}`, 540, y + 66, F.d(84), "#ffffff", "center", 4);
+      g.fillStyle = col; g.beginPath(); g.roundRect(800, y + 26, 180, 76, 38); g.fill();
+      txt(res, 890, y + 66, F.b(44), "#ffffff");
+      g.restore();
+    });
+    // summary
+    const sp = ease.outBack(prog(t, MK("results", 6) - 0.1, MK("results", 6) + 0.4), 1.8);
+    if (sp > 0) {
+      const W2 = D.sets.filter(([h, o]) => h > o).length, Dr = D.sets.filter(([h, o]) => h === o).length, L2 = D.sets.length - W2 - Dr;
+      const gf = D.sets.reduce((s, [h]) => s + h, 0), ga = D.sets.reduce((s, [, o]) => s + o, 0);
+      g.save(); g.translate(W / 2, 1300); g.scale(sp, sp);
+      g.shadowColor = "rgba(245,197,66,0.7)"; g.shadowBlur = 40;
+      g.fillStyle = "rgba(5,11,31,0.95)"; g.beginPath(); g.roundRect(-470, -95, 940, 190, 30); g.fill(); g.shadowBlur = 0;
+      g.lineWidth = 6; g.strokeStyle = GOLD; g.stroke();
+      txt(`ชนะ ${W2} · เสมอ ${Dr} · แพ้ ${L2}`, 0, -30, F.b(66), GOLD);
+      txt(`ประตูรวม ${gf} - ${ga}`, 0, 50, F.b(42), "#ffffff");
+      g.restore();
+    }
     g.restore();
   }
 
   function outro(t) {
-    const t0 = D.clip2_end, a = prog(t, t0 - 0.15, t0 + 0.3);
+    const t0 = C.outro.start - 0.5, a = prog(t, t0 - 0.15, t0 + 0.3);
     if (a <= 0) return;
     stage(t, a);
     g.save(); g.globalAlpha = a;
@@ -202,12 +254,13 @@
       const vg = g.createRadialGradient(W / 2, H * 0.45, H * 0.35, W / 2, H * 0.45, H * 0.85);
       vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,10,0.45)"); g.fillStyle = vg; g.fillRect(0, 0, W, H);
     }
-    intro(t); logoBug(t); matchCard(t); lowerThird(t); gag(t); outro(t); captions(t);
+    intro(t); logoBug(t); matchCard(t); lowerThird(t); gag(t); results(t); outro(t); captions(t);
     // flash on cuts into each clip
     for (const tc of [D.clip1, D.clip2]) { const f = 1 - prog(t, tc, tc + 0.18); if (t >= tc && f > 0) { g.fillStyle = `rgba(255,255,255,${0.5 * f})`; g.fillRect(0, 0, W, H); } }
     const fin = Math.max(prog(t, TL.duration - 0.45, TL.duration), 1 - prog(t, 0, 0.2));
     if (fin > 0) { g.fillStyle = `rgba(0,0,0,${fin})`; g.fillRect(0, 0, W, H); }
   }
-  function events() { return { pen: [], clip1: D.clip1, clip2: D.clip2, clip2_end: D.clip2_end, gag: D.gag }; }
+  function events() { return { pen: [], clip1: D.clip1, clip2: D.clip2, clip2_end: D.clip2_end, gag: D.gag, outro: C.outro.start - 0.5,
+    sets: D.sets.map((_, i) => MK("results", i + 1)), summary: MK("results", 6) }; }
   window.scene = { setup, preload, draw, events };
 })();
