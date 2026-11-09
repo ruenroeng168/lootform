@@ -203,52 +203,206 @@
   "ข้อมูล: Sky Sports, ESPN, Liverpool FC, Gulf News, สยามสปอร์ต, PPTV, ไทยรัฐ",
   "ภาพ: Wikimedia Commons (CC BY / CC BY-SA) · ผลการแข่งขัน 8 พ.ย. 2026"
  ],
- "images": {},
  "segments": [
   {
    "cue": "hook",
-   "img": "x",
-   "match": null
+   "img": "oldtrafford",
+   "kb": "in"
   },
   {
    "cue": "mu1",
-   "img": "x",
+   "img": "jackson",
    "match": "mu"
   },
   {
    "cue": "mu2",
-   "img": "x",
-   "match": "mu"
+   "img": "bruno",
+   "match": "mu",
+   "swaps": [
+    {
+     "mark": 2,
+     "img": "tielemans"
+    }
+   ]
   },
   {
    "cue": "mu3",
-   "img": "x",
+   "img": "mcginn",
    "match": "mu"
   },
   {
    "cue": "mu4",
-   "img": "x",
-   "match": "mu"
+   "img": "zirkzee",
+   "match": "mu",
+   "swaps": [
+    {
+     "mark": 3,
+     "img": "dorgu",
+     "delay": 0.9
+    }
+   ]
   },
   {
    "cue": "mu5",
-   "img": "x",
-   "match": "mu"
+   "img": "oldtrafford",
+   "match": "mu",
+   "kb": "out"
   },
   {
    "cue": "lfc1",
-   "img": "x",
-   "match": "lfc"
+   "img": "selhurst",
+   "match": "lfc",
+   "swaps": [
+    {
+     "mark": 1,
+     "img": "macallister"
+    },
+    {
+     "mark": 2,
+     "img": "wirtz"
+    },
+    {
+     "mark": 3,
+     "img": "isak"
+    }
+   ]
   },
   {
    "cue": "lfc2",
-   "img": "x",
-   "match": "lfc"
+   "img": "wirtz",
+   "match": "lfc",
+   "kb": "out"
   },
   {
    "cue": "cta",
-   "img": "x",
-   "match": null
+   "img": "oldtrafford",
+   "kb": "out"
+  }
+ ],
+ "images": {
+  "bruno": "assets/bruno.jpg",
+  "dorgu": "assets/dorgu.jpg",
+  "isak": "assets/isak.jpg",
+  "jackson": "assets/jackson.jpg",
+  "macallister": "assets/macallister.jpg",
+  "mcginn": "assets/mcginn.jpg",
+  "oldtrafford": "assets/oldtrafford.jpg",
+  "selhurst": "assets/selhurst.jpg",
+  "tielemans": "assets/tielemans.jpg",
+  "wirtz": "assets/wirtz.jpg",
+  "zirkzee": "assets/zirkzee.jpg"
+ },
+ "inset": {
+  "dorgu": true
+ },
+ "focus": {
+  "oldtrafford": [
+   0.5,
+   0.45
+  ],
+  "selhurst": [
+   0.5,
+   0.5
+  ],
+  "jackson": [
+   0.5,
+   0.3
+  ],
+  "bruno": [
+   0.5,
+   0.3
+  ],
+  "tielemans": [
+   0.5,
+   0.3
+  ],
+  "mcginn": [
+   0.5,
+   0.3
+  ],
+  "zirkzee": [
+   0.5,
+   0.25
+  ],
+  "macallister": [
+   0.5,
+   0.3
+  ],
+  "wirtz": [
+   0.5,
+   0.3
+  ],
+  "isak": [
+   0.5,
+   0.3
+  ]
+ },
+ "credits": [
+  {
+   "key": "oldtrafford",
+   "author": "Arne Müseler",
+   "license": "CC BY-SA 3.0 de",
+   "year": "2023"
+  },
+  {
+   "key": "jackson",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "bruno",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "tielemans",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "zirkzee",
+   "author": "Hainotdeptrai",
+   "license": "CC0",
+   "year": "2024"
+  },
+  {
+   "key": "dorgu",
+   "author": "Fra Casa",
+   "license": "CC0",
+   "year": "2024"
+  },
+  {
+   "key": "macallister",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "wirtz",
+   "author": "Timmy96",
+   "license": "CC0",
+   "year": "2026"
+  },
+  {
+   "key": "isak",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
+  },
+  {
+   "key": "selhurst",
+   "author": "Arne Müseler",
+   "license": "CC BY-SA 3.0 de",
+   "year": "2023"
+  },
+  {
+   "key": "mcginn",
+   "author": "Bryan Berlin",
+   "license": "CC BY-SA 4.0",
+   "year": "2026"
   }
  ]
 }

@@ -9,7 +9,7 @@ d["segments"] = [
     {"cue": "mu2", "img": "bruno", "match": "mu", "swaps": [{"mark": 2, "img": "tielemans"}]},
     {"cue": "mu3", "img": "mcginn", "match": "mu"},
     {"cue": "mu4", "img": "zirkzee", "match": "mu", "swaps": [{"mark": 3, "img": "dorgu", "delay": 0.9}]},
-    {"cue": "mu5", "img": "ot2", "match": "mu", "kb": "out"},
+    {"cue": "mu5", "img": "oldtrafford", "match": "mu", "kb": "out"},
     {"cue": "lfc1", "img": "selhurst", "match": "lfc", "swaps": [{"mark": 1, "img": "macallister"}, {"mark": 2, "img": "wirtz"}, {"mark": 3, "img": "isak"}]},
     {"cue": "lfc2", "img": "wirtz", "match": "lfc", "kb": "out"},
     {"cue": "cta", "img": "oldtrafford", "kb": "out"},
@@ -20,7 +20,7 @@ if missing:
     raise SystemExit(f"missing photos: {missing}")
 d["images"] = {k: f"assets/{k}.jpg" for k in sorted(keys)}
 d["inset"] = {"dorgu": True}
-d["focus"] = {"oldtrafford": [0.5, 0.45], "ot2": [0.5, 0.5], "selhurst": [0.5, 0.5], "jackson": [0.5, 0.3], "bruno": [0.5, 0.3],
+d["focus"] = {"oldtrafford": [0.5, 0.45], "selhurst": [0.5, 0.5], "jackson": [0.5, 0.3], "bruno": [0.5, 0.3],
               "tielemans": [0.5, 0.3], "mcginn": [0.5, 0.3], "zirkzee": [0.5, 0.25], "macallister": [0.5, 0.3], "wirtz": [0.5, 0.3], "isak": [0.5, 0.3]}
 def author(a):
     a = a.replace("\n", " ").strip()

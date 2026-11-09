@@ -238,10 +238,10 @@
 
   function badges(t) {   // lfc2: top 4 + bottom
     const end = C.cta.start - 0.3, out = 1 - prog(t, end - 0.25, end);
-    [["lfc2", 2, "ขึ้นท็อป 4", "#c8102e", W - 290], ["lfc2", 3, "จมบ๊วย", "#1b458f", 290]].forEach(([cue, m, s, col, x]) => {
+    [["lfc2", 1, "ขึ้นท็อป 4", "#c8102e", W - 290], ["lfc2", 2, "จมบ๊วย", "#1b458f", 290]].forEach(([cue, m, s, col, x]) => {
       const p = ease.outBack(prog(t, MK(cue, m) - 0.1, MK(cue, m) + 0.35), 2.2);
       if (p <= 0 || out <= 0) return;
-      g.save(); g.globalAlpha = out; g.translate(x, 470); g.rotate(x > W / 2 ? 0.06 : -0.06); g.scale(p, p);
+      g.save(); g.globalAlpha = out; g.translate(x, 900); g.rotate(x > W / 2 ? 0.06 : -0.06); g.scale(p, p);
       g.fillStyle = col; g.beginPath(); g.roundRect(-190, -56, 380, 112, 24); g.fill();
       g.lineWidth = 8; g.strokeStyle = "#ffffff"; g.stroke();
       txt(s, 0, 4, F.b(58), "#ffffff");
