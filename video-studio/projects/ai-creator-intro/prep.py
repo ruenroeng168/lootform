@@ -67,11 +67,15 @@ EVENTS = {  # name: (clip, t)
     "honest": ("c4", 0.80), "fail": ("c4", 6.55), "real": ("c5", 1.05),
     "work_ok": ("c5", 6.20), "work_no": ("c5", 6.95), "follow": ("c5", 8.60), "together": ("c5", 10.32),
 }
-VOICE = ("highpass=f=75,adeclip,afftdn=nf=-30:tn=1,"
-         "rubberband=pitch=0.955:formant=preserved,"                       # ~0.8 semitone deeper, formants kept natural
-         "equalizer=f=140:t=q:w=0.9:g=3.5,equalizer=f=380:t=q:w=1.2:g=-3,"  # body up, boxiness down
-         "equalizer=f=3200:t=q:w=1:g=3,deesser=i=0.35:f=0.55,"            # presence, tame 's'
-         "acompressor=threshold=-24dB:ratio=4.5:attack=3:release=120:makeup=3,"
+VOICE = ("highpass=f=80,adeclip,"
+         "afftdn=nr=20:nf=-38:tn=1,afftdn=nr=8:nf=-42,"                     # two-pass denoise (room hiss/hum)
+         "agate=threshold=0.015:ratio=2.5:range=0.2:attack=4:release=140,"  # duck room noise between words
+         "rubberband=pitch=0.988:formant=preserved,"                        # only ~0.2 semitone: firmer, still natural
+         "equalizer=f=150:t=q:w=1:g=1.5,equalizer=f=380:t=q:w=1.2:g=-2.5,"
+         "equalizer=f=2800:t=q:w=1:g=1.5,"
+         "deesser=i=0.7:m=0.6:f=0.45,equalizer=f=6800:t=q:w=1.4:g=-4,"      # strong de-ess + cut sibilance band
+         "highshelf=f=9000:g=-3,lowpass=f=12000,"
+         "acompressor=threshold=-24dB:ratio=4:attack=4:release=130:makeup=3,"
          "alimiter=limit=0.89:attack=2:release=60,loudnorm=I=-14:TP=-1.5:LRA=5")
 GRADE = ("hqdn3d=4:3:6:4,colorbalance=rs=-0.02:gs=-0.02:bs=0.05:rm=0.02:bm=0.02,"
          "eq=gamma=1.28:contrast=1.08:saturation=1.12:brightness=0.02,unsharp=5:5:0.6")
