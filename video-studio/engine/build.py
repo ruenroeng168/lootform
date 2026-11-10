@@ -292,8 +292,29 @@ def main(project):
         # One request for the whole script: a single continuous take, 1 quota unit per video.
         texts = [" ".join(p.strip() for p in ln["text"].split("|")) for ln in spec["lines"]]
         cfg = {**base_voice, "notes": "Read the paragraphs in order. Pause about one second between paragraphs."}
-        wav = tts.synth("\n\n".join(texts), cfg, out / "vo", pmodel, log)
-        batched = best_split(load_audio(wav), wav, texts, out)
+        # Long scripts get cut off by the TTS model (~90 s of audio max), so split the script into
+        # takes of at most `batch_chars` characters (one quota unit each).
+        budget = int(base_voice.get("batch_chars", 450))
+        groups, cur = [], []
+        for tx in texts:
+            if cur and sum(len(s) for s in cur) + len(tx) > budget:
+                groups.append(cur); cur = []
+            cur.append(tx)
+        groups.append(cur)
+        if len(groups) > 1:
+            log(f"long script: {len(groups)} takes of {[len(g) for g in groups]} lines")
+        batched = []
+        manual = base_voice.get("splits") or []   # optional per-take cut times (s) when auto-split is wrong
+        for gi, grp in enumerate(groups):
+            wav = tts.synth("\n\n".join(grp), cfg, out / "vo", pmodel, log)
+            x = load_audio(wav)
+            cuts = manual[gi] if gi < len(manual) and manual[gi] else None
+            if cuts and len(cuts) == len(grp) - 1:
+                idx = [0] + [int(c * S.SR) for c in cuts] + [len(x)]
+                batched += [x[idx[i]:idx[i + 1]] for i in range(len(grp))]
+                log(f"take {gi + 1}: manual split at " + ", ".join(f"{c:.1f}s" for c in cuts))
+            else:
+                batched += best_split(x, wav, grp, out)
     clips, cues, t = [], {}, 0.0
     for li, ln in enumerate(spec["lines"]):
         cfg = {**base_voice, **{k: ln[k] for k in ("voice", "style", "engine", "speed") if k in ln}}
