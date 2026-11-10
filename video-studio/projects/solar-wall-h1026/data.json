@@ -1,0 +1,15 @@
+{
+  "fit": "blur", "fit_y": 300,
+  "edl": [
+    { "cue": "hook",    "clip": "assets/review.mp4", "in": 0.0,  "out": 5.8 },
+    { "cue": "intro",   "clip": "assets/review.mp4", "in": 5.9,  "out": 12.2 },
+    { "cue": "f1",      "clip": "assets/review.mp4", "in": 12.3, "out": 17.2 },
+    { "cue": "f2",      "clip": "assets/review.mp4", "in": 17.3, "out": 23.2 },
+    { "cue": "f3",      "clip": "assets/review.mp4", "in": 23.3, "out": 27.2 },
+    { "cue": "verdict", "clip": "assets/review.mp4", "in": 27.3, "out": 34.9 },
+    { "cue": "price",   "clip": "assets/review.mp4", "in": 35.0, "out": 38.8 },
+    { "cue": "cta",     "clip": "assets/review.mp4", "in": 0.0,  "out": 5.8 }
+  ],
+  "capfix": [["เอ็มดี โซลาร์ เอช หนึ่งศูนย์สองหก", "MD-SOLAR-H1026"], ["ห้านาที", "5 นาที"], ["สองรู", "2 รู"],
+             ["ไอพีหกสิบห้า", "IP65"], ["หกร้อยมิลลิแอมป์", "600 mAh"], ["อาร์จีบี", "RGB"]]
+}

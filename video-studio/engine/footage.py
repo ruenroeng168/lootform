@@ -4,7 +4,8 @@
 data.json "edl": [{ "cue": <script cue>, "clip": "assets/x.mp4", "in": s, "out": s, "blur": false, "vol": 1.0 }, ...]
 Each cue's segment runs from its voice line start (minus a lead) to the next cue. If a clip
 chunk is shorter than its segment it is slowed down (to 0.6x at most) and then held on the last frame.
-Phone rotation metadata is honoured; footage is cover-fit to the project size.
+Phone rotation metadata is honoured; footage is cover-fit to the project size, or with data.json
+"fit": "blur" (+ "fit_y") shown full-width over a blurred fill (for square/landscape clips).
 
     python3 video-studio/engine/footage.py video-studio/projects/<slug>
 """
@@ -31,8 +32,15 @@ def main(project):
         L = e["out"] - e["in"]
         k = 1.0 if L >= D else max(L / D, 0.6)
         take = min(L, D * k)
-        vf = [f"setpts=(PTS-STARTPTS)/{k:.4f}",
-              f"scale={W}:{H}:force_original_aspect_ratio=increase", f"crop={W}:{H}"]
+        if data.get("fit") == "blur":   # non-vertical footage: sharp copy at fit_y over a blurred cover-fill
+            fy = int(data.get("fit_y", (H - W) // 2))
+            vf = [f"setpts=(PTS-STARTPTS)/{k:.4f}",
+                  f"split[bg][fg];[bg]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+                  f"boxblur=30:3,eq=brightness=-0.12:saturation=0.9[bgb];[fg]scale={W}:-2[fgs];"
+                  f"[bgb][fgs]overlay=0:{fy}"]
+        else:
+            vf = [f"setpts=(PTS-STARTPTS)/{k:.4f}",
+                  f"scale={W}:{H}:force_original_aspect_ratio=increase", f"crop={W}:{H}"]
         if e.get("blur"):
             vf += ["boxblur=22:2", "eq=brightness=-0.06:saturation=0.85"]
         vf += [f"fps={fps}", f"tpad=stop_mode=clone:stop_duration={D}", f"trim=duration={D}", "setsar=1"]
