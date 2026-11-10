@@ -48,3 +48,15 @@ Add it to the environment's Network secrets: Host `generativelanguage.googleapis
 - **Edit real footage** (product review for basket-pinning): put the clips in the project's `assets/` folder, write `data.json → edl` (which clip/time range goes with which voice line), then run
   `build.py <proj> --audio-only` → `engine/footage.py <proj>` (cuts and fits the footage to the voice-over) → `render.mjs <proj> --overlay` (overlays transparent graphics on the footage and mixes in the clips' own sound). Example: `projects/winch-review`.
 - **Visual styles** for the storybook scenes (`engine/sketch.js`): set `data.json → "style"` to `ink | watercolor | paper | silhouette | flat | comic | chalk`. Use `node engine/render.mjs <proj> --still=<frame> --style=<x>` to preview one frame. Scenes call `SK.STYLE_BG` for palettes, texture and panel frames. The hand is shown only in `ink` and `chalk`.
+
+## Deliverables (automatic)
+
+Every full render (`build.py` or `render.mjs` without `--frames`) also runs `engine/publish.py`:
+- `out/video_post.mp4` — post-ready copy, size-targeted (≤ 22 MB, `--mb=`), -14 LUFS / -1.5 dBTP, faststart. Send this one to the user.
+- `out/cover.jpg` — 1080x1920 cover: sharpest well-exposed frame (from `out/base.mp4` for footage edits, so no overlays) + title from `script.json → "cover"` (or `"title"`), Thai-aware line wrapping. Pick a frame with `publish.py <proj> --cover-at=12.5`.
+- Skip with `--no-publish`.
+
+## Footage tools
+- `data.json → "fit": "blur"` (+ `"fit_y"`): square/landscape clips shown full-width over a blurred fill.
+- EDL entry `"clean": true`: voice clean-up chain on that segment (de-clip, denoise, compressor, -15 LUFS).
+- Long scripts: Gemini batch TTS splits automatically into takes of ≤ `tts.batch_chars` (450) characters; if an auto split is wrong set `tts.splits` = per-take cut times in seconds.

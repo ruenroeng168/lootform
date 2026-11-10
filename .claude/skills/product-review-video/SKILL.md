@@ -34,6 +34,9 @@ This environment usually can't open shop pages (network policy) — ask the user
 3. `build.py <proj> --audio-only` → `engine/footage.py <proj>` → `node engine/render.mjs <proj> --overlay [--footage-vol=0.35]`.
 4. `scene.js` (see `projects/winch-review`) draws only small overlays on a cleared canvas: hook pill, callout chips, result badge, spec card ≤ ~25% of the frame, CTA button + basket arrow, safety notes, captions.
 
+### Deliverables
+Send the user `out/video_post.mp4` (≤ 22 MB, -14 LUFS) and `out/cover.jpg` — both made automatically after the full render (`engine/publish.py`). Set `script.json → "cover"` to a short hook for the cover title. Use `"clean": true` on EDL segments where the creator talks, and `"fit": "blur"` for non-vertical clips.
+
 ## 2. Honesty & compliance rules (non-negotiable)
 
 - **Never invent** specs, test results, sales numbers, ratings, reviews or quotes. Every feature line must come from the spec/page or the owner's notes; mark spec-based claims `"source": "spec"` (renders "* ตามสเปกผู้ผลิต").

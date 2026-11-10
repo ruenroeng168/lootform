@@ -35,6 +35,12 @@ if (tl.data && tl.data.images && !Array.isArray(tl.data.images)) {  // {key: pat
 }
 const styleArg = args.find((a) => a.startsWith("--style="));
 if (styleArg) { tl.data = tl.data || {}; tl.data.style = styleArg.slice(8); }   // try a visual style without editing data.json
+
+// After a full render: post-ready copy (≤22 MB, -14 LUFS) + auto cover (skip with --no-publish).
+function publish() {
+  if (args.includes("--no-publish")) return Promise.resolve();
+  return new Promise((r) => spawn("python3", [path.join(ENGINE, "publish.py"), project], { stdio: "inherit" }).on("close", r));
+}
 const stills = args.includes("--stills");
 const range = (args.find((a) => a.startsWith("--frames=")) || "").slice(9);
 
@@ -101,7 +107,7 @@ if (overlayArg) {
     if (i % 90 === 0) process.stdout.write(`\r[studio] overlay frame ${i}/${tl.frames}`);
   }
   ffo.stdin.end(); await new Promise((r) => ffo.on("close", r)); await browser.close();
-  console.log(`\n[studio] wrote ${mp4o}`); process.exit(0);
+  console.log(`\n[studio] wrote ${mp4o}`); await publish(); process.exit(0);
 }
 
 const frameAt = (i) => page.evaluate((i) => {
@@ -150,3 +156,4 @@ ff.stdin.end();
 await new Promise((r) => ff.on("close", r));
 await browser.close();
 console.log(`\n[studio] wrote ${mp4}`);
+if (!range) await publish();

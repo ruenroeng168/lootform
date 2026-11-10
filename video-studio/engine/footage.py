@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Cut real footage to the voice-over timeline (EDL in data.json) -> out/base.mp4 + out/footage.wav.
 
-data.json "edl": [{ "cue": <script cue>, "clip": "assets/x.mp4", "in": s, "out": s, "blur": false, "vol": 1.0 }, ...]
+data.json "edl": [{ "cue": <script cue>, "clip": "assets/x.mp4", "in": s, "out": s, "blur": false, "vol": 1.0, "clean": false }, ...]
+"clean": true runs the voice clean-up chain (de-clip, denoise, compress, -15 LUFS) on that segment's sound.
 Each cue's segment runs from its voice line start (minus a lead) to the next cue. If a clip
 chunk is shorter than its segment it is slowed down (to 0.6x at most) and then held on the last frame.
 Phone rotation metadata is honoured; footage is cover-fit to the project size, or with data.json
@@ -44,7 +45,9 @@ def main(project):
         if e.get("blur"):
             vf += ["boxblur=22:2", "eq=brightness=-0.06:saturation=0.85"]
         vf += [f"fps={fps}", f"tpad=stop_mode=clone:stop_duration={D}", f"trim=duration={D}", "setsar=1"]
-        af = ["asetpts=PTS-STARTPTS"] + ([f"atempo={k:.4f}"] if k != 1.0 else []) + \
+        clean = ["highpass=f=90", "adeclip", "afftdn=nf=-30", "acompressor=threshold=-20dB:ratio=4:attack=5:release=150",
+                 "loudnorm=I=-15:TP=-2:LRA=6"] if e.get("clean") else []   # creator speaking: fix clipping/noise/level
+        af = ["asetpts=PTS-STARTPTS"] + clean + ([f"atempo={k:.4f}"] if k != 1.0 else []) + \
              [f"volume={e.get('vol', 1.0)}", "apad", f"atrim=duration={D}"]   # per-segment footage level
         v = seg_dir / f"{i:02d}.mp4"; aw = seg_dir / f"{i:02d}.wav"
         src = str(project / e["clip"])
