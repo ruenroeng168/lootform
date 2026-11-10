@@ -52,6 +52,13 @@ def silences(x, min_len=0.22):
     return out
 
 
+def clip_dur(f):
+    return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(f)], capture_output=True, text=True).stdout)
+
+
+CLIP_DUR = {f"c{i}": clip_dur(P.A / f"c{i}.mp4") for i in range(1, 6)}
+
+
 def main():
     caps = P.CAPS
     texts = [c[3].replace("…", "").strip() for c in caps]
@@ -80,10 +87,15 @@ def main():
         c, a, b, _ = caps[ci]
         span = max(0.3, b - a)
         z = next((p[3] for p in P.PIECES if p[0] == c and p[1] - 0.05 <= a <= p[2]), 1.0)
-        f = min(1.35, max(0.7, span / D))      # playback speed so the source span roughly fills the window
+        # Real-time playback only (slow-motion duplicated every 3rd frame = judder, and a too-short span ended
+        # in a frozen frame). If the voice runs longer than the spoken span, show neighbouring footage of the
+        # same clip; slow down only if the whole clip is shorter than the window (never below 0.9x).
+        cd = CLIP_DUR[c]
+        a0 = a if a + D <= cd - 0.05 else max(0.0, cd - 0.05 - D)
+        f = 1.0 if a0 + D <= cd - 0.05 else max(0.9, (cd - 0.05 - a0) / D)
         out = SEG / f"{k:02d}.mp4"
-        vf = f"setpts=(PTS-STARTPTS)/{f:.4f}," + P.speaker_vf(z, D)
-        src = ["-ss", f"{a}", "-t", f"{min(span, D * f) + 0.05:.3f}", "-i", str(P.A / f"{c}.mp4")]
+        vf = f"fps={FPS},setpts=(PTS-STARTPTS)/{f:.4f}," + P.speaker_vf(z, D)
+        src = ["-ss", f"{a0:.3f}", "-t", f"{D * f + 0.1:.3f}", "-i", str(P.A / f"{c}.mp4")]
         br = BROLL_CAPS.get(ci)
         if not br:
             run(src + ["-vf", vf, "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p", str(out)])
