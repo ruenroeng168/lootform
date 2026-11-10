@@ -1,0 +1,19 @@
+{
+  "id": "review-001",
+  "title": "รีวิว: ดูขวดน้ำอย่างไรให้ตรงกับการใช้งาน",
+  "content_type": "product_review",
+  "primary_goal": "help viewers evaluate a product honestly",
+  "language": "th-TH",
+  "platforms": ["youtube", "shorts"],
+  "video": {"width": 1920, "height": 1080, "fps": 30, "duration_target_seconds": 44},
+  "hook": {"variant": "A", "text": "ขวดน้ำใบนี้เหมาะกับการใช้งานของคุณจริงไหม?", "first_frame": "Real product footage if supplied; otherwise labelled diagram preview"},
+  "claims_ledger": "examples/claims/product-review.csv",
+  "shots": [
+    {"id":"s01","start_seconds":0,"end_seconds":6,"purpose":"open with a relevant buyer question","speaker":"narrator","dialogue":"ก่อนซื้อขวดน้ำ ลองดูว่ามันเข้ากับวิธีใช้งานของคุณไหม","visual":"Product closeup, pending real product footage","subtitle":"เลือกขวดน้ำให้เหมาะกับการใช้งาน"},
+    {"id":"s02","start_seconds":6,"end_seconds":16,"purpose":"evaluate a clear criterion","visual":"Split-screen checklist of size and carry method, illustrative only","on_screen_text":"1. ขนาดและวิธีพก"},
+    {"id":"s03","start_seconds":16,"end_seconds":27,"purpose":"show what needs real evidence","visual":"Unedited hands-on test placeholder, do not invent a test","on_screen_text":"2. ดูฝาและการใช้งานจริง"},
+    {"id":"s04","start_seconds":27,"end_seconds":38,"purpose":"acknowledge tradeoffs","visual":"Honest pro/con checklist; no unsupported verdict","on_screen_text":"3. เปรียบเทียบข้อดีและข้อจำกัด"},
+    {"id":"s05","start_seconds":38,"end_seconds":44,"purpose":"ethical close","visual":"Simple question card","on_screen_text":"เลือกจากการใช้งานจริง ไม่ใช่แค่คำโฆษณา"}
+  ],
+  "production_notes": ["PROTOTYPE ONLY: no actual product footage, performance test, or voice supplied", "Use actual video, verified specs and proper rights before describing as a tested review"]
+}

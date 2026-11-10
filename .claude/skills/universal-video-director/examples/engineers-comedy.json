@@ -1,0 +1,34 @@
+{
+  "id": "site-chaos-ep01",
+  "title": "วิศวกรโยธา VS ไฟฟ้า: เจาะคานอีกแล้วเหรอ",
+  "language": "th-TH",
+  "platforms": ["tiktok", "reels", "shorts"],
+  "video": {"width": 1080, "height": 1920, "fps": 30, "duration_target_seconds": 30},
+  "hook": {
+    "variant": "A",
+    "text": "ไอ้โย! กูขอเจาะคานรูนึง!",
+    "first_frame": "ช่างไฟถือสว่านจ่อคาน ช่างโยธาทำหน้าตกใจ"
+  },
+  "characters": [
+    {"id": "yo", "name": "ไอ้โย", "voice": "ห้วน โวยวาย แต่จริงใจ", "visual_asset": "art/civil.svg"},
+    {"id": "shock", "name": "ไอ้ช็อต", "voice": "กวนๆ พูดไวแบบหน้าตาย", "visual_asset": "art/electric.svg"},
+    {"id": "boss", "name": "เฮียเสี่ย", "voice": "นิ่งๆ มั่นใจ ชอบสั่งงานเกินงบ", "visual_asset": "art/boss.svg"}
+  ],
+  "shots": [
+    {"id":"s01","start_seconds":0.0,"end_seconds":2.8,"purpose":"hook","speaker":"shock","dialogue":"ไอ้โย! กูขอเจาะคานรูนึง!","direction":"ตะโกนจากนอกจอ ยกสว่าน","visual":"close-up สว่านที่ห่างคาน เน้นการแสดงตลก ไม่ลงมือเจาะ","image_asset":"art/electric.svg","voice_asset":null,"camera":"snap_zoom","subtitle":"ขอเจาะคานรูนึง!","sfx":"record_scratch"},
+    {"id":"s02","start_seconds":2.8,"end_seconds":7.0,"purpose":"conflict","speaker":"yo","dialogue":"มึงเรียนไฟฟ้าหรือเรียนเป็นปลวกวะ เห็นคานกูก็จะแทะ!","direction":"กอดแบบโครงสร้าง หัวร้อน","visual":"civil engineer close-up reaction","image_asset":"art/civil.svg","voice_asset":null,"camera":"push_in","subtitle":"เรียนไฟฟ้าหรือเรียนเป็นปลวก!?","sfx":null},
+    {"id":"s03","start_seconds":7.0,"end_seconds":10.5,"purpose":"escalation","speaker":"shock","dialogue":"แล้วมึงจะให้กูเดินท่อทางไหน!","direction":"ชี้แบบที่ขัดกัน","visual":"electric engineer points at conflicting plan","image_asset":"art/electric.svg","voice_asset":null,"camera":"handheld_light","subtitle":"แล้วจะให้กูเดินท่อทางไหน!?","sfx":null},
+    {"id":"s04","start_seconds":10.5,"end_seconds":12.7,"purpose":"escalation","speaker":"yo","dialogue":"เดินอ้อมสิวะ!","direction":"หน้าตายและชี้ไปทางอ้อม","visual":"civil engineer reaction","image_asset":"art/civil.svg","voice_asset":null,"camera":"smash_cut","subtitle":"เดินอ้อมสิวะ!","sfx":"boing_short"},
+    {"id":"s05","start_seconds":12.7,"end_seconds":17.8,"purpose":"escalation","speaker":"shock","dialogue":"งั้นมึงก็อ้อมไปรับเงินเดือนเองนะ กูจะลาออก!","direction":"ชี้หน้าแล้วหันหลัง","visual":"electric engineer mock exit","image_asset":"art/electric.svg","voice_asset":null,"camera":"zoom_out","subtitle":"อ้อมไปรับเงินเดือนเอง!","sfx":null},
+    {"id":"s06","start_seconds":17.8,"end_seconds":22.6,"purpose":"reversal","speaker":"boss","dialogue":"พวกมึงหยุดเถียงก่อน กูยังไม่มีเงินจ่ายงวดนี้!","direction":"เดินเข้ากลางเฟรม น้ำเสียงปกติ","visual":"boss appears from foreground","image_asset":"art/boss.svg","voice_asset":null,"camera":"dramatic_push","subtitle":"กูยังไม่มีเงินจ่ายงวดนี้!","sfx":"dramatic_sting"},
+    {"id":"s07","start_seconds":22.6,"end_seconds":26.2,"purpose":"punchline","speaker":null,"dialogue":"","direction":"ทั้งคู่มองหน้ากัน เงียบ แล้วหันมองกล้อง","visual":"two engineers silent reaction split screen","image_asset":null,"voice_asset":null,"camera":"freeze_reaction","subtitle":"...","sfx":"cricket_short"},
+    {"id":"s08","start_seconds":26.2,"end_seconds":29.8,"purpose":"punchline","speaker":"yo","dialogue":"มึงเอาสว่านมา กูขอยืมหน่อย!","direction":"เปลี่ยนจากหวงคานเป็นโกรธเฮียเสี่ยแบบการ์ตูน ไม่ทำร้ายจริง","visual":"comical cutaway without depicting violence","image_asset":"art/civil.svg","voice_asset":null,"camera":"comedy_whip","subtitle":"เอาสว่านมา กูขอยืมหน่อย!","sfx":"comic_pop"}
+  ],
+  "end_card": {"text": "ไซต์งานนรกแตก EP.1", "cta": "ทีมโยธาหรือทีมไฟฟ้า?"},
+  "production_notes": [
+    "This is a script/timing PLAN, not a voiced video.",
+    "Shot durations MUST be retimed after actual voice files are generated and reviewed.",
+    "SFX names are creative cues, not bundled sound files.",
+    "No construction drilling operation should be shown as a recommended procedure."
+  ]
+}

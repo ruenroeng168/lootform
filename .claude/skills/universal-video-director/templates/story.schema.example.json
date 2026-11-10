@@ -1,0 +1,33 @@
+{
+  "$comment": "Example data format, not JSON Schema. Works for ANY genre. Validate with scripts/validate_story.py.",
+  "id": "project-001",
+  "title": "Video working title",
+  "content_type": "education",
+  "primary_goal": "teach one actionable idea",
+  "language": "th-TH",
+  "platforms": ["youtube"],
+  "video": {"width": 1920, "height": 1080, "fps": 30, "duration_target_seconds": 60},
+  "hook": {"variant": "A", "text": "Specific question viewers want answered", "first_frame": "A relevant illustration"},
+  "claims_ledger": "claims-ledger.csv",
+  "characters": [],
+  "shots": [
+    {
+      "id": "s01",
+      "start_seconds": 0,
+      "end_seconds": 8,
+      "purpose": "Make the question clear and frame the lesson",
+      "speaker": "narrator",
+      "dialogue": "Voiceover text when needed, or omit for silent formats.",
+      "voice_asset": null,
+      "visual": "A labelled diagram",
+      "video_asset": null,
+      "image_asset": null,
+      "camera": "static",
+      "subtitle": "Voiceover text when needed",
+      "on_screen_text": "One readable idea",
+      "sfx": null
+    }
+  ],
+  "end_card": {"text": "", "cta": ""},
+  "production_notes": ["No voice or real source footage supplied: provisional timing only."]
+}

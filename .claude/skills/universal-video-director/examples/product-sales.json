@@ -1,0 +1,18 @@
+{
+  "id": "sales-001",
+  "title": "โฆษณา: ตัวอย่างสาธิตอุปกรณ์จัดระเบียบโต๊ะ",
+  "content_type": "product_sales",
+  "primary_goal": "inform interested buyers with a verified product demonstration",
+  "language": "th-TH",
+  "platforms": ["tiktok", "reels"],
+  "video": {"width": 1080, "height": 1920, "fps": 30, "duration_target_seconds": 24},
+  "hook": {"variant": "B", "text": "โต๊ะรกจนหาของไม่เจอ?", "first_frame": "Generic problem illustration labelled as illustration"},
+  "claims_ledger": "examples/claims/product-sales.csv",
+  "shots": [
+    {"id":"s01","start_seconds":0,"end_seconds":4,"purpose":"audience pain point","visual":"Illustrated cluttered desk with clear graphic label","on_screen_text":"โต๊ะรกจนหาอะไรไม่เจอ?"},
+    {"id":"s02","start_seconds":4,"end_seconds":11,"purpose":"demonstrate the featured product if actual footage available","visual":"ACTUAL product usage footage required; placeholder card only","on_screen_text":"สาธิตจากสินค้าจริง"},
+    {"id":"s03","start_seconds":11,"end_seconds":18,"purpose":"match use case with verified specs","visual":"Verified product name/size/features, omit unverified fields","on_screen_text":"เช็กขนาดให้เหมาะกับโต๊ะของคุณ"},
+    {"id":"s04","start_seconds":18,"end_seconds":24,"purpose":"clear next step without fake price offer","visual":"Simple CTA card without invented price","on_screen_text":"ดูรายละเอียดสินค้าและเงื่อนไขก่อนสั่งซื้อ"}
+  ],
+  "production_notes": ["CONCEPT STORYBOARD ONLY: product photos/video, price, inventory and buy link are not supplied", "Never portray illustration as real product test"]
+}

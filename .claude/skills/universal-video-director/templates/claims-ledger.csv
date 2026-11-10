@@ -1,0 +1,2 @@
+claim_id,claim,evidence,status,material,on_screen_treatment,notes
+C001,Example product performance claim,,UNVERIFIED,yes,omit until evidence exists,Placeholder row; replace it before release

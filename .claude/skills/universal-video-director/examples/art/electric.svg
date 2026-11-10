@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#15364A"/><stop offset="1" stop-color="#45837B"/></linearGradient>
+  <linearGradient id="face" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B68C"/><stop offset="1" stop-color="#B97750"/></linearGradient>
+  <filter id="drop" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="22" stdDeviation="18" flood-opacity="0.28"/></filter>
+</defs>
+
+<g filter="url(#drop)" stroke-linejoin="round">
+  <!-- Torso, arm silhouettes and neck -->
+  <path d="M180 1790 Q154 1290 327 1184 Q429 1134 539 1151 Q669 1136 754 1192 Q933 1300 911 1790 Z" fill="#365B68" stroke="#152D3C" stroke-width="24"/>
+  <path d="M475 1070 L473 1220 Q542 1300 610 1221 L605 1070" fill="#B97750" stroke="#583B32" stroke-width="16"/>
+  <path d="M390 1198 L515 1620 L565 1620 L695 1198" fill="none" stroke="#51BBD6" stroke-width="85" stroke-linejoin="round"/>
+  <path d="M219 1560 Q150 1480 136 1620 Q123 1740 212 1782 L364 1770" fill="#365B68" stroke="#172E3C" stroke-width="20"/>
+  <path d="M862 1570 Q956 1478 972 1633 Q973 1758 860 1791 L713 1755" fill="#365B68" stroke="#172E3C" stroke-width="20"/>
+  <!-- Ears and face -->
+  <ellipse cx="307" cy="810" rx="68" ry="102" fill="#B97750" stroke="#653E34" stroke-width="15"/>
+  <ellipse cx="774" cy="810" rx="68" ry="102" fill="#B97750" stroke="#653E34" stroke-width="15"/>
+  <path d="M302 568 Q530 432 769 576 L763 904 Q736 1105 539 1114 Q338 1109 310 906 Z" fill="url(#face)" stroke="#653E34" stroke-width="19"/>
+  <path d="M336 924 Q538 1029 734 923" stroke="#D77A6A" stroke-opacity="0.27" stroke-width="33" fill="none"/>
+  <g stroke="#1D3444" stroke-width="13" stroke-linejoin="round">
+    <path d="M288 612 Q310 355 542 343 Q780 361 795 610 L286 610 Z" fill="#F4D648" />
+    <path d="M249 607 Q541 569 833 605 Q842 629 806 640 L275 640 Q241 627 249 607 Z" fill="#F4D648" />
+    <path d="M530 350 L535 606" stroke="#FFFFFF" stroke-opacity="0.30" stroke-width="24" />
+    </g>
+  <!-- Eyebrows and eyes -->
+  <path d="M355 680 Q415 665 465 681" stroke="#30242D" stroke-width="30" stroke-linecap="round" fill="none"/>
+  <path d="M609 681 Q668 660 730 676" stroke="#30242D" stroke-width="30" stroke-linecap="round" fill="none"/>
+  <ellipse cx="410" cy="769" rx="29" ry="35" fill="#fff"/><ellipse cx="667" cy="769" rx="29" ry="35" fill="#fff"/>
+  <circle cx="425" cy="773" r="17" fill="#202C36"/><circle cx="652" cy="773" r="17" fill="#202C36"/>
+  <path d="M536 767 L513 842 Q544 858 570 840" fill="none" stroke="#9D6249" stroke-width="15" stroke-linecap="round"/>
+  <path d="M475 874 Q565 935 619 856" stroke="#5E2B2A" stroke-width="19" stroke-linecap="round" fill="none"/>
+  
+  <path d="M450 1620 Q546 1653 629 1620" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-opacity="0.25"/>
+</g>
+</svg>

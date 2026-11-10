@@ -1,0 +1,16 @@
+{
+  "id": "interview-001",
+  "title": "Podcast highlight paper edit",
+  "content_type": "interview",
+  "primary_goal": "faithfully share one useful answer from a real conversation",
+  "language": "th-TH",
+  "platforms": ["shorts", "reels"],
+  "video": {"width": 1080, "height": 1920, "fps": 30, "duration_target_seconds": 28},
+  "hook": {"variant": "A", "text": "Question sourced from actual conversation", "first_frame": "Real interview recording is required, not synthesized talking-head"},
+  "shots": [
+    {"id":"s01","start_seconds":0,"end_seconds":8,"purpose":"open on sourced question","visual":"SOURCE_FOOTAGE_REQUIRED: source clip and timecode must be recorded","on_screen_text":"คำถามที่ชวนคิด"},
+    {"id":"s02","start_seconds":8,"end_seconds":23,"purpose":"retain authentic contextual answer","visual":"SOURCE_FOOTAGE_REQUIRED: preserve speaker quote and qualifier","on_screen_text":"คำตอบจากผู้ให้สัมภาษณ์จริง"},
+    {"id":"s03","start_seconds":23,"end_seconds":28,"purpose":"close with fair source attribution","visual":"Speaker and episode attribution card with verified names","on_screen_text":"รับชมบทสนทนาฉบับเต็ม"}
+  ],
+  "production_notes": ["PAPER EDIT ONLY: source audio/video, consent, transcript and timecodes not supplied", "Do not invent interviews or present placeholder quotes as real"]
+}

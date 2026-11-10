@@ -1,0 +1,18 @@
+{
+  "id": "learn-001",
+  "title": "สอนจัดโครงสร้างคลิปให้เล่าเรื่องเข้าใจง่าย",
+  "content_type": "education",
+  "primary_goal": "explain three components of a clear short tutorial",
+  "language": "th-TH",
+  "platforms": ["youtube"],
+  "video": {"width": 1920, "height": 1080, "fps": 30, "duration_target_seconds": 42},
+  "hook": {"variant": "A", "text": "อยากให้คลิปสอนเข้าใจง่ายขึ้น?", "first_frame": "Readable three-part diagram: question, example, summary"},
+  "claims_ledger": "examples/claims/education-explainer.csv",
+  "shots": [
+    {"id":"s01","start_seconds":0,"end_seconds":6,"purpose":"state learning outcome","visual":"Flat vector diagram appears one item at a time","on_screen_text":"คลิปสอนที่ดีต้องตอบคำถามให้ชัด"},
+    {"id":"s02","start_seconds":6,"end_seconds":18,"purpose":"teach step one: question","visual":"Highlight QUESTION area and sample topic","on_screen_text":"1. เริ่มด้วยคำถามเดียว"},
+    {"id":"s03","start_seconds":18,"end_seconds":31,"purpose":"teach step two: concrete example","visual":"Step-by-step vector annotation, no sound required","on_screen_text":"2. ยกตัวอย่างให้เห็นภาพ"},
+    {"id":"s04","start_seconds":31,"end_seconds":42,"purpose":"recap and viewer action","visual":"Diagram all three sections with recap","on_screen_text":"3. สรุปสิ่งที่นำไปใช้ได้"}
+  ],
+  "production_notes": ["Silent motion-graphic proof of concept; voice optional", "Do not claim an actual rendered export until rendered and watched"]
+}
