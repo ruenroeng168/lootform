@@ -67,6 +67,12 @@ EVENTS = {  # name: (clip, t)
     "honest": ("c4", 0.80), "fail": ("c4", 6.55), "real": ("c5", 1.05),
     "work_ok": ("c5", 6.20), "work_no": ("c5", 6.95), "follow": ("c5", 8.60), "together": ("c5", 10.32),
 }
+VOICE = ("highpass=f=75,adeclip,afftdn=nf=-30:tn=1,"
+         "rubberband=pitch=0.955:formant=preserved,"                       # ~0.8 semitone deeper, formants kept natural
+         "equalizer=f=140:t=q:w=0.9:g=3.5,equalizer=f=380:t=q:w=1.2:g=-3,"  # body up, boxiness down
+         "equalizer=f=3200:t=q:w=1:g=3,deesser=i=0.35:f=0.55,"            # presence, tame 's'
+         "acompressor=threshold=-24dB:ratio=4.5:attack=3:release=120:makeup=3,"
+         "alimiter=limit=0.89:attack=2:release=60,loudnorm=I=-14:TP=-1.5:LRA=5")
 GRADE = ("hqdn3d=4:3:6:4,colorbalance=rs=-0.02:gs=-0.02:bs=0.05:rm=0.02:bm=0.02,"
          "eq=gamma=1.28:contrast=1.08:saturation=1.12:brightness=0.02,unsharp=5:5:0.6")
 
@@ -88,7 +94,49 @@ def src_of(proj):
             return PROJ / proj / "out" / n
 
 
+KEY = {("c1", 3.20), ("c2", 2.46), ("c3", 7.85), ("c3", 9.50), ("c4", 6.55), ("c5", 1.05), ("c5", 8.60)}  # lines that get a beat before them
+GAP_KEEP, GAP_BEAT, GAP_MIN = 0.22, 0.42, 0.30
+
+
+def pauses(c, a, b):
+    """Silences (s, e) inside [a, b] of clip c, measured on denoised speech band."""
+    x = np.frombuffer(subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{a}", "-to", f"{b}", "-i", str(A / f"{c}.mp4"), "-ac", "1", "-ar", "8000",
+                                      "-af", "highpass=f=150,afftdn=nf=-25", "-f", "s16le", "-"], capture_output=True).stdout, np.int16) / 32768
+    hop = 160
+    db = 20 * np.log10(np.array([np.sqrt(np.mean(x[k:k + hop] ** 2)) for k in range(0, len(x) - hop, hop)]) + 1e-9)
+    db = np.convolve(db, np.ones(3) / 3, "same"); thr = np.percentile(db, 95) - 21; sil = db < thr
+    out, k = [], 0
+    while k < len(sil):
+        if sil[k]:
+            j = k
+            while j < len(sil) and sil[j]: j += 1
+            s0, e0 = a + k * hop / 8000, a + j * hop / 8000
+            if e0 - s0 >= GAP_MIN and s0 > a + 0.05 and e0 < b - 0.05: out.append((s0, e0))
+            k = j
+        else: k += 1
+    return out
+
+
+def tighten(pieces):
+    res = []
+    for c, a, b, z, br in pieces:
+        if br:
+            res.append((c, a, b, z, br)); continue
+        cur = a
+        for s0, e0 in pauses(c, a, b):
+            beat = any(kc == c and e0 - 0.1 <= kt <= e0 + 0.45 for kc, kt in KEY)
+            keep = GAP_BEAT if beat else GAP_KEEP
+            if e0 - s0 <= keep + 0.05: continue
+            res.append((c, cur, s0 + keep / 2, z, None)); cur = e0 - keep / 2
+        res.append((c, cur, b, z, None))
+    return [p for p in res if p[2] - p[1] > 0.12]
+
+
 def main():
+    global PIECES
+    n0 = sum(p[2] - p[1] for p in PIECES)
+    PIECES = tighten(PIECES)
+    print(f"[prep] pacing: {n0:.2f}s -> {sum(p[2] - p[1] for p in PIECES):.2f}s in {len(PIECES)} pieces")
     starts, t, segs = [], 0.0, []
     brolls = {}
     for i, (c, a, b, z, br) in enumerate(PIECES):
@@ -121,12 +169,11 @@ def main():
     for i, (c, a, b, z, br) in enumerate(PIECES):
         f = SEG / f"{i:02d}.wav"; d = b - a
         run(["-ss", f"{a}", "-t", f"{d}", "-i", str(A / f"{c}.mp4"), "-vn", "-ac", "1", "-ar", "48000",
-             "-af", f"afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03", str(f)])
+             "-af", f"afade=t=in:d=0.012,afade=t=out:st={d - 0.02:.3f}:d=0.02", str(f)])
         aw.append(f)
     (SEG / "a.txt").write_text("".join(f"file '{s}'\n" for s in aw))
     run(["-f", "concat", "-safe", "0", "-i", str(SEG / "a.txt"), "-af",
-         "highpass=f=90,adeclip,afftdn=nf=-28,equalizer=f=3000:t=q:w=1:g=2.5,"
-         "acompressor=threshold=-20dB:ratio=3.5:attack=5:release=150,loudnorm=I=-15:TP=-2:LRA=6,apad",
+         VOICE + ",apad",
          "-t", f"{total:.3f}", "-ac", "2", str(OUT / "footage.wav")])
 
     def m(c, x):  # source time -> output time
