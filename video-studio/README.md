@@ -60,3 +60,7 @@ Every full render (`build.py` or `render.mjs` without `--frames`) also runs `eng
 - `data.json → "fit": "blur"` (+ `"fit_y"`): square/landscape clips shown full-width over a blurred fill.
 - EDL entry `"clean": true`: voice clean-up chain on that segment (de-clip, denoise, compressor, -15 LUFS).
 - Long scripts: Gemini batch TTS splits automatically into takes of ≤ `tts.batch_chars` (450) characters; if an auto split is wrong set `tts.splits` = per-take cut times in seconds.
+
+## Offline forced alignment (no API quota)
+`engine/align.py` (faster-whisper `small` int8 CPU + script matching) returns a (start, end) per known script line in an audio take; deterministic decoding, retries prompts, snaps boundaries to pauses. Use it whenever the Gemini ASR is rate-limited, or to split a multi-line TTS take reliably:
+`python3 engine/align.py take.wav lines.txt`. Requires `pip install faster-whisper`; model cached in `models/hf`.
