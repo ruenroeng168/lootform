@@ -17,12 +17,14 @@ import synth as S  # noqa: E402
 W, H, FPS = 1080, 1920, 30
 GRADE = ("hqdn3d=4:3:6:4,colorbalance=rs=-0.02:gs=-0.02:bs=0.05:rm=0.02:bm=0.02,"
          "eq=gamma=1.22:contrast=1.08:saturation=1.12:brightness=0.02,unsharp=5:5:0.6")
-VOICE = ("highpass=f=80,adeclip,afftdn=nr=20:nf=-38:tn=1,afftdn=nr=8:nf=-42,"
-         "agate=threshold=0.015:ratio=2.5:range=0.2:attack=4:release=140,"
-         "equalizer=f=150:t=q:w=1:g=1.5,equalizer=f=380:t=q:w=1.2:g=-2.5,equalizer=f=2800:t=q:w=1:g=1.5,"
-         "deesser=i=0.7:m=0.6:f=0.45,equalizer=f=6800:t=q:w=1.4:g=-4,highshelf=f=9000:g=-3,lowpass=f=12000,"
-         "acompressor=threshold=-24dB:ratio=4:attack=4:release=130:makeup=3,alimiter=limit=0.89,loudnorm=I=-14:TP=-1.5:LRA=5")
-HOST = "highpass=f=90,equalizer=f=3000:t=q:w=1:g=1,acompressor=threshold=-22dB:ratio=3:makeup=2,loudnorm=I=-15:TP=-1.5"
+VOICE = ("highpass=f=85:poles=2,highpass=f=85:poles=2,"                      # phone-mic rumble / fan hum
+         "afftdn=nr=22:nf=-38:tn=1,afftdn=nr=8:nf=-46,"                         # two-pass room-noise reduction
+         "agate=threshold=0.012:ratio=1.8:range=0.5:attack=5:release=180,"      # gentle (-6 dB) between words
+         "equalizer=f=130:t=q:w=1:g=-4,equalizer=f=280:t=q:w=1:g=-6,equalizer=f=550:t=q:w=1.2:g=-2.5,"  # boomy/muddy close mic
+         "equalizer=f=3000:t=q:w=1.2:g=6,equalizer=f=5000:t=q:w=1:g=3,highshelf=f=7500:g=5,highshelf=f=10000:g=3,"  # clarity + air
+         "deesser=i=0.3:m=0.5:f=0.55,"
+         "acompressor=threshold=-24dB:ratio=3:attack=5:release=120:makeup=2,alimiter=limit=0.89,loudnorm=I=-15:TP=-1.5:LRA=6")
+HOST = "atempo=0.95,highpass=f=80,equalizer=f=200:t=q:w=1:g=1.5,deesser=i=0.3:f=0.5,acompressor=threshold=-22dB:ratio=2.5:makeup=1,loudnorm=I=-15:TP=-1.5:LRA=6"
 
 # answers: pieces (source in/out s), captions in source time, photos for the b-roll montage
 ANS = {
@@ -94,7 +96,9 @@ def main():
     Q = json.loads((HERE / "questions.json").read_text())
     qwav = next((OUT / "q").glob("*.wav"))
     qa = load_audio(qwav, HOST); spans = json.loads((OUT / "q" / "spans.json").read_text())
-    qclip = [qa[int(a * S.SR):int(b * S.SR)] for a, b in spans]
+    st = 1 / 0.95                                        # HOST slows the host by atempo 0.95
+    qclip = [qa[int(max(0, a * st - 0.03) * S.SR):int((b * st + 0.08) * S.SR)] for a, b in spans]
+    qclip = [c * np.minimum(1, np.minimum(np.arange(len(c)) / 300, (len(c) - np.arange(len(c))) / 1200)) for c in qclip]
     clean = {k: load_audio(A / f"{k}.mp4", VOICE) for k in ANS}
 
     enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",

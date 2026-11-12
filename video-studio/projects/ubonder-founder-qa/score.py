@@ -19,7 +19,9 @@ def build(duration, D):
             drums.add(t0 + i * beat + beat / 2, S.hat(0.04), 0.06)
             if i % 2: drums.add(t0 + i * beat, S.clap(0.18), 0.08)
     tour = D["tour"]["start"]; end = D["end"]
-    g = [(0, 0), (0.3, 0.75), (tour - 0.2, 0.8), (tour, 1.0), (duration - 0.6, 1.0), (duration, 0), (duration + 1, 0)]
+    o = D["outro"][0]   # the tour has no voice until the host outro: lift the bed there so loudness stays even
+    g = [(0, 0), (0.3, 0.75), (tour - 0.2, 0.8), (tour + 0.3, 2.1), (o - 0.4, 2.1), (o, 1.1), (end, 1.1), (end + 0.3, 1.7),
+         (duration - 0.6, 1.7), (duration, 0), (duration + 1, 0)]
     for tr in (keys, low, drums): tr.gate(g)
     drums.gate([(0, 0), (D["segs"][2][1], 0), (D["segs"][2][1] + 0.1, 1), (duration + 1, 1)])   # beat enters at Q2
     music = S.lowpass(keys.buf, 4000) + low.buf + drums.buf
