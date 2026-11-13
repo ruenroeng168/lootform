@@ -15,3 +15,10 @@ Images: AI stills from the user (assets/ai*.jpg, gitignored); faces allowed; cor
 
 Waiting on the user: S1a–c (hands repairing) and S5 (job done) images, or the go-ahead to fill them with the
 real technician photos from ubonder-founder-qa.
+
+## Update: winter / water-heater angle (proposed, waiting for hook choice + W1–W5 images)
+Hook options: ก "หน้าหนาวมาแล้ว… แต่ถ้าเครื่องทำน้ำอุ่นไม่มีสายดิน อาบน้ำอาจโดนไฟดูด!" (recommended) · ข "ตื่นเช้ามาอาบน้ำเย็นเฉียบ… หน้าหนาวนี้ไม่ต้องทนแล้ว" · ค "เครื่องทำน้ำอุ่นในบ้านคุณ… ติดถูกวิธีหรือยัง?"
+New lines: safety "ติดเครื่องทำน้ำอุ่นให้ปลอดภัย ต้องมีสายดิน และเบรกเกอร์กันดูด ควรให้ช่างไฟฟ้าทำ"; end "หน้าหนาวนี้ อาบน้ำอุ่นแบบสบายใจ… แจ้งงานช่างที่ อุบลเด้อ".
+Steps s1–s4 reuse the Puck take already generated (lines.json, out/vo spans verified); the 15-categories line is dropped.
+Images still needed: W1 steamy bathroom + heater, W2 technician mounting heater, W3 ground wire, W4 RCD test button, W5 warm shower stream.
+Have: ai1 hero, ai2 phone, ai3 wai at gate, ai4 inspect AC, ai5 quote, ai6 thumbs-up at sink, ai7 farewell at door.
