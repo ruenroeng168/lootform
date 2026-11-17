@@ -1,5 +1,5 @@
-// Overlay for ทางหลวง FC "ศึกแย่งปลอกคอกัปตัน" (wildlife-documentary parody) on out/base.mp4 from prep.py.
-// Letterbox + narrator captions, interview captions, title card, field-guide cards, "voted out" stamp,
+// Overlay for ทางหลวง FC "ศึกแย่งปลอกแขนกัปตัน" (intense football-drama documentary) on out/base.mp4 from prep.py.
+// Breaking-news ticker, letterbox + narrator captions, interview captions, title card, player-profile cards, "voted out" stamp,
 // a drawn night-pond reconstruction of the lost ball, and the team-logo end card.
 (function () {
   const { clamp, prog, ease } = window.L;
@@ -34,9 +34,9 @@
     const parts = s.split("…").map((p) => p.trim()).filter(Boolean), tot = parts.reduce((n, p) => n + p.length, 0);
     let acc = 0, cur = parts[0];
     for (const p of parts) { if (t >= a + (b - a) * acc / tot - 0.05) cur = p; acc += p.length; }
-    const z = 50, lines = splitThai(cur, 940, z, F.n).slice(-2);
+    const z = 52, lines = splitThai(cur, 940, z, F.b).slice(-2);
     g.save(); g.globalAlpha = al;
-    lines.forEach((l, i) => outlined(l, 540, 1630 + (i - (lines.length - 1)) * 66, fitSize(l, z, 980, F.n), CREAM, 1, F.n));
+    lines.forEach((l, i) => outlined(l, 540, 1630 + (i - (lines.length - 1)) * 66, fitSize(l, z, 980, F.b), "#fff", 1, F.b));
     g.restore();
   }
   function caps(t) {
@@ -49,29 +49,39 @@
     if (!D.title) return; const [a, b] = D.title, al = vis(t, a, b + 0.2); if (al <= 0) return;
     const beats = [0.1, 0.52, 0.94].map((x) => a + x), shake = beats.reduce((s, bt) => s + (t >= bt && t < bt + 0.25 ? (1 - (t - bt) / 0.25) * 10 : 0), 0);
     g.save(); g.globalAlpha = al; g.translate(Math.sin(t * 90) * shake, Math.cos(t * 70) * shake);
-    txt("สารคดีชีวิตสัตว์ฟุตบอล · ทางหลวง FC", 540, 640, F.m(36), CREAM);
+    rr(300, 612, 480, 56, 8); g.fillStyle = RED; g.fill(); txt("สารคดีลูกหนัง · ทางหลวง FC", 540, 641, F.b(34), "#fff");
     const k1 = ease.outBack(prog(t, beats[0], beats[0] + 0.3), 2), k2 = ease.outBack(prog(t, beats[2], beats[2] + 0.35), 2.4);
-    if (k1 > 0) outlined("ศึกแย่งปลอกคอกัปตัน", 540, 800, fitSize("ศึกแย่งปลอกคอกัปตัน", 104, 1000), "#fff", k1);
+    if (k1 > 0) outlined("ศึกแย่งปลอกแขนกัปตัน", 540, 800, fitSize("ศึกแย่งปลอกแขนกัปตัน", 104, 1000), "#fff", k1);
     if (k2 > 0) outlined("น้องรักหักเหลี่ยมโหด", 540, 950, fitSize("น้องรักหักเหลี่ยมโหด", 112, 1000), YEL, k2);
     g.restore();
   }
   const CARD = {
-    mod: ["มด 49", "Formica highwayensis", [["ตำแหน่ง", "จ่าฝูง (ขณะนี้)"], ["จุดเด่น", "รับปากห่อข้าวเหนียว"], ["ผลงาน", "พาลูกฝูงเข้าฝูงเอง"]]],
-    tar: ["ต้าร์", "Juvenis ballboyus", [["ตำแหน่ง", "จ่าฝูงคนใหม่"], ["ประวัติ", "อดีตเด็กเก็บบอล"], ["อาวุธ", "รอยยิ้มบริสุทธิ์"]]],
+    mod: ["มด", "#49", [["สถานะ", "กัปตันทีม"], ["ผลงาน", "ดึงต้าร์เข้าทีม"], ["จุดอ่อน", "ไม่ลงน้ำ"]]],
+    tar: ["ต้าร์", "รุ่นน้อง", [["เส้นทาง", "เด็กเก็บบอล → กองกลาง"], ["ผู้พาเข้าทีม", "มด"], ["เป้าหมาย", "ปลอกแขนกัปตัน"]]],
   };
   function cards(t) {
     D.cards.forEach(([who, a, b]) => {
-      const al = vis(t, a, b); if (al <= 0) return; const [name, latin, rows] = CARD[who];
-      const k = ease.outCubic(prog(t, a, a + 0.4));
-      g.save(); g.globalAlpha = al; g.translate(60 + (1 - k) * -620, 170); g.rotate(-0.02);
-      shadow(() => { rr(0, 0, 600, 330, 10); g.fillStyle = CREAM; g.fill(); }, 30, 10);
-      g.strokeStyle = GREEN; g.lineWidth = 4; rr(14, 14, 572, 302, 6); g.stroke();
-      txt("บันทึกภาคสนาม", 36, 52, F.m(26), GREEN, "left");
-      txt(name, 36, 106, F.b(62), INK, "left");
-      g.font = `italic 600 30px "IBM Plex Sans Thai"`; g.fillStyle = "#6b5a3e"; g.textAlign = "left"; g.fillText(latin, 36 + 20 + g.measureText(name).width * 0 + 230, 112);
-      rows.forEach(([k2, v], i) => { txt(k2, 36, 178 + i * 46, F.m(30), GREEN, "left"); txt(v, 190, 178 + i * 46, F.b(32), INK, "left"); });
+      const al = vis(t, a, b); if (al <= 0) return; const [name, tag, rows] = CARD[who];
+      const k = ease.outCubic(prog(t, a, a + 0.35));
+      g.save(); g.globalAlpha = al; g.translate(50 + (1 - k) * -640, 165); g.transform(1, 0, -0.08, 1, 0, 0);
+      shadow(() => { rr(0, 0, 640, 320, 8); g.fillStyle = "rgba(12,12,12,0.92)"; g.fill(); }, 30, 10);
+      g.fillStyle = YEL; g.fillRect(0, 0, 640, 12); g.fillStyle = RED; g.fillRect(0, 0, 14, 320);
+      txt("โปรไฟล์ผู้เล่น · ทางหลวง FC", 44, 48, F.m(26), YEL, "left");
+      txt(name, 44, 110, F.b(72), "#fff", "left"); g.font = F.b(72); const nw = g.measureText(name).width;
+      txt(tag, 64 + nw, 116, F.d(44), YEL, "left");
+      rows.forEach(([k2, v], i) => { txt(k2, 44, 186 + i * 44, F.m(28), "#bbb", "left"); txt(v, 220, 186 + i * 44, F.b(32), i === rows.length - 1 ? YEL : "#fff", "left"); });
       g.restore();
     });
+  }
+  function ticker(t) {   // breaking-news strip on the cold open
+    const e = D.title ? D.title[0] : 3; if (t > e) return; const al = prog(t, 0.1, 0.35);
+    g.save(); g.globalAlpha = al; g.fillStyle = RED; g.fillRect(0, 1700, W, 76); g.fillStyle = "#fff"; g.fillRect(0, 1700, 230, 76);
+    txt("ข่าวด่วน", 115, 1739, F.b(42), RED);
+    g.save(); g.beginPath(); g.rect(230, 1700, W - 230, 76); g.clip();
+    const msg = "ทางหลวง FC ปลดกัปตันทีม · เหตุลูกบอลตกบึง · รุ่นน้องขึ้นเป็นกัปตันคนใหม่ ·  ";
+    g.font = F.b(38); const mw = g.measureText(msg).width, off = (t * 260) % mw;
+    for (let x = 250 - off; x < W; x += mw) txt(msg, x, 1740, F.b(38), "#fff", "left");
+    g.restore(); g.restore();
   }
   function stamps(t) {
     D.stamps.forEach((a) => {
@@ -113,12 +123,12 @@
     const k = ease.outBack(prog(t, a + 0.1, a + 0.6), 1.8);
     if (logo) { const s = 560 * k; g.save(); rr(540 - s / 2, 720 - s / 2, s, s, 40); g.clip(); g.drawImage(logo, 540 - s / 2, 720 - s / 2, s, s); g.restore(); }
     g.globalAlpha = al * prog(t, a + 0.5, a + 0.9);
-    txt("ทางหลวง FC", 540, 1100, F.b(96), YEL); txt("สารคดีชีวิตสัตว์ฟุตบอล · ติดตามตอนต่อไป", 540, 1200, F.n(40), CREAM);
+    txt("ทางหลวง FC", 540, 1100, F.b(96), YEL); txt("สารคดีลูกหนัง · ติดตามตอนต่อไป", 540, 1200, F.b(40), CREAM);
     g.restore();
   }
   function draw(t) {
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.globalAlpha = 1;
-    pond(t); title(t); cards(t); stamps(t); letterbox(t); caps(t); narrCaps(t); endCard(t);
+    pond(t); title(t); cards(t); stamps(t); letterbox(t); ticker(t); caps(t); narrCaps(t); endCard(t);
   }
   window.scene = { setup, preload, draw, events: () => ({ pen: [], pops: [], whoosh: [] }) };
 })();

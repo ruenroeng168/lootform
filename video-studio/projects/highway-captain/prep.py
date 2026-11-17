@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ทางหลวง FC "ศึกแย่งปลอกคอกัปตัน · น้องรักหักเหลี่ยมโหด": wildlife-documentary parody.
+"""ทางหลวง FC "ศึกแย่งปลอกแขนกัปตัน · น้องรักหักเหลี่ยมโหด": intense football-drama documentary.
 Real interview clips (assets/mod.mp4 = old captain มด, assets/tar.mp4 = new captain ต้าร์, 448x960 phone clips),
 Puck documentary narration (out/n, split by spans.json), the old กองบิน21 match clip as slow-mo b-roll, the duo
 photo with Ken-Burns pushes onto each face, a drawn "reconstruction" of the ball in the pond (scene.js), team logo.
@@ -90,7 +90,7 @@ def match_frames(d):
 def main():
     OUT.mkdir(exist_ok=True)
     N = json.loads((HERE / "narr.json").read_text()); nkeys = [k for k, _ in N]; ntext = dict(N)
-    nwav = next((OUT / "n").glob("*.wav")); na = load_audio(nwav, NARR); spans = json.loads((OUT / "n" / "spans.json").read_text())
+    nwav = next((OUT / "n2").glob("*.wav")); na = load_audio(nwav, NARR); spans = json.loads((OUT / "n2" / "spans.json").read_text())
     nclip = {}
     for k, (a, b) in zip(nkeys, spans):
         c = na[int(max(0, a - 0.03) * S.SR):int((b + 0.15) * S.SR)]; m = np.arange(len(c))
