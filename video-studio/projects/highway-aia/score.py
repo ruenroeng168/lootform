@@ -32,4 +32,11 @@ def build(duration, D):
     for when, k, a, b in D["scores"]: fx.add(when + 0.9, S.pop(0.14), 0.4)
     s4 = sg["s4"][0]; fx.add(s4 - 0.6, S.riser(0.6), 0.25); fx.add(s4 + 1.6, S.boom(2.0), 0.4); fx.add(s4 + 1.6, S.sparkle(1.4), 0.2)
     for i, n in enumerate((79, 84, 88)): fx.add(D["end"] + i * 0.09, S.bell(S.midi(n), 0.9), 0.18)
+    def scratch(d=0.4):
+        t = S.tt(d); return S.sweep_lowpass(S.noise(d), 5000, 300) * np.exp(-t * 5) * (0.6 + 0.4 * np.sign(np.sin(2 * np.pi * 9 * t)))
+    for a, b in D["freezes"]: fx.add(a, scratch(), 0.45)
+    for a, b, _ in D["labels"]: fx.add(a + 0.05, S.pop(0.14), 0.4)
+    for a, b, _ in D["stickers"]:
+        t = S.tt(0.35); fx.add(a, np.sin(2 * np.pi * (300 + 900 * t) * t) * np.exp(-t * 6) * 0.5, 0.35)        # boing
+    for a, b in D["live"]: fx.add(max(0, a - 0.1), S.whoosh(0.35), 0.15)
     return music * 0.5, fx.buf

@@ -78,10 +78,43 @@
       g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 2; g.beginPath(); g.moveTo(x, y + 70); g.lineTo(x + Math.sin(t * 3 + i) * 10, y + 220); g.stroke(); g.restore(); });
   }
   function caps(t) {
-    const c = D.caps.find(([a, b]) => t >= a - 0.05 && t < b + 0.15); if (!c || c[0] < D.segs.intro[0]) return;
+    const c = D.caps.find(([a, b]) => t >= a - 0.05 && t < b + 0.15); if (!c || (c[0] >= D.segs.hook[0] && c[0] < D.segs.hook[1])) return;
     const [a, b, s] = c, al = prog(t, a - 0.05, a + 0.08) * (1 - prog(t, b, b + 0.15));
     const z = fit(s, 54, 980); g.font = F.b(z); const bw = Math.min(1040, g.measureText(s).width + 70);
     g.save(); g.globalAlpha = al; rr(540 - bw / 2, 1560, bw, 100, 26); g.fillStyle = "rgba(0,0,0,0.72)"; g.fill(); txt(s, 540, 1612, F.b(z), WHITE); g.restore();
+  }
+  function liveCaps(t) {
+    const c = D.lcaps.find(([a, b]) => t >= a - 0.04 && t < b + 0.12); if (!c) return;
+    const [a, b, s, who] = c, al = prog(t, a - 0.04, a + 0.06) * (1 - prog(t, b, b + 0.12)), q = who === "q";
+    const z = fit(s, q ? 50 : 64, 960); g.font = F.b(z); const bw = Math.min(1040, g.measureText(s).width + (q ? 120 : 70));
+    const y = q ? 1420 : 1560, k = q ? 1 : ease.outBack(prog(t, a - 0.04, a + 0.2), 2);
+    g.save(); g.globalAlpha = al; g.translate(540, y); g.scale(k, k);
+    rr(-bw / 2, -50, bw, 100, 26); g.fillStyle = q ? "rgba(226,59,46,0.92)" : "rgba(0,0,0,0.78)"; g.fill();
+    if (q) txt("🎤", -bw / 2 + 50, 3, F.b(40), WHITE);
+    txt(s, q ? 30 : 0, 3, F.b(z), q ? WHITE : YEL); g.restore();
+  }
+  function interviewTag(t) {
+    const l = D.live.slice(1).find(([a, b]) => t >= a && t < b); if (!l) return;
+    const al = vis(t, l[0], l[1]);
+    g.save(); g.globalAlpha = al; rr(40, 170, 400, 64, 32); g.fillStyle = "rgba(0,0,0,0.6)"; g.fill();
+    g.fillStyle = RED; g.beginPath(); g.arc(80, 202, 12, 0, 7); g.fill(); txt("สัมภาษณ์หลังเกม", 250, 204, F.b(34), WHITE); g.restore();
+  }
+  function labels(t) {
+    D.labels.forEach(([a, b, s]) => {
+      const al = vis(t, a, b + 0.15); if (al <= 0) return; const k = ease.outBack(prog(t, a, a + 0.3), 2.4);
+      g.save(); g.globalAlpha = al; g.translate(540, 760); g.rotate(-0.06); g.scale(k, k);
+      const z = fit(s, 86, 940); g.font = F.b(z); const w = g.measureText(s).width + 90;
+      shadow(() => { rr(-w / 2, -75, w, 150, 24); g.fillStyle = YEL; g.fill(); }); txt(s, 0, 4, F.b(z), INK); g.restore();
+    });
+  }
+  function stickers(t) {
+    const all = D.stickers.concat([[D.segs.abs[0] + 0.6, D.segs.abs[1], "💪 ซิกแพ็กหลังเกม"]]);
+    all.forEach(([a, b, s], i) => {
+      const al = vis(t, a, b); if (al <= 0) return; const k = ease.outBack(prog(t, a, a + 0.3), 2.6), wob = Math.sin(t * 8) * 0.04;
+      g.save(); g.globalAlpha = al; g.translate(540, 520); g.rotate(0.05 + wob); g.scale(k, k);
+      const z = fit(s, 64, 900); g.font = F.b(z); const w = g.measureText(s).width + 80;
+      shadow(() => { rr(-w / 2, -62, w, 124, 62); g.fillStyle = WHITE; g.fill(); }); txt(s, 0, 4, F.b(z), INK); g.restore();
+    });
   }
   function endCard(t) {
     const a = D.blackout - 0.2; if (t < a) return; const al = prog(t, a, a + 0.3);
@@ -97,7 +130,7 @@
   }
   function draw(t) {
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.globalAlpha = 1;
-    hook(t); matchCard(t); board(t); confetti(t, D.segs.s4[0] + 1.6, 3.0); bday(t); caps(t); endCard(t);
+    hook(t); matchCard(t); board(t); confetti(t, D.segs.s4[0] + 1.6, 3.0); bday(t); interviewTag(t); stickers(t); labels(t); caps(t); liveCaps(t); endCard(t);
   }
   window.scene = { setup, preload, draw, events: () => ({ pen: [], pops: [], whoosh: [] }) };
 })();
