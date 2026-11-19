@@ -6,6 +6,7 @@ HERE = Path(__file__).resolve().parent; OUT = HERE / "out"; ENGINE = HERE.parent
 sys.path.insert(0, str(ENGINE)); import synth as S
 from scipy.io import wavfile
 tl = json.loads((OUT / "timeline.json").read_text()); spec = json.loads((HERE / "script.json").read_text())
+tl["data"] = json.loads((HERE / "data.json").read_text()); (OUT / "timeline.json").write_text(json.dumps(tl, ensure_ascii=False, indent=1))
 subprocess.run(["node", str(ENGINE / "render.mjs"), str(HERE), "--events"], check=True)
 events = json.loads((OUT / "events.json").read_text())
 sp = importlib.util.spec_from_file_location("score", HERE / "score.py"); sc = importlib.util.module_from_spec(sp); sp.loader.exec_module(sc)

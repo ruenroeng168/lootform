@@ -18,7 +18,29 @@
     const r = rng(7); for (let i = 0; i < 2600; i++) { pg.fillStyle = `rgba(80,40,10,${0.01 + r() * 0.02})`; pg.fillRect(r() * 512, r() * 512, 1 + r() * 1.5, 1 + r() * 1.5); }
     build(); b.settleCamera();
   }
-  function preload() { return new Promise((r) => { logo = new Image(); logo.onload = r; logo.onerror = r; logo.src = (D.images || {}).logo; }); }
+  const img = {};
+  function preload() {
+    return Promise.all(Object.entries(D.images || {}).map(([k, src]) => new Promise((r) => { const im = new Image(); im.onload = () => { img[k] = im; if (k === "logo") logo = im; r(); }; im.onerror = r; im.src = src; })));
+  }
+  // illustrative photo / video card pinned on the board (world space via b.live), label "ภาพประกอบ"
+  function cardAt(cx, cy, w, src, opt = {}) {
+    const t0 = b.cursor, rot = opt.rot ?? -0.03;
+    b.live((gg, t) => {
+      const dt = t - t0, k = ease.outBack(prog(dt, 0, 0.45), 1.7); if (k <= 0) return;
+      const im = Array.isArray(src) ? img[src[Math.min(src.length - 1, Math.floor(dt * 12) % src.length)]] : img[src]; if (!im) return;
+      const h = w * im.height / im.width, z = 1 + 0.05 * clamp(dt / 6);
+      gg.save(); gg.translate(cx, cy); gg.rotate(rot); gg.scale(k, k);
+      gg.save(); gg.shadowColor = "rgba(60,30,10,0.35)"; gg.shadowBlur = 30; gg.shadowOffsetY = 12; gg.fillStyle = "#fff"; gg.fillRect(-w / 2 - 16, -h / 2 - 16, w + 32, h + 32); gg.restore();
+      gg.save(); gg.beginPath(); gg.rect(-w / 2, -h / 2, w, h); gg.clip(); gg.drawImage(im, -w / 2 * z, -h / 2 * z, w * z, h * z);
+      if (opt.flicker) { const on = (Math.sin(t * 23) + Math.sin(t * 7.3) * 0.7) > -0.2 ? 0 : 0.55; gg.fillStyle = `rgba(0,0,0,${on})`; gg.fillRect(-w / 2, -h / 2, w, h); }
+      gg.restore();
+      gg.fillStyle = "rgba(251,191,36,0.75)"; gg.save(); gg.translate(0, -h / 2 - 10); gg.rotate(0.05); gg.fillRect(-80, -22, 160, 44); gg.restore();
+      gg.fillStyle = "rgba(43,26,18,0.75)"; gg.beginPath(); gg.roundRect(-w / 2 + 14, h / 2 - 58, 170, 44, 22); gg.fill();
+      gg.font = F.cap(24); gg.fillStyle = "#fff"; gg.textAlign = "center"; gg.textBaseline = "middle"; gg.fillText("ภาพประกอบ", -w / 2 + 99, h / 2 - 35);
+      gg.restore();
+    }, { t0 });
+  }
+  const FR = (v) => Array.from({ length: 60 }, (_, i) => `f${v}_${i + 1}`);
 
   // ------------------------------------------------------------ helpers
   function header(n, str, cue, col = OR) {
@@ -44,14 +66,12 @@
     keys.forEach((k, i) => b.scene(i === 0 ? 0 : C[k].start - 0.15, i * SP, 0));
     const at = (i) => { const s = b.scenes[i]; b.ox = s.x; b.oy = s.y; };
 
-    // 0 — hook: house with a warning inside
-    at(0); b.go(M("hook", 0) + 0.05);
+    // 0 — hook: full-screen photos first (drawn in draw()), then the house board
+    at(0); b.go(M("hook", 1) - 0.25);
     b.stroke("M-300,40 L0,-230 L300,40", { x: 540, y: 720, w: 10 });
     b.stroke("M-240,0 V330 H240 V0", { x: 540, y: 720, w: 10, fill: "#ffedd5" });
-    b.stroke(P.rrect(-60, 170, 120, 160, 10), { x: 540, y: 720, w: 8 });
     warnSign(540, 820, 1.05);
     bolt(360, 470, 0.9); bolt(730, 450, 0.75);
-    b.go(M("hook", 1));
     label("5 อาการ", 540, 1200, OR, 110);
     label("ห้ามมองข้าม!", 540, 1330, INK, 84);
     b.go(M("hook", 2));
@@ -60,61 +80,32 @@
 
     // 1 — flickering light
     at(1); header(1, "ไฟกระพริบ / หรี่ลงเอง", "s1");
-    b.stroke("M0,-260 V-160", { x: 540, y: 700, w: 7 });
-    b.stroke("M-50,-160 H50 V-110 H-50 Z", { x: 540, y: 700, w: 7, fill: "#d6c6b8" });
-    b.stroke("M-50,-110 Q-130,-40 -110,60 Q-90,140 0,150 Q90,140 110,60 Q130,-40 50,-110", { x: 540, y: 700, w: 8 });
-    const flickT = b.cursor;
-    b.live((gg, t) => flicker(gg, t, 540, 770, flickT), { t0: flickT });
-    b.stroke("M-170,-60 L-230,-80 M170,-60 L230,-80 M-150,80 L-220,110 M150,80 L220,110", { x: 540, y: 700, color: OR, w: 8 });
+    cardAt(540, 770, 500, "p3", { flicker: true, rot: -0.03 });
     b.go(M("s1", 1));
-    label("จุดต่อหลวม?", 300, 1130, OR, 56); label("สายไฟเสื่อม?", 780, 1130, OR, 56);
-    b.stroke("M-150,0 Q-100,-40 -50,0 T40,0 M70,10 L110,-25 L100,20 L150,-10", { x: 300, y: 1250, w: 7 });
-    b.stroke("M-150,0 Q-80,30 -10,0 Q40,-20 70,10 M90,-20 L110,-50 M110,10 L140,30", { x: 780, y: 1250, w: 7 });
+    label("จุดต่อหลวม?", 290, 1320, OR, 58); label("สายไฟเสื่อม?", 790, 1320, OR, 58);
 
     // 2 — hot / scorched outlet
     at(2); header(2, "ปลั๊ก/สวิตช์ร้อน มีรอยไหม้", "s2");
-    b.stroke(P.rrect(-190, -230, 380, 460, 40), { x: 540, y: 760, w: 9, fill: "#ffffff" });
-    for (const yy of [-90, 90]) {
-      b.stroke(P.rrect(-90, -55, 180, 110, 26), { x: 540, y: 760 + yy, w: 7 });
-      b.stroke("M-28,-24 V10 M28,-24 V10 M0,28 V36", { x: 540, y: 760 + yy, w: 10 });
-    }
-    b.stroke("M-70,-150 Q-120,-100 -60,-40 Q-20,-80 30,-50 Q80,-110 20,-160 Q-20,-120 -70,-150 Z", { x: 520, y: 760, w: 4, fill: "#3b2a20", fillAlpha: 0.55 });
+    cardAt(540, 770, 500, "p4", { rot: 0.03 });
     const heatT = b.cursor;
-    b.live((gg, t) => heat(gg, t, 540, 470, heatT), { t0: heatT });
+    b.live((gg, t) => heat(gg, t, 860, 420, heatT), { t0: heatT });
     b.go(M("s2", 1));
-    label("ต่อหลวม", 290, 1080, OR, 60); label("ใช้ไฟเกิน", 790, 1080, OR, 60);
-    b.stroke(P.rrect(-140, -30, 280, 60, 14), { x: 790, y: 1290, w: 6 });
-    b.stroke("M-100,-30 V-90 M-30,-30 V-100 M40,-30 V-85 M110,-30 V-95", { x: 790, y: 1290, w: 6 });
-    b.stroke("M-100,-90 Q-130,-150 -80,-180 M-30,-100 Q-40,-160 0,-190 M40,-85 Q60,-150 100,-160", { x: 790, y: 1290, w: 5, color: MUTED });
+    label("ต่อหลวม", 290, 1320, OR, 62); label("ใช้ไฟเกิน", 790, 1320, OR, 62);
 
-    // 3 — breaker trips
+    // 3 — breaker trips (video card)
     at(3); header(3, "เบรกเกอร์ตัดบ่อย", "s3");
-    b.stroke(P.rrect(-260, -260, 520, 520, 24), { x: 540, y: 760, w: 9, fill: "#e7e0d8" });
-    for (let i = 0; i < 4; i++) {
-      const x = -180 + i * 120, down = i === 2;
-      b.stroke(P.rrect(-40, -110, 80, 220, 10), { x: 540 + x, y: 760, w: 6, fill: "#ffffff", gapAfter: 0.02 });
-      b.stroke(P.rrect(-24, down ? 10 : -80, 48, 70, 8), { x: 540 + x, y: 760, w: 6, fill: down ? RED : INK, gapAfter: 0.02 });
-    }
+    cardAt(540, 760, 480, FR(1), { rot: -0.02 });
     b.go(M("s3", 1));
-    b.stroke(P.arrow(0, 120, 0, -60, 0, 24), { x: 600, y: 1150, color: INK, w: 9 });
-    b.stroke("M-30,0 Q-40,-60 0,-70 Q40,-60 30,0 L30,70 H-30 Z", { x: 600, y: 1300, w: 6, fill: "#f2c7a5" });
-    cross(600, 1220, 1.4);
-    label("อย่าดันขึ้นซ้ำๆ", 540, 1460, RED, 64);
+    cross(200, 1300, 0.7);
+    label("อย่าดันขึ้นซ้ำๆ", 600, 1300, RED, 64);
     b.go(M("s3", 2));
-    label("ไฟเกิน?", 230, 1150, OR, 54); label("ไฟรั่ว?", 870, 1150, OR, 54);
+    label("ไฟเกิน?", 300, 1430, OR, 56); label("ไฟรั่ว?", 780, 1430, OR, 56);
 
-    // 4 — burning smell / crackling
+    // 4 — burning smell / crackling (video card)
     at(4); header(4, "กลิ่นไหม้ / เสียงเปาะแปะ", "s4");
-    b.stroke("M0,-120 Q-30,-20 -60,60 Q-50,110 0,100 Q20,120 40,100", { x: 330, y: 760, w: 9 });
-    const smokeT = b.cursor;
-    b.live((gg, t) => smoke(gg, t, 560, 760, smokeT), { t0: smokeT });
-    b.stroke(P.star(800, 640, 60) + " " + P.star(880, 780, 40) + " " + P.star(760, 860, 34), { color: OR, w: 7 });
-    b.write("เปาะ! แปะ!", { x: 820, y: 980, font: F.t(56), color: OR, align: "center" });
+    cardAt(540, 760, 480, FR(2), { rot: 0.025 });
     b.go(M("s4", 1));
-    label("ตัดไฟทันที!", 540, 1460, RED, 92);
-    b.stroke(P.rrect(-130, -90, 260, 180, 20), { x: 540, y: 1250, w: 8, fill: "#ffffff" });
-    b.stroke(P.rrect(-30, -50, 60, 100, 10), { x: 540, y: 1250, w: 7, fill: RED });
-    b.stroke(P.arrow(200, -60, 200, 60, 0, 22), { x: 540, y: 1250, color: RED, w: 9 });
+    label("ตัดไฟทันที!", 540, 1330, RED, 96);
 
     // 5 — tingling touch
     at(5); header(5, "จับแล้วรู้สึกซ่า", "s5", RED);
@@ -131,14 +122,14 @@
     b.stroke(P.circle(-40, 0, 22) + " M30,-40 H70 M30,0 H70 M30,40 H70", { x: 780, y: 1240, w: 6, color: GREEN });
     label("เครื่องตัดไฟรั่ว", 780, 1390, GREEN, 56);
 
-    // 6 — don't DIY
+    // 6 — don't DIY -> electrician photo
     at(6); b.go(M("safe", 0) + 0.05);
     b.stroke("M-90,160 L-110,-60 Q-110,-90 -85,-90 Q-60,-90 -60,-60 L-55,-160 Q-55,-190 -28,-190 Q0,-190 0,-160 L2,-180 Q2,-210 30,-210 Q58,-210 58,-180 L60,-150 Q62,-178 88,-178 Q114,-178 114,-150 L110,40 Q100,160 0,180 Q-60,185 -90,160 Z",
       { x: 540, y: 720, s: 1.5, w: 8, fill: "#fee2e2" });
     label("อย่าซ่อมเอง!", 540, 1140, RED, 100);
     b.go(M("safe", 1));
-    b.stroke("M-70,40 L40,-70 Q70,-110 110,-90 L80,-60 L90,-40 L120,-50 Q130,-10 90,20 L-20,130 Z", { x: 170, y: 1340, w: 7, fill: "#e5e7eb" });
-    b.write("ให้ช่างไฟฟ้าตรวจ", { x: 610, y: 1340, font: F.t(64), color: GREEN, align: "center" });
+    cardAt(540, 720, 480, "p5", { rot: 0.02 });
+    b.write("ให้ช่างไฟฟ้าตรวจ", { x: 540, y: 1330, font: F.t(70), color: GREEN, align: "center" });
 
     // 7 — อุบลเด้อ
     at(7); b.go(M("ubon", 0) + 0.05);
@@ -186,6 +177,23 @@
     gg.save(); gg.translate(x, y); gg.scale(k, k); gg.beginPath(); gg.roundRect(-130, -130, 260, 260, 56); gg.clip(); gg.drawImage(logo, -130, -130, 260, 260); gg.restore();
   }
 
+  function hookPhotos(t) {
+    const end = M("hook", 1) - 0.1; if (t > end + 0.35) return;
+    const al = 1 - prog(t, end, end + 0.35), sw = 1.4;
+    const key = t < sw ? "p1" : "p2", im = img[key]; if (!im) return;
+    const t0 = key === "p1" ? 0 : sw, z = 1.05 + 0.06 * (t - t0) / 3;
+    const s = Math.max(W / im.width, H / im.height) * z, w = im.width * s, h = im.height * s;
+    g.save(); g.globalAlpha = al; g.drawImage(im, (W - w) / 2, (H - h) / 2 - 40 * (t - t0) / 3, w, h);
+    if (key === "p2") { const on = (Math.sin(t * 21) + Math.sin(t * 6.1) * 0.8) > -0.1 ? 0 : 0.5; g.fillStyle = `rgba(0,0,0,${on})`; g.fillRect(0, 0, W, H); }
+    if (key === "p1" && t > sw - 0.12) { g.fillStyle = `rgba(255,255,255,${(t - (sw - 0.12)) / 0.12 * 0.6})`; g.fillRect(0, 0, W, H); }
+    g.fillStyle = "rgba(43,26,18,0.7)"; g.beginPath(); g.roundRect(40, 170, 200, 50, 25); g.fill();
+    g.font = F.cap(26); g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("ภาพประกอบ", 140, 196);
+    const k = ease.outBack(prog(t, 0.2, 0.55), 2);
+    if (k > 0) { g.save(); g.translate(540, 1200); g.scale(k, k); g.font = F.h(92); g.textAlign = "center"; g.lineJoin = "round"; g.lineWidth = 18; g.strokeStyle = INK; g.fillStyle = "#fff";
+      g.strokeText("ไฟในบ้านคุณ…", 0, 0); g.fillText("ไฟในบ้านคุณ…", 0, 0); g.fillStyle = YEL; g.strokeText("กำลังเตือนอะไรอยู่?", 0, 120); g.fillText("กำลังเตือนอะไรอยู่?", 0, 120); g.restore(); }
+    g.restore();
+  }
+
   // ------------------------------------------------------------ frame
   function captions(t) {
     let seg = null;
@@ -213,6 +221,7 @@
     g.fillStyle = g.createPattern(paper, "repeat"); g.fillRect(0, 0, W + 1024, H + 1024); g.restore();
     b.draw(t, "world", cam); b.draw(t, "screen", cam);
     const h = b.hand(t, cam); if (b.showHand) drawHand(g, h.pos[0], h.pos[1], h.down, t, INK);
+    hookPhotos(t);
     brandStrip(); captions(t);
     const vg = g.createRadialGradient(W / 2, H / 2, H * 0.5, W / 2, H / 2, H * 0.95);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(120,60,20,0.14)"); g.fillStyle = vg; g.fillRect(0, 0, W, H);
