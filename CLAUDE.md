@@ -23,3 +23,11 @@
 ก่อนทำคอนเทนต์ คลิป หรือแคปชันของ "อุบลเด้อ" ให้อ่าน `video-studio/brands/ubonder/BRIEF.md` ก่อนทุกครั้ง แล้วใช้เป็นข้อเท็จจริงหลัก (ลิงก์ ขั้นตอน ข้อห้าม สี ฟอนต์ น้ำเสียง) ห้ามแต่งตัวเลขหรือฟีเจอร์ที่ไม่มีในนั้น
 
 **ลิงก์ในคลิปและแคปชันของอุบลเด้อ (ผู้ใช้สั่ง):** ใช้แค่ `ubonder.com` อย่างเดียว ไม่ต้องใส่ path ปลายทาง (/chang, /merchant/apply ฯลฯ) และไม่ต้องต่อ `?src=` เป้าหมายคือให้คนเข้ามาในแอปเท่านั้น (คำสั่งนี้ใช้แทนเรื่องลิงก์ปลายทางและ `?src=` ใน BRIEF.md)
+
+## เสียงพากย์ (ทุก session ต้องใช้แบบนี้)
+
+เสียงพากย์ทุกคลิปใช้ **Gemini TTS ผ่าน `video-studio/engine/tts.py`** (หรือ `engine/build.py` ที่เรียกมันอยู่แล้ว) ค่าเริ่มต้น: `"engine": "gemini", "model": "gemini-3.8-flash-tts", "voice": "Puck"` ห้ามใช้เสียงของ Windows (SAPI / System.Speech / Narrator), espeak หรือ TTS ของเครื่องแทน
+- ใน style ใส่ "Read exactly… Do not add, improvise" กันพูดเกินบท และตรวจผลด้วย whisper (`engine/align.py`) ก่อนใช้
+- คำว่า "อุบลเด้อ" ให้เขียนเป็น "อุบล… เด้อ" + บอกใน style ให้ออกเสียงแบบอีสาน
+- คีย์: cloud session ใช้ network secret ของ environment (proxy ใส่ header `x-goog-api-key` ให้เอง ไม่ต้องมีคีย์ในเครื่อง); เครื่อง Windows ใช้ตัวแปร `GEMINI_API_KEY` ห้ามพิมพ์คีย์ลงแชต ห้าม commit คีย์
+- ถ้าเรียก Gemini ไม่ได้ ให้หยุดแล้วแจ้งผู้ใช้ ห้ามเปลี่ยนไปใช้เสียงอื่นเอง
