@@ -54,6 +54,14 @@ const html = `<!doctype html><html><head><meta charset="utf-8">
 @font-face{font-family:"Sriracha";font-weight:400;src:url(../../../assets/fonts/Sriracha-Regular.ttf)}
 @font-face{font-family:"Mali";font-weight:600;src:url(../../../assets/fonts/Mali-SemiBold.ttf)}
 @font-face{font-family:"Mali";font-weight:700;src:url(../../../assets/fonts/Mali-Bold.ttf)}
+@font-face{font-family:"Kanit";font-weight:600;src:url(../../../assets/fonts/kanit-thai-600-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+@font-face{font-family:"Kanit";font-weight:600;src:url(../../../assets/fonts/kanit-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Kanit";font-weight:700;src:url(../../../assets/fonts/kanit-thai-700-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+@font-face{font-family:"Kanit";font-weight:700;src:url(../../../assets/fonts/kanit-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Noto Sans Thai";font-weight:500;src:url(../../../assets/fonts/noto-sans-thai-thai-500-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+@font-face{font-family:"Noto Sans Thai";font-weight:500;src:url(../../../assets/fonts/noto-sans-thai-latin-500-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Noto Sans Thai";font-weight:700;src:url(../../../assets/fonts/noto-sans-thai-thai-700-normal.woff2) format("woff2");unicode-range:U+0E01-0E5B,U+200C-200D,U+25CC}
+@font-face{font-family:"Noto Sans Thai";font-weight:700;src:url(../../../assets/fonts/noto-sans-thai-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 html,body{margin:0;background:${args.some((x) => x.startsWith("--overlay")) ? "transparent" : "#000"}}</style></head><body>
 <canvas id="c" width="${tl.width}" height="${tl.height}"></canvas>
 <script src="../../../engine/lib.js"></script>
@@ -71,6 +79,7 @@ await page.evaluate(async (tl) => {
     '700 10px "Chakra Petch"', '600 10px "Chakra Petch"', '600 10px "IBM Plex Sans Thai"',
     '700 10px "IBM Plex Sans Thai"', '500 10px "IBM Plex Mono"', '400 10px "Sriracha"',
     '600 10px "Mali"', '700 10px "Mali"',
+    '600 10px "Kanit"', '700 10px "Kanit"', '500 10px "Noto Sans Thai"', '700 10px "Noto Sans Thai"',
   ].map((f) => document.fonts.load(f, "ABCกขค")));
   window.TL = tl;
   window.scene.setup(document.getElementById("c"), tl);

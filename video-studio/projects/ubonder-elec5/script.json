@@ -1,0 +1,20 @@
+{
+  "title": "5 สัญญาณไฟฟ้าในบ้าน",
+  "cover": "5 สัญญาณไฟฟ้าในบ้าน ที่ห้ามมองข้าม",
+  "fps": 30, "width": 1080, "height": 1920, "bpm": 92, "duck": 0.5, "tail": 2.4,
+  "tts": {
+    "engine": "gemini", "model": "gemini-3.8-flash-tts", "voice": "Puck",
+    "style": "Read exactly the given Thai text and nothing else. A friendly, trustworthy young electrician-explainer from Ubon Ratchathani (Isan) talking to homeowners; warm, clear, calm but serious on the safety points, natural pacing. The brand name อุบลเด้อ is said the Isan way (เด้อ as in ไปเด้อ), never like the English word 'der'."
+  },
+  "lines": [
+    { "cue": "hook", "at": 0.6, "text": "ไฟในบ้านคุณ… กำลังส่งสัญญาณเตือนอยู่หรือเปล่า? | ห้าอาการนี้ ห้ามมองข้าม | โดยเฉพาะข้อสุดท้าย!" },
+    { "cue": "s1", "gap": 0.6, "text": "ข้อหนึ่ง ไฟกระพริบ หรือหรี่ลงเอง | อาจมาจากจุดต่อหลวม หรือสายไฟเสื่อม" },
+    { "cue": "s2", "gap": 0.6, "text": "ข้อสอง ปลั๊กหรือสวิตช์ร้อน มีรอยไหม้ | สัญญาณของจุดต่อหลวม หรือใช้ไฟเกิน" },
+    { "cue": "s3", "gap": 0.6, "text": "ข้อสาม เบรกเกอร์ตัดบ่อย | อย่าดันขึ้นซ้ำ ๆ | อาจมีไฟเกิน หรือไฟรั่ว" },
+    { "cue": "s4", "gap": 0.6, "text": "ข้อสี่ ได้กลิ่นไหม้ หรือเสียงดังเปาะแปะ | ตัดไฟทันที!" },
+    { "cue": "s5", "gap": 0.6, "text": "ข้อสุดท้าย จับเครื่องใช้ไฟฟ้าแล้วรู้สึกซ่า | อาจมีไฟรั่ว | บ้านควรมีสายดิน และเครื่องตัดไฟรั่ว" },
+    { "cue": "safe", "gap": 0.6, "text": "เจออาการไหน… อย่าซ่อมเอง | ให้ช่างไฟฟ้าตรวจดีกว่า" },
+    { "cue": "ubon", "gap": 0.5, "text": "ในอุบลฯ แจ้งงานช่างไฟฟ้าได้ฟรีที่ อุบล… เด้อ | ช่างผ่านการตรวจสอบตัวตน | แอดมินตรวจราคา ก่อนส่งให้คุณเลือก" },
+    { "cue": "cta", "gap": 0.5, "text": "เซฟคลิปนี้ไว้… | เผื่อวันหนึ่ง บ้านคุณต้องใช้" }
+  ]
+}
