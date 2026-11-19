@@ -63,6 +63,12 @@ def main():
     for k, (a, b) in zip(keys, spans):
         c = na[int(max(0, a - 0.03) * S.SR):int((b + 0.12) * S.SR)]; m = np.arange(len(c))
         ncl[k] = c * np.minimum(1, np.minimum(m / 300, (len(c) - m) / 1200))
+    # Isan pronunciation of "เด้อ" (user request): replace the brand + end lines with the Isan take (out/isan: b2, e2)
+    iw = next((OUT / "isan").glob("*.wav")); ia = load_audio(iw, NARR); isp = dict(zip([k for k, _ in json.loads((HERE / "isan.json").read_text())],
+                                                                                 json.loads((OUT / "isan" / "spans.json").read_text())))
+    for key, alt in (("brand", "b2"), ("end", "e2")):
+        a, b = isp[alt]; c = ia[int(max(0, a - 0.05) * S.SR):int((b + 0.2) * S.SR)]; m = np.arange(len(c))
+        ncl[key] = c * np.minimum(1, np.minimum(m / 300, (len(c) - m) / 1500))
     pics = {k: cover(cv2.imread(str(A / f"{k}.jpg"))) for k in ("ai2", "ai3", "ai5", "ai6", "ai7", "ph4", "ph1")}
     pics["hookbg"] = (cv2.GaussianBlur(cover(cv2.imread(str(A / "ai1.jpg"))), (0, 0), 30) * 0.35).astype(np.uint8)
     g = np.linspace(0, 1, H)[:, None]; org = np.zeros((H, W, 3), np.uint8)
