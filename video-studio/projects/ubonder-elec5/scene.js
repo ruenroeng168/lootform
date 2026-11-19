@@ -12,7 +12,7 @@
 
   function setup(canvas, tl) {
     g = canvas.getContext("2d"); W = tl.width; H = tl.height; TL = tl; C = tl.cues; D = tl.data || {};
-    b = new Board(g, { speed: 1600, writeSpeed: 950, color: INK, width: 7, style: D.style || "ink" });
+    b = new Board(g, { speed: 2700, writeSpeed: 1600, color: INK, width: 7, style: D.style || "ink" });
     paper = document.createElement("canvas"); paper.width = paper.height = 512;
     const pg = paper.getContext("2d"); pg.fillStyle = CREAM; pg.fillRect(0, 0, 512, 512);
     const r = rng(7); for (let i = 0; i < 2600; i++) { pg.fillStyle = `rgba(80,40,10,${0.01 + r() * 0.02})`; pg.fillRect(r() * 512, r() * 512, 1 + r() * 1.5, 1 + r() * 1.5); }
@@ -82,7 +82,7 @@
     const heatT = b.cursor;
     b.live((gg, t) => heat(gg, t, 540, 470, heatT), { t0: heatT });
     b.go(M("s2", 1));
-    label("ต่อหลวม", 290, 1170, OR, 60); label("ใช้ไฟเกิน", 790, 1170, OR, 60);
+    label("ต่อหลวม", 290, 1080, OR, 60); label("ใช้ไฟเกิน", 790, 1080, OR, 60);
     b.stroke(P.rrect(-140, -30, 280, 60, 14), { x: 790, y: 1290, w: 6 });
     b.stroke("M-100,-30 V-90 M-30,-30 V-100 M40,-30 V-85 M110,-30 V-95", { x: 790, y: 1290, w: 6 });
     b.stroke("M-100,-90 Q-130,-150 -80,-180 M-30,-100 Q-40,-160 0,-190 M40,-85 Q60,-150 100,-160", { x: 790, y: 1290, w: 5, color: MUTED });
@@ -111,10 +111,10 @@
     b.stroke(P.star(800, 640, 60) + " " + P.star(880, 780, 40) + " " + P.star(760, 860, 34), { color: OR, w: 7 });
     b.write("เปาะ! แปะ!", { x: 820, y: 980, font: F.t(56), color: OR, align: "center" });
     b.go(M("s4", 1));
+    label("ตัดไฟทันที!", 540, 1460, RED, 92);
     b.stroke(P.rrect(-130, -90, 260, 180, 20), { x: 540, y: 1250, w: 8, fill: "#ffffff" });
     b.stroke(P.rrect(-30, -50, 60, 100, 10), { x: 540, y: 1250, w: 7, fill: RED });
     b.stroke(P.arrow(200, -60, 200, 60, 0, 22), { x: 540, y: 1250, color: RED, w: 9 });
-    label("ตัดไฟทันที!", 540, 1460, RED, 92);
 
     // 5 — tingling touch
     at(5); header(5, "จับแล้วรู้สึกซ่า", "s5", RED);
@@ -137,8 +137,8 @@
       { x: 540, y: 720, s: 1.5, w: 8, fill: "#fee2e2" });
     label("อย่าซ่อมเอง!", 540, 1140, RED, 100);
     b.go(M("safe", 1));
-    b.stroke("M-70,40 L40,-70 Q70,-110 110,-90 L80,-60 L90,-40 L120,-50 Q130,-10 90,20 L-20,130 Z", { x: 300, y: 1340, w: 7, fill: "#e5e7eb" });
-    b.write("ให้ช่างไฟฟ้าตรวจ", { x: 640, y: 1340, font: F.t(64), color: GREEN, align: "center" });
+    b.stroke("M-70,40 L40,-70 Q70,-110 110,-90 L80,-60 L90,-40 L120,-50 Q130,-10 90,20 L-20,130 Z", { x: 170, y: 1340, w: 7, fill: "#e5e7eb" });
+    b.write("ให้ช่างไฟฟ้าตรวจ", { x: 610, y: 1340, font: F.t(64), color: GREEN, align: "center" });
 
     // 7 — อุบลเด้อ
     at(7); b.go(M("ubon", 0) + 0.05);
