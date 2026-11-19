@@ -111,7 +111,7 @@
     outlined("แจ้งงานช่าง", 540, 880, 104, WHITE); outlined("ที่ อุบลเด้อ!", 540, 1000, 120, YEL);
     const c = ease.outBack(prog(t, a + 0.5, a + 0.85), 2), s = c * (1 + 0.035 * Math.sin((t - a) * 6));
     g.globalAlpha = al * clamp(c); g.translate(540, 1190); g.scale(s, s); shadow(() => { rr(-430, -70, 860, 140, 70); g.fillStyle = WHITE; g.fill(); });
-    txt("ubonder.vercel.app/chang", 0, 4, F.d(56), INK);
+    txt("ubonder.com/chang", 0, 4, F.d(64), INK);
     g.restore();
   }
   function flash(t) { for (const c of D.cuts) { const u = t - c; if (c > 0.2 && u >= 0 && u < 0.08) { g.fillStyle = `rgba(255,255,255,${0.35 * (1 - u / 0.08)})`; g.fillRect(0, 0, W, H); } } }
