@@ -133,7 +133,7 @@
     // 5 — two months later: from one character to a whole town
     at(5); b.go(C.grow.start + 0.05);
     burst(540, 260, 1.0, "2 เดือนต่อมา", GOLD, 66);
-    card(540, 620, 760, "early", { rot: -0.03, tag: "เมืองแรก" , tagCol: BLUE });
+    card(540, 620, 760, "early", { rot: -0.03, tag: "ช่วงแรก", tagCol: BLUE });
     b.go(M("grow", 1) - 0.1);
     card(330, 1000, 420, "tiles1", { rot: 0.05, zoom: 0.1 });
     card(760, 1030, 420, "tiles2", { rot: -0.04, zoom: 0.1 });
