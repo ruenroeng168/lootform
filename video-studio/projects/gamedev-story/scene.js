@@ -55,8 +55,9 @@
     b.write(str, { x, y: y + 4, font: F.h(opt.size || 52), color: opt.color || INK, align: "center" });
   }
   function burst(x, y, s, str, col = GOLD, size = 64) {
-    let d = ""; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r = i % 2 ? 0.62 : 1; d += (i ? "L" : "M") + (Math.cos(a) * 200 * r).toFixed(1) + "," + (Math.sin(a) * 130 * r).toFixed(1) + " "; }
-    b.stroke(d + "Z", { x, y, s, w: 7, fill: col, dur: 0.35 }); pop(b.cursor);
+    g.font = F.h(size); const rx = (g.measureText(str).width / 2 + 40) / 0.72, ry = size * 1.75;
+    let d = ""; for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2, r = i % 2 ? 0.7 : 1; d += (i ? "L" : "M") + (Math.cos(a) * rx * r).toFixed(1) + "," + (Math.sin(a) * ry * r).toFixed(1) + " "; }
+    b.stroke(d + "Z", { x, y, w: 7, fill: col, dur: 0.35 }); pop(b.cursor);
     b.write(str, { x, y: y + 4, font: F.h(size), color: INK, align: "center" });
   }
   const check = (x, y) => { const c = b.stroke("M-30,0 L-8,26 L38,-34", { x, y, color: GREEN, w: 13, dur: 0.2 }); pop(c.t0 + c.dur); };
@@ -78,14 +79,14 @@
 
     // 0 — contractor who can't code
     at(0); b.go(0.25);
-    b.stroke(P.rrect(-300, -200, 600, 400, 10), { x: 540, y: 620, w: 7, fill: "#dbeafe" });            // blueprint
-    b.stroke("M-240,-140 H60 V60 H-240 Z M-240,-40 H60 M-90,-140 V60 M120,-140 H240 M120,-80 H240 M120,-20 H200", { x: 540, y: 620, w: 5, color: BLUE });
-    helmet(540, 470, 0.9);
+    b.stroke(P.rrect(-300, -200, 600, 400, 10), { x: 540, y: 700, w: 7, fill: "#dbeafe" });            // blueprint
+    b.stroke("M-240,-140 H60 V60 H-240 Z M-240,-40 H60 M-90,-140 V60 M120,-140 H240 M120,-80 H240 M120,-20 H200", { x: 540, y: 700, w: 5, color: BLUE });
+    helmet(760, 520, 0.75);
     b.go(M("hook", 1));
     label("เขียนโค้ด 0 บรรทัด", 540, 980, RED, 82);
     b.stroke("M-230,0 H230", { x: 540, y: 1040, w: 9, color: RED });
     b.go(M("hook", 2));
-    burst(540, 1270, 1.25, "อยากสร้าง MMORPG!", GOLD, 58);
+    burst(540, 1290, 1.25, "อยากสร้าง MMORPG!", GOLD, 58);
 
     // 1 — Claude + YouTube after work
     at(1); b.go(C.tools.start + 0.05);
@@ -97,9 +98,9 @@
     bubble(380, 690, 330, 120, "Claude", { color: ORANGE, size: 60 });
     b.stroke(P.rrect(-120, -80, 240, 160, 36), { x: 730, y: 840, w: 7, fill: RED });
     b.stroke("M-30,-45 L50,0 L-30,45 Z", { x: 730, y: 840, w: 6, fill: "#fff" });
-    label("YouTube", 730, 970, RED, 50);
+    label("YouTube", 730, 1060, RED, 56);
     b.go(M("tools", 2));
-    label("เวลาว่างเท่านั้น!", 540, 1280, BLUE, 88);
+    label("เวลาว่างเท่านั้น!", 540, 1300, BLUE, 88);
 
     // 2 — week 1: the first character moves
     at(2); b.go(C.week.start + 0.05);
@@ -114,7 +115,7 @@
     b.stroke("M-90,-80 Q-90,-170 0,-170 Q90,-170 90,-90 Q90,-30 20,0 Q0,15 0,60 M0,120 V130", { x: 540, y: 640, s: 1.4, w: 16, color: INK });
     pop(b.cursor);
     b.go(M("boss", 1)); burst(290, 1060, 0.85, "สนุก?", GOLD, 70);
-    b.go(M("boss", 2)); burst(790, 1180, 0.85, "ไม่ซ้ำใคร?", "#93c5fd", 60);
+    b.go(M("boss", 2)); burst(770, 1190, 0.85, "ไม่ซ้ำใคร?", "#93c5fd", 60);
     b.go(M("boss", 3)); burst(420, 1420, 0.95, "ไทบ้านแท้ๆ?", "#86efac", 64);
 
     // 4 — ask the groups, trial & error
@@ -132,13 +133,13 @@
 
     // 5 — two months later: from one character to a whole town
     at(5); b.go(C.grow.start + 0.05);
-    burst(540, 260, 1.0, "2 เดือนต่อมา", GOLD, 66);
-    card(540, 620, 760, "early", { rot: -0.03, tag: "ช่วงแรก", tagCol: BLUE });
+    burst(540, 250, 1.0, "2 เดือนต่อมา", GOLD, 66);
+    card(540, 660, 720, "early", { rot: -0.03, tag: "ช่วงแรก", tagCol: BLUE });
     b.go(M("grow", 1) - 0.1);
     card(330, 1000, 420, "tiles1", { rot: 0.05, zoom: 0.1 });
     card(760, 1030, 420, "tiles2", { rot: -0.04, zoom: 0.1 });
     b.go(M("grow", 2) - 0.1);
-    card(540, 1300, 900, "town2", { rot: 0.015, tag: "วันนี้", tagCol: RED });
+    card(540, 1320, 880, "town2", { rot: 0.015, tag: "วันนี้", tagCol: RED });
 
     // 6 — proudest moment: real players like it
     at(6); b.go(C.proud.start + 0.05);
