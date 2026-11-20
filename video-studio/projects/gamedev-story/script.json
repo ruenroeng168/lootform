@@ -1,0 +1,14 @@
+{"title": "ผู้รับเหมาสร้างเกมด้วย AI", "cover": "ผู้รับเหมา สร้างเกมด้วย AI",
+ "fps": 30, "width": 1080, "height": 1920, "bpm": 118, "duck": 0.55, "tail": 2.6,
+ "tts": {"engine": "gemini", "model": "gemini-3.8-flash-tts", "voice": "Puck",
+  "style": "Read exactly the given Thai text and nothing else. Do not add, improvise or repeat anything. You are an energetic Thai esports / game caster narrating a hype highlight reel: punchy, excited, dramatic pauses on the ellipses, rising energy on exclamations, but clear and natural Thai."},
+ "lines": [
+  {"cue": "hook", "at": 0.5, "text": "ผู้รับเหมาคนหนึ่ง… | เขียนโค้ดไม่เป็นสักบรรทัด | แต่ดันอยากสร้างเกม เอ็มเอ็มโออาร์พีจี เป็นของตัวเอง!"},
+  {"cue": "tools", "text": "อาวุธที่มี มีแค่สองอย่าง… | คล็อด กับ ยูทูบ | ทำหลังเลิกงาน เวลาว่างเท่านั้น!"},
+  {"cue": "week", "text": "หนึ่งสัปดาห์ผ่านไป… | ตัวละครตัวแรก ขยับได้แล้ว!"},
+  {"cue": "boss", "text": "แต่บอสตัวจริงไม่ใช่โค้ด… | คือคำถามว่า ทำยังไงให้สนุก | ไม่ซ้ำใคร | และเป็นไทบ้านแท้ ๆ"},
+  {"cue": "trial", "text": "เขาถามคนในกลุ่ม | ลองผิด ลองถูก | ล้มแล้วลุก วนไปเรื่อย ๆ"},
+  {"cue": "grow", "text": "สองเดือนต่อมา… | จากตัวละครตัวเดียว | กลายเป็นเมืองบ้านทุ่งทั้งเมือง!"},
+  {"cue": "proud", "text": "และช่วงเวลาที่ภูมิใจที่สุด… | คือวันที่มีคนเข้ามาเล่นจริง | แล้วบอกว่า ชอบเกมของเรา"},
+  {"cue": "cta", "text": "ผมจะไม่หยุดพัฒนา… | มาเล่นด้วยกันเยอะ ๆ นะครับ! | ลูทฟอร์ม ซิตี้ เล่นฟรี ไม่ต้องโหลด!"}
+ ]}

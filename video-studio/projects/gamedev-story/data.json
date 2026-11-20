@@ -1,0 +1,3 @@
+{"style": "comic",
+ "capfix": [["เอ็มเอ็มโออาร์พีจี", "MMORPG"], ["คล็อด", "Claude"], ["ยูทูบ", "YouTube"], ["ลูทฟอร์ม ซิตี้", "LOOTFORM CITY"], ["แท้ ๆ", "แท้ๆ"], ["เรื่อย ๆ", "เรื่อยๆ"], ["เยอะ ๆ", "เยอะๆ"]],
+ "images": {"logo": "assets/logo.png", "sprite": "assets/sprite.png", "early": "assets/early.jpg", "tiles1": "assets/tiles1.jpg", "tiles2": "assets/tiles2.jpg", "town1": "assets/town1.jpg", "town2": "assets/town2.jpg", "inv": "assets/inv.jpg"}}
