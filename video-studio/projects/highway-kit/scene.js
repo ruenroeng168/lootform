@@ -4,7 +4,7 @@
 (function () {
   const { clamp, prog, ease, rng } = window.L;
   const W = 1080, H = 1920, GREEN = "#3ddc84", WHITE = "#ffffff", GOLD = "#f5c451";
-  const F = { h: (s) => `700 ${s}px "Kanit"`, t: (s) => `600 ${s}px "Kanit"`, e: (s) => `700 ${s}px "Chakra Petch"` };
+  const F = { th: (s) => `700 ${s}px "IBM Plex Sans Thai"`, h: (s) => `700 ${s}px "Kanit"`, t: (s) => `600 ${s}px "Kanit"`, e: (s) => `700 ${s}px "Chakra Petch"` };
   let g, D, S, grain, logo, shine;
   function setup(c, tl) {
     g = c.getContext("2d"); D = tl.data; S = D.segs;
@@ -16,7 +16,14 @@
   }
   function preload() { return new Promise((r) => { logo = new Image(); logo.onload = r; logo.onerror = r; logo.src = D.images.logo; }); }
   const vis = (t, a, b, fi = 0.25, fo = 0.25) => prog(t, a, a + fi) * (1 - prog(t, b - fo, b));
+  const isThai = (s) => /[\u0E00-\u0E7F]/.test(s);
   function spaced(s, x, y, font, col, sp, a = 1) {
+    if (isThai(s)) {   // Thai: no letter-spacing (keeps vowels/tone marks on their consonant), readable looped face + thin outline
+      const size = parseInt(font.match(/(\d+)px/)[1]); g.font = F.th(Math.round(size * 0.95));
+      g.globalAlpha = a; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+      g.lineWidth = Math.max(4, size * 0.09); g.strokeStyle = "rgba(0,0,0,0.75)"; g.strokeText(s, x, y);
+      g.fillStyle = col; g.fillText(s, x, y); g.globalAlpha = 1; return g.measureText(s).width;
+    }
     g.font = font; const chars = [...s]; const w = chars.reduce((n, c) => n + g.measureText(c).width, 0) + sp * (chars.length - 1);
     let cx = x - w / 2; g.globalAlpha = a; g.fillStyle = col; g.textAlign = "left"; g.textBaseline = "middle";
     for (const c of chars) { g.fillText(c, cx, y); cx += g.measureText(c).width + sp; }
