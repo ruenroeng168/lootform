@@ -19,24 +19,6 @@ import synth as S  # noqa: E402
 W, H, FPS, BPM = 1080, 1920, 30, 120
 BEAT = 60 / BPM
 
-# (beats, kind, source, opts)
-SHOTS = [
-    (6, "intro", None, {}),
-    (4, "clip", "v1", {"ss": 0.2, "speed": 0.55}),           # NEO 11 back, slow
-    (3, "clip", "v1", {"ss": 5.2, "speed": 0.6}),            # sleeve badge
-    (3, "photo", "s15", {"zoom": (1.35, 1.5), "cy": 0.55}),  # hand on the crest
-    (4, "clip", "v2", {"ss": 0.0, "speed": 0.75}),           # arms crossed turn
-    (3, "poster", "s17", {}),                                 # back 47 + LOOTFORM CITY
-    (3, "clip", "v3", {"ss": 5.4, "speed": 0.7}),            # back 10 under the floodlight
-    (2, "clip", "v3", {"ss": 9.4, "speed": 0.8}),            # back 47 walking
-    (2, "poster", "220302", {}), (2, "poster", "220304", {}), (2, "poster", "s09", {}),
-    (2, "poster", "220306", {}), (2, "poster", "s11", {}), (2, "poster", "220305", {}),
-    (2, "poster", "s13", {}), (2, "poster", "220303", {}), (2, "poster", "s10", {}), (2, "poster", "s14", {}),
-    (3, "photo", "220307", {"zoom": (1.05, 1.15), "cy": 0.45}),
-    (4, "clip", "v3", {"ss": 14.2, "speed": 0.8}),           # duo, thumbs up
-    (3, "clip", "v4", {"ss": 0.3, "speed": 0.8}),
-    (8, "end", "s16", {}),
-]
 
 
 def fn(n): return n + "_0" if n.startswith("22") else n
@@ -103,104 +85,209 @@ def stage(seed=0):
     return np.array(pil)
 
 
-def poster(name, seed):
+def poster_layers(name, seed):
+    """returns (bg float32 HxWx3 with rim glow + shadow, subject rgb, alpha, x0, y0)."""
     cut = cv2.imread(str(CUT / f"{fn(name)}.png"), cv2.IMREAD_UNCHANGED)
-    rgb, al = cut[..., :3], cut[..., 3:].astype(np.float32) / 255
-    rgb = grade(rgb)
-    h, w = rgb.shape[:2]; s = min(980 / w, 1500 / h)
-    rgb = cv2.resize(rgb, (int(w * s), int(h * s)), interpolation=cv2.INTER_LANCZOS4); al = cv2.resize(al, (rgb.shape[1], rgb.shape[0]))[..., None]
+    rgb, al = grade(cut[..., :3]), cut[..., 3].astype(np.float32) / 255
+    h, w = rgb.shape[:2]; s = min(960 / w, 1480 / h)
+    rgb = cv2.resize(rgb, (int(w * s), int(h * s)), interpolation=cv2.INTER_LANCZOS4); al = cv2.resize(al, (rgb.shape[1], rgb.shape[0]))
     bg = stage(seed).astype(np.float32)
-    x0 = (W - rgb.shape[1]) // 2; y0 = 1720 - rgb.shape[0]
-    # rim light: green edge glow around the cut
-    edge = cv2.GaussianBlur(al, (0, 0), 18); edge = edge[..., None] if edge.ndim == 2 else edge
-    sub = bg[y0:y0 + rgb.shape[0], x0:x0 + rgb.shape[1]]
-    sub += edge * np.array([40, 150, 50], np.float32) * 0.8
-    shadow = cv2.GaussianBlur(al, (0, 0), 30); shadow = shadow[..., None] if shadow.ndim == 2 else shadow
-    sub *= 1 - 0.35 * shadow
-    bg[y0:y0 + rgb.shape[0], x0:x0 + rgb.shape[1]] = sub * (1 - al) + rgb.astype(np.float32) * al
-    return vignette(np.clip(bg, 0, 255).astype(np.uint8), 0.4)
+    x0 = (W - rgb.shape[1]) // 2; y0 = 1700 - rgb.shape[0]
+    full = np.zeros((H, W), np.float32); full[y0:y0 + al.shape[0], x0:x0 + al.shape[1]] = al
+    bg += cv2.GaussianBlur(full, (0, 0), 22)[..., None] * np.array([40, 150, 50], np.float32) * 0.7
+    bg *= 1 - 0.3 * cv2.GaussianBlur(full, (0, 0), 40)[..., None]
+    return np.clip(bg, 0, 255), rgb.astype(np.float32), al, x0, y0
 
 
-def clip_frames(name, ss, n, speed):
-    dur = n / FPS * speed + 0.2
-    vf = (f"setpts={1 / speed:.4f}*PTS,minterpolate=fps={FPS}:mi_mode=blend," if speed < 0.99 else f"fps={FPS},") + \
-         f"scale={W}:{H}:flags=lanczos,hqdn3d=3:3:6:6,unsharp=7:7:1.1:5:5:0.0"
+def poster_frame(L, u, VIG):
+    """parallax: background drifts/zooms slowly, player pushes in a touch faster; a white light sweep crosses the kit."""
+    bg, rgb, al, x0, y0 = L
+    zb = 1.03 + 0.05 * u; frame = zoom(bg.astype(np.uint8), zb, 540 - 30 * u, 1000).astype(np.float32)
+    zs = 1.0 + 0.06 * u + 0.05 * (1 - sm(u * 6))
+    h, w = al.shape; nw, nh = int(w * zs), int(h * zs)
+    r2 = cv2.resize(rgb, (nw, nh), interpolation=cv2.INTER_LINEAR); a2 = cv2.resize(al, (nw, nh))
+    cx = x0 + w / 2 + 25 * u; by = y0 + h + 10 * (1 - u)
+    xa, ya = int(cx - nw / 2), int(by - nh)
+    xs0, ys0 = max(0, -xa), max(0, -ya); xs1, ys1 = min(nw, W - xa), min(nh, H - ya)
+    a = a2[ys0:ys1, xs0:xs1, None]; sub = frame[ya + ys0:ya + ys1, xa + xs0:xa + xs1]
+    pr = r2[ys0:ys1, xs0:xs1].copy()
+    # light sweep (diagonal band crossing the player between u = 0.15 .. 0.75)
+    yy, xx = np.mgrid[ys0:ys1, xs0:xs1].astype(np.float32)
+    pos = (-0.3 + 1.6 * sm((u - 0.12) / 0.6)) * (nw + nh)
+    band = np.exp(-(((xx + yy * 0.6) - pos) / 70) ** 2)[..., None]
+    pr = pr + band * 120
+    frame[ya + ys0:ya + ys1, xa + xs0:xa + xs1] = sub * (1 - a) + np.clip(pr, 0, 255) * a
+    return (np.clip(frame, 0, 255) * VIG).astype(np.uint8)
+
+
+def clip_frames(name, ss, dur):
+    vf = f"fps={FPS},scale={W}:{H}:flags=lanczos,hqdn3d=3:3:6:6,unsharp=7:7:1.1:5:5:0.0"
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(ss), "-t", f"{dur:.3f}", "-i", str(RAW / f"{name}.mp4"), "-vf", vf, "-an",
                           "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True).stdout
-    fr = np.frombuffer(raw, np.uint8).reshape(-1, H, W, 3)
-    return fr
+    return np.frombuffer(raw, np.uint8).reshape(-1, H, W, 3)
+
+
+def sample(fr, n, speed, ramp=False):
+    """map n output frames onto source frames; ramp = fast start (2x) easing into slow-mo (0.35x), frame-blended."""
+    out = []
+    if ramp:
+        sp = lambda u: 2.0 - 1.65 * sm(u * 1.6)
+        pos = 0.0
+        for j in range(n): out.append(pos); pos += sp(j / n)
+    else:
+        out = [j * speed for j in range(n)]
+    res = []
+    for p in out:
+        i = min(int(p), len(fr) - 2); f = p - i
+        res.append(cv2.addWeighted(fr[i], 1 - f, fr[i + 1], f, 0) if f > 0.05 else fr[i])
+    return res
+
+
+def glitch(f, k):
+    """RGB split + slice offsets for the first frames of a cut (k 1..0)."""
+    if k <= 0: return f
+    o = int(28 * k); g = f.copy()
+    g[..., 2] = np.roll(f[..., 2], o, 1); g[..., 0] = np.roll(f[..., 0], -o, 1)
+    rng = np.random.default_rng(int(k * 1000))
+    for _ in range(int(6 * k)):
+        y = rng.integers(0, H - 60); hh = rng.integers(10, 60); g[y:y + hh] = np.roll(g[y:y + hh], rng.integers(-80, 80), 1)
+    return g
+
+
+# (beats, kind, source, opts)
+SHOTS = [
+    (10, "intro", None, {}),
+    (4, "clip", "v1", {"ss": 0.2, "speed": 0.5}),            # NEO 11 back, slow
+    (3, "clip", "v1", {"ss": 5.2, "speed": 0.55}),           # sleeve badge
+    (3, "photo", "s15", {"zoom": (1.45, 1.6), "cy": 0.5}),   # hand on the crest
+    (2, "photo", "220307", {"zoom": (2.3, 2.45), "cy": 0.62, "cx": 760}),  # crest detail
+    (4, "clip", "v2", {"ss": 0.0, "ramp": True}),            # arms-crossed turn, speed ramp
+    (3, "poster", "s17", {}),                                 # back 47
+    (3, "clip", "v3", {"ss": 5.3, "speed": 0.6}),            # back 10 under the floodlight
+    (2, "clip", "v3", {"ss": 9.4, "speed": 0.8}),            # back 47 walking
+    (2, "poster", "220302", {}), (2, "poster", "220304", {}), (2, "poster", "s09", {}), (2, "poster", "220306", {}),
+    (2, "poster", "s11", {}), (2, "poster", "220305", {}), (2, "poster", "s13", {}), (2, "poster", "s10", {}),
+    (4, "photo", "220307", {"zoom": (1.05, 1.16), "cy": 0.45}),
+    (4, "clip", "v3", {"ss": 14.2, "speed": 0.75}),           # duo, thumbs up
+    (14, "end", "s16", {}),
+]
+VO_AT = {"intro": 0.9, "tease": "s1+0.25", "reveal": "s5+0.3", "we": "s17+0.15", "end": "s19+0.6"}
+NARR = "highpass=f=70,lowshelf=f=160:g=3,equalizer=f=3000:t=q:w=1:g=1.5,acompressor=threshold=-20dB:ratio=3.5:makeup=2,aecho=0.8:0.5:60:0.12,loudnorm=I=-14:TP=-1.5:LRA=6"
 
 
 def main():
     OUT.mkdir(exist_ok=True)
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    VIG = (1 - 0.45 * np.clip(np.sqrt(((xx - W / 2) / (W * 0.62)) ** 2 + ((yy - H / 2) / (H * 0.62)) ** 2) - 0.45, 0, 1) ** 1.5)[..., None]
     enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
-                            "-c:v", "libx264", "-preset", "medium", "-crf", "16", "-pix_fmt", "yuv420p", str(OUT / "base.mp4")], stdin=subprocess.PIPE)
-    nf = 0; segs = []; beat_t = 0.0; vig = None
+                            "-c:v", "libx264", "-preset", "medium", "-crf", "15", "-pix_fmt", "yuv420p", str(OUT / "base.mp4")], stdin=subprocess.PIPE)
+    nf = 0; segs = []; beat_t = 0.0
     for si, (beats, kind, src, o) in enumerate(SHOTS):
         t0 = beat_t; beat_t += beats * BEAT; n = int(round(beat_t * FPS)) - nf
         segs.append({"t0": round(t0, 3), "t1": round(beat_t, 3), "kind": kind, "src": src})
+        frames = []
         if kind == "intro":
-            for j in range(n): enc.stdin.write(np.zeros((H, W, 3), np.uint8).tobytes())
+            frames = [np.zeros((H, W, 3), np.uint8)] * n
         elif kind == "clip":
-            fr = clip_frames(src, o["ss"], n, o["speed"])
-            for j in range(n):
-                f = grade(fr[min(j, len(fr) - 1)]); p = 1 - sm(j / 6)
-                f = zoom(f, 1.0 + 0.07 * p + 0.04 * j / n)
-                enc.stdin.write(vignette(f, 0.45).tobytes())
+            fr = clip_frames(src, o["ss"], n / FPS * (2.2 if o.get("ramp") else o["speed"]) + 0.3)
+            for j, f in enumerate(sample(fr, n, o.get("speed", 1), o.get("ramp", False))):
+                p = 1 - sm(j / 6); frames.append((zoom(grade(f), 1.0 + 0.07 * p + 0.04 * j / n) * VIG).astype(np.uint8))
         elif kind == "photo":
             base = grade(cover(cv2.imread(str(RAW / f"{fn(src)}.jpg")), o.get("cy", 0.5))); z0, z1 = o["zoom"]
             for j in range(n):
-                f = zoom(base, z0 + (z1 - z0) * sm(j / n), 540, 1920 * o.get("cy", 0.5))
-                enc.stdin.write(vignette(f, 0.45).tobytes())
-        elif kind in ("poster", "end"):
-            pimg = poster(src, si)
-            if kind == "end": pimg = (cv2.GaussianBlur(pimg, (0, 0), 7) * 0.32).astype(np.uint8)
-            for j in range(n):
-                z = (1.0 + 0.09 * (1 - sm(j / 5)) + 0.03 * j / n) if kind == "poster" else 1.04 + 0.05 * j / n
-                enc.stdin.write(zoom(pimg, z, 540, 1000).tobytes())
+                frames.append((zoom(base, z0 + (z1 - z0) * sm(j / n), o.get("cx", 540), 1920 * o.get("cy", 0.5)) * VIG).astype(np.uint8))
+        elif kind == "poster":
+            L = poster_layers(src, si)
+            frames = [poster_frame(L, j / n, VIG) for j in range(n)]
+        elif kind == "end":
+            bg, rgb, al, x0, y0 = poster_layers(src, si)
+            img = bg.copy(); a = al[..., None]; sub = img[y0:y0 + al.shape[0], x0:x0 + al.shape[1]]
+            img[y0:y0 + al.shape[0], x0:x0 + al.shape[1]] = sub * (1 - a) + rgb * a
+            img = (cv2.GaussianBlur(img, (0, 0), 8) * 0.3).astype(np.uint8)
+            frames = [zoom(img, 1.04 + 0.05 * j / n) for j in range(n)]
+        for j, f in enumerate(frames):
+            if si > 0 and kind != "end": f = glitch(f, 1 - j / 3)
+            enc.stdin.write(np.ascontiguousarray(f).tobytes())
         nf += n
     enc.stdin.close(); enc.wait()
     total = nf / FPS
-    D = {"segs": segs, "beat": BEAT, "total": round(total, 3)}
+    # ---- voice
+    L = json.loads((HERE / "narr.json").read_text()); spans = json.loads((OUT / "n" / "spans.json").read_text())
+    wav = next((OUT / "n").glob("*.wav"))
+    na = np.frombuffer(subprocess.run(["ffmpeg", "-v", "error", "-i", str(wav), "-af", NARR, "-ac", "1", "-ar", str(S.SR), "-f", "f32le", "-"],
+                                      capture_output=True, check=True).stdout, np.float32).astype(np.float64)
+    voice = S.Track(total + 1); vo = {}
+    for (k, txt), (a, b) in zip(L, spans):
+        at = VO_AT[k]
+        if isinstance(at, str): si, off = at[1:].split("+"); at = segs[int(si)]["t0"] + float(off)
+        c = na[int(max(0, a - 0.03) * S.SR):int((b + 0.25) * S.SR)]; m = np.arange(len(c))
+        voice.add(at, c * np.minimum(1, np.minimum(m / 300, (len(c) - m) / 2000))); vo[k] = [round(at, 3), round(at + len(c) / S.SR, 3), txt]
+    D = {"segs": segs, "beat": BEAT, "total": round(total, 3), "vo": vo, "images": {"logo": "assets/logo.png"}}
+    v = voice.buf[:int(total * S.SR)]
     music, fx = score(total, D)
-    mix = music + fx
-    mix = mix / (np.max(np.abs(mix)) + 1e-9) * 0.9
+    duck = np.clip(S.follower(v, 0.02, 0.3) / 0.08, 0, 1)
+    mix = music[:len(v)] * (1 - 0.55 * duck) + fx[:len(v)]
     wavfile.write(OUT / "mix.wav", S.SR, (np.clip(np.stack([mix, mix], 1), -1, 1) * 32767).astype(np.int16))
-    sil = np.zeros(len(mix)); wavfile.write(OUT / "footage.wav", S.SR, np.stack([sil, sil], 1).astype(np.int16))
+    wavfile.write(OUT / "footage.wav", S.SR, (np.clip(np.stack([v, v], 1), -1, 1) * 32767).astype(np.int16))
     (OUT / "timeline.json").write_text(json.dumps({"width": W, "height": H, "fps": FPS, "frames": nf, "duration": round(total, 3), "cues": {}, "data": D}, ensure_ascii=False))
-    print(f"[prep] {total:.2f}s {nf} frames")
+    print(f"[prep] {total:.2f}s {nf} frames; vo {vo}")
+
+
+# ---------------------------------------------------------------- music: phonk / drift
+def cowbell(f, dur=0.22):
+    t = S.tt(dur)
+    sq = lambda ff: np.sign(np.sin(2 * np.pi * ff * t))
+    x = (sq(f) + sq(f * 1.48)) * np.exp(-t * 14) * 0.5
+    return S.bandpass(x, 450, 5000) * 0.9
+
+
+def b808(f, dur=0.9, glide=0.0):
+    t = S.tt(dur)
+    fr = f * (1 + 1.5 * np.exp(-t * 40)) * (2 ** (glide * np.minimum(1, t / dur)))
+    ph = 2 * np.pi * np.cumsum(fr) / S.SR
+    x = np.sin(ph) * np.exp(-t * 2.2) * np.minimum(1, t / 0.005)
+    return np.tanh(x * 3.0) * 0.7
 
 
 def score(dur, D):
-    """dark trailer hybrid: sub drone + pulse from the reveal, trap hats + big kick/clap on the poster run,
-    booms on section hits, risers into sections, a final impact + tail."""
-    beat = D["beat"]; bar = beat * 4
-    drone, pulse, drums, fx = (S.Track(dur + 2) for _ in range(4))
-    roots = [38, 38, 41, 36]                                            # D D F C (minor, dark)
+    beat = D["beat"]; bar = beat * 4; sx = beat / 4
+    segs = D["segs"]; tease = segs[1]["t0"]; drop = segs[5]["t0"]; run = segs[9]["t0"]; we = segs[17]["t0"]; end = segs[-1]["t0"]
+    bell, bass, drums, pad, fx = (S.Track(dur + 3) for _ in range(5))
+    # D minor phonk riff (16 sixteenths per bar, None = rest)
+    riff = [74, None, 74, 77, 74, None, 72, None, 74, None, 74, 77, 79, 77, 74, 72]
+    riff2 = [74, None, 74, 77, 74, None, 72, None, 70, None, 70, 72, 74, 72, 70, 69]
+    roots = [38, 38, 34, 36]
     for b in range(int(dur / bar) + 2):
-        t0 = b * bar; r = roots[b % 4]
-        drone.add(t0, S.lowpass(S.pad([S.midi(r), S.midi(r + 7), S.midi(r + 12)], bar + 0.1, 0.4, 0.6), 900), 0.35)
-        for i in range(8):
-            pulse.add(t0 + i * beat / 2, S.lowpass(S.bass(S.midi(r), beat * 0.45), 700), 0.32 if i % 2 == 0 else 0.22)
+        t0 = b * bar; r = riff if b % 2 == 0 else riff2
+        for i, n in enumerate(r):
+            if n is not None: bell.add(t0 + i * sx, cowbell(S.midi(n) * 1.0), 0.28 if i % 4 == 0 else 0.2)
+        bass.add(t0, b808(S.midi(roots[b % 4]), bar * 0.48), 0.75)
+        bass.add(t0 + beat * 2.5, b808(S.midi(roots[b % 4]), beat * 1.4, -0.15), 0.6)
+        pad.add(t0, S.lowpass(S.pad([S.midi(roots[b % 4] + 24), S.midi(roots[b % 4] + 31), S.midi(roots[b % 4] + 27)], bar + 0.1, 0.5, 0.7), 1400), 0.22)
         for i in range(4):
             tb = t0 + i * beat
-            drums.add(tb, S.kick(0.4), 0.7 if i in (0, 2) else 0.0)
-            if i in (1, 3): drums.add(tb, S.clap(0.22), 0.35)
-            for j in range(4 if b % 2 else 2):
-                drums.add(tb + j * beat / (4 if b % 2 else 2), S.hat(0.03), 0.09)
-    segs = D["segs"]; s = {i: x for i, x in enumerate(segs)}
-    reveal = segs[1]["t0"]; run = next(x["t0"] for x in segs if x["kind"] == "poster" and x["src"] == "220302"); end = segs[-1]["t0"]
-    pulse.gate([(0, 0), (reveal - 0.05, 0), (reveal, 1), (end, 1), (end + 0.05, 0), (dur + 2, 0)])
-    drums.gate([(0, 0), (run - 0.05, 0), (run, 1), (end - beat * 2, 1), (end - beat * 2 + 0.05, 0), (dur + 2, 0)])
-    drone.gate([(0, 0), (0.3, 0.7), (end, 1), (dur - 0.3, 0.6), (dur + 0.5, 0), (dur + 2, 0)])
-    fx.add(0.35, S.boom(2.6), 0.6)
-    fx.add(reveal - 1.4, S.riser(1.4), 0.25); fx.add(reveal, S.boom(2.0), 0.5)
-    fx.add(run - 1.0, S.riser(1.0), 0.25); fx.add(run, S.boom(1.6), 0.45)
-    fx.add(end - 1.2, S.riser(1.2), 0.3); fx.add(end, S.boom(2.8), 0.7); fx.add(end, S.thump(0.4), 0.6)
+            if i == 0 or (i == 1 and b % 2): drums.add(tb + (beat / 2 if i == 1 else 0), S.kick(0.35), 0.75)
+            if i == 2: drums.add(tb, S.clap(0.25), 0.5); drums.add(tb, S.bandpass(S.noise(0.18), 1500, 7000) * np.exp(-S.tt(0.18) * 18), 0.35)
+            roll = (b % 4 == 3 and i == 3)
+            for j in range(6 if roll else 2):
+                drums.add(tb + j * beat / (6 if roll else 2), S.hat(0.025), 0.1)
+    # arrangement
+    bell.buf = np.concatenate([S.sweep_lowpass(bell.buf[:int(drop * S.SR)], 400, 3500), bell.buf[int(drop * S.SR):]])
+    bell.gate([(0, 0), (tease - 0.05, 0), (tease, 0.8), (we - 0.05, 1), (we, 0), (we + 4 * beat - 0.05, 0), (we + 4 * beat, 1), (end, 1), (end + 0.05, 0), (dur + 3, 0)])
+    bass.gate([(0, 0), (drop - 0.05, 0), (drop, 1), (we - 0.05, 1), (we, 0), (we + 4 * beat - 0.05, 0), (we + 4 * beat, 1), (end, 1), (end + 0.05, 0), (dur + 3, 0)])
+    drums.gate([(0, 0), (drop - 0.05, 0), (drop, 1), (we - 0.05, 1), (we, 0), (we + 4 * beat - 0.05, 0), (we + 4 * beat, 1), (end - 0.05, 1), (end, 0), (dur + 3, 0)])
+    pad.gate([(0, 0), (0.4, 0.9), (drop, 0.6), (end, 1), (dur - 0.2, 0.5), (dur + 1, 0), (dur + 3, 0)])
+    fx.add(0.4, S.boom(3.0), 0.55)
+    fx.add(tease - 1.0, S.riser(1.0), 0.18); fx.add(tease, S.thump(0.4), 0.45)
+    fx.add(drop - 1.6, S.riser(1.6), 0.3); fx.add(drop, S.boom(2.2), 0.6); fx.add(drop, b808(S.midi(38), 1.2), 0.7)
+    fx.add(run, S.boom(1.4), 0.35)
+    fx.add(we, S.boom(2.4), 0.55)
+    fx.add(end - 1.4, S.riser(1.4), 0.3); fx.add(end, S.boom(3.2), 0.75); fx.add(end, b808(S.midi(38), 2.5, -0.3), 0.8)
     for x in segs[1:]:
-        if x["kind"] != "end": fx.add(x["t0"] - 0.15, S.whoosh(0.4), 0.18)
-    music = (drone.buf + pulse.buf + drums.buf)[: int(dur * S.SR)] * 0.6
-    return music, fx.buf[: int(dur * S.SR)]
+        if x["kind"] not in ("end",): fx.add(x["t0"] - 0.12, S.whoosh(0.35), 0.14)
+    n = int(dur * S.SR)
+    music = (bell.buf[:n] * 0.8 + bass.buf[:n] + drums.buf[:n] + pad.buf[:n]) * 0.55
+    return music, fx.buf[:n]
 
 
 if __name__ == "__main__":
