@@ -32,7 +32,7 @@
     const v = D.vo[key]; if (!v) return; const [a0, a1, txt] = v;
     if (!rows) { const k = txt.indexOf("…"); rows = k < 0 ? [txt] : [txt.slice(0, k + 1), txt.slice(k + 1).trim()]; }
     const step = (a1 - a0) / rows.length;
-    rows.forEach((p, i) => title(p, y + i * (size * 1.35), size, t, a0 + i * step * 0.85, a1 + 0.5, i === rows.length - 1 ? col : WHITE));
+    rows.forEach((p, i) => { const [str, c] = Array.isArray(p) ? p : [p, i === rows.length - 1 ? col : WHITE]; title(str, y + i * (size * 1.35), size, t, a0 + i * step * 0.85, a1 + 0.5, c); });
   }
   function drawLogo(cx, cy, w, t, t0, sweep = true, a = 1) {
     if (!logo || a <= 0) return;
@@ -66,7 +66,7 @@
       voLine("intro", 1320, 64, t);
       if (t < i0.t1 + 0.3) letterbox(t, 0, i0.t1 + 0.4);
     }
-    voLine("tease", 1480, 78, t, GREEN, ["สีเขียว… คือหัวใจ", "สีขาว… คือศักดิ์ศรี"]);
+    voLine("tease", 1480, 78, t, GREEN, [["สีเขียว… คือหัวใจ", GREEN], ["สีขาว… คือศักดิ์ศรี", WHITE]]);
     // reveal line + 2027 stamp on the back-47 poster
     voLine("reveal", 1540, 88, t, WHITE);
     const p47 = S[6]; if (t >= p47.t0 && t < p47.t1) spaced("2027", 540, 330, F.e(170), GREEN, 22, vis(t, p47.t0 + 0.1, p47.t1));
