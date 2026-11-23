@@ -66,12 +66,15 @@
       voLine("intro", 1320, 64, t);
       if (t < i0.t1 + 0.3) letterbox(t, 0, i0.t1 + 0.4);
     }
+    // soft bottom gradient behind the voice-over lines (keeps white text readable on the white kit)
+    let la = 0; for (const k of ["tease", "reveal", "we"]) { const v = D.vo[k]; if (v) la = Math.max(la, vis(t, v[0] - 0.2, v[1] + 0.7, 0.3, 0.4)); }
+    if (la > 0) { const gr = g.createLinearGradient(0, 1180, 0, 1920); gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(0.45, `rgba(0,0,0,${0.55 * la})`); gr.addColorStop(1, `rgba(0,0,0,${0.7 * la})`); g.fillStyle = gr; g.fillRect(0, 1180, W, 740); }
     voLine("tease", 1480, 78, t, GREEN, [["สีเขียว… คือหัวใจ", GREEN], ["สีขาว… คือศักดิ์ศรี", WHITE]]);
     // reveal line + 2027 stamp on the back-47 poster
     voLine("reveal", 1540, 88, t, WHITE);
     const p47 = S[6]; if (t >= p47.t0 && t < p47.t1) spaced("2027", 540, 330, F.e(170), GREEN, 22, vis(t, p47.t0 + 0.1, p47.t1));
     // ---- ambassador run lower third
-    const run = S.filter((x, i) => x.kind === "poster" && i > 8);
+    const run = S.filter((x, i) => (x.kind === "poster" || x.kind === "trio") && i > 8);
     if (run.length && t >= run[0].t0 && t < run[run.length - 1].t1) {
       const a = vis(t, run[0].t0, run[run.length - 1].t1, 0.3, 0.2);
       spaced("HIGHWAY FC", 540, 1785, F.e(56), WHITE, 18, a);
@@ -90,7 +93,7 @@
       spaced("NEW KIT • NEW ERA", 540, 1440, F.e(48), WHITE, 16, vis(t, last.t0 + 2.2, D.total + 2));
     }
     // ---- flash on cuts, grain, fade out
-    for (const x of S.slice(1)) { const u = t - x.t0; if (u >= 0 && u < 0.1) { g.fillStyle = `rgba(220,255,230,${0.28 * (1 - u / 0.1)})`; g.fillRect(0, 0, W, H); } }
+    for (const x of [1, 5, 9, 15].map((i) => S[i])) { const u = t - x.t0; if (u >= 0 && u < 0.1) { g.fillStyle = `rgba(220,255,230,${0.28 * (1 - u / 0.1)})`; g.fillRect(0, 0, W, H); } }
     g.save(); const o = Math.floor(t * 30) % 4; g.translate(-o * 37, -o * 53); g.fillStyle = g.createPattern(grain, "repeat"); g.fillRect(0, 0, W + 256, H + 256); g.restore();
     const fo = prog(t, D.total - 0.7, D.total); if (fo > 0) { g.fillStyle = `rgba(0,0,0,${fo})`; g.fillRect(0, 0, W, H); }
   }

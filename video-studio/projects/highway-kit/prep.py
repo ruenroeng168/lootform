@@ -30,14 +30,14 @@ def sm(u): u = min(1.0, max(0.0, u)); return u * u * (3 - 2 * u)
 def grade(img):
     """night campaign grade: deep blacks, lifted whites, punchy kit green, cool-green shadows."""
     x = img.astype(np.float32) / 255
-    x = np.clip((x - 0.03) / 0.95, 0, 1)
-    x = x * x * (3 - 2 * x) * 0.55 + x * 0.45                      # S-curve
+    x = np.clip((x - 0.01) / 0.9, 0, 1) ** 0.8                       # lift exposure / midtones
+    x = x * x * (3 - 2 * x) * 0.3 + x * 0.7                          # gentle S-curve
     hsv = cv2.cvtColor((x * 255).astype(np.uint8), cv2.COLOR_BGR2HSV).astype(np.float32)
     green = ((hsv[..., 0] > 35) & (hsv[..., 0] < 95)).astype(np.float32)
     hsv[..., 1] = np.clip(hsv[..., 1] * (1.1 + 0.25 * green), 0, 255)
     x = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR).astype(np.float32) / 255
     lum = x.mean(-1, keepdims=True); sh = (1 - lum) ** 3
-    x = x + sh * np.array([0.015, 0.03, -0.005], np.float32)          # BGR: teal-green shadows
+    x = x + sh * np.array([0.01, 0.02, -0.003], np.float32)          # BGR: teal-green shadows
     return (np.clip(x, 0, 1) * 255).astype(np.uint8)
 
 
@@ -66,9 +66,9 @@ def stage(seed=0):
     rng = np.random.default_rng(seed)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
     bg = np.zeros((H, W, 3), np.float32)
-    bg += np.array([8, 14, 6], np.float32) * (1 - yy / H)[..., None]
+    bg += np.array([22, 40, 18], np.float32) * (1 - 0.5 * yy / H)[..., None]
     glow = np.exp(-(((xx - 540) / 520) ** 2 + ((yy - 900) / 760) ** 2))
-    bg += glow[..., None] * np.array([30, 85, 22], np.float32)
+    bg += glow[..., None] * np.array([45, 125, 35], np.float32)
     for _ in range(3):                                                   # diagonal light streaks
         x0 = rng.uniform(-200, 1100); a = rng.uniform(0.25, 0.45)
         d = np.abs((xx - x0) - (yy - 0) * a) ; bg += (np.exp(-(d / rng.uniform(18, 40)) ** 2) * 55)[..., None] * np.array([0.6, 1.0, 0.7], np.float32)
@@ -120,6 +120,30 @@ def poster_frame(L, u, VIG):
     return (np.clip(frame, 0, 255) * VIG).astype(np.uint8)
 
 
+def trio_frames(names, seed, n, VIG):
+    """lineup: three cut-out players side by side on one stage, sliding up one after another, thin green dividers."""
+    bg = stage(seed).astype(np.float32)
+    subs = []
+    for k, nm in enumerate(names):
+        cut = cv2.imread(str(CUT / f"{fn(nm)}.png"), cv2.IMREAD_UNCHANGED)
+        rgb, al = grade(cut[..., :3]).astype(np.float32), cut[..., 3].astype(np.float32) / 255
+        h, w = al.shape; s_ = min(350 / w, 1180 / h)
+        subs.append((cv2.resize(rgb, (int(w * s_), int(h * s_)), interpolation=cv2.INTER_AREA), cv2.resize(al, (int(w * s_), int(h * s_)))))
+    out = []
+    for j in range(n):
+        u = j / n; f = zoom(bg.astype(np.uint8), 1.02 + 0.04 * u).astype(np.float32)
+        for k, (rgb, al) in enumerate(subs):
+            p = sm((u - k * 0.1) / 0.28); 
+            if p <= 0: continue
+            cx = 190 + k * 350; h, w = al.shape; x0 = int(cx - w / 2); y0 = int(1640 - h + 160 * (1 - p))
+            ys0 = max(0, -y0); a = al[ys0:, :, None] * p; sub = f[y0 + ys0:y0 + h, x0:x0 + w]
+            f[y0 + ys0:y0 + h, x0:x0 + w] = sub * (1 - a) + rgb[ys0:] * a
+        for k in (1, 2):
+            a = sm((u - 0.3) / 0.2); x = 15 + k * 350; f[420:1640, x - 1:x + 2] = f[420:1640, x - 1:x + 2] * (1 - 0.7 * a) + np.array([132, 220, 61], np.float32) * 0.7 * a
+        out.append((np.clip(f, 0, 255) * VIG).astype(np.uint8))
+    return out
+
+
 def clip_frames(name, ss, dur):
     vf = f"fps={FPS},scale={W}:{H}:flags=lanczos,hqdn3d=3:3:6:6,unsharp=7:7:1.1:5:5:0.0"
     raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", str(ss), "-t", f"{dur:.3f}", "-i", str(RAW / f"{name}.mp4"), "-vf", vf, "-an",
@@ -165,20 +189,21 @@ SHOTS = [
     (3, "poster", "s17", {}),                                 # back 47
     (3, "clip", "v3", {"ss": 5.3, "speed": 0.6}),            # back 10 under the floodlight
     (2, "clip", "v3", {"ss": 9.4, "speed": 0.8}),            # back 47 walking
-    (2, "poster", "220302", {}), (2, "poster", "220304", {}), (2, "poster", "s09", {}), (2, "poster", "220306", {}),
-    (2, "poster", "s11", {}), (2, "poster", "220305", {}), (2, "poster", "s13", {}), (2, "poster", "s10", {}),
+    (2, "poster", "220302", {}), (2, "poster", "s09", {}), (2, "poster", "220306", {}), (2, "poster", "s13", {}),
+    (4, "trio", ["220304", "s11", "220305"], {}), (4, "trio", ["s10", "220303", "s14"], {}),
     (4, "photo", "220307", {"zoom": (1.05, 1.16), "cy": 0.45}),
     (4, "clip", "v3", {"ss": 14.2, "speed": 0.75}),           # duo, thumbs up
     (14, "end", "s16", {}),
 ]
-VO_AT = {"intro": 0.9, "tease": "s1+0.25", "reveal": "s5+0.3", "we": "s17+0.15", "end": "s19+0.6"}
+VO_AT = {"intro": 0.9, "tease": "s1+0.25", "reveal": "s5+0.3", "we": "s15+0.15", "end": "s17+0.6"}
+SECTION = {1, 5, 9, 15}   # shots that open a section: the only cuts that get the glitch
 NARR = "highpass=f=70,lowshelf=f=160:g=3,equalizer=f=3000:t=q:w=1:g=1.5,acompressor=threshold=-20dB:ratio=3.5:makeup=2,aecho=0.8:0.5:60:0.12,loudnorm=I=-14:TP=-1.5:LRA=6"
 
 
 def main():
     OUT.mkdir(exist_ok=True)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    VIG = (1 - 0.45 * np.clip(np.sqrt(((xx - W / 2) / (W * 0.62)) ** 2 + ((yy - H / 2) / (H * 0.62)) ** 2) - 0.45, 0, 1) ** 1.5)[..., None]
+    VIG = (1 - 0.22 * np.clip(np.sqrt(((xx - W / 2) / (W * 0.62)) ** 2 + ((yy - H / 2) / (H * 0.62)) ** 2) - 0.45, 0, 1) ** 1.5)[..., None]
     enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
                             "-c:v", "libx264", "-preset", "medium", "-crf", "15", "-pix_fmt", "yuv420p", str(OUT / "base.mp4")], stdin=subprocess.PIPE)
     nf = 0; segs = []; beat_t = 0.0
@@ -199,14 +224,16 @@ def main():
         elif kind == "poster":
             L = poster_layers(src, si)
             frames = [poster_frame(L, j / n, VIG) for j in range(n)]
+        elif kind == "trio":
+            frames = trio_frames(src, si, n, VIG)
         elif kind == "end":
             bg, rgb, al, x0, y0 = poster_layers(src, si)
             img = bg.copy(); a = al[..., None]; sub = img[y0:y0 + al.shape[0], x0:x0 + al.shape[1]]
             img[y0:y0 + al.shape[0], x0:x0 + al.shape[1]] = sub * (1 - a) + rgb * a
-            img = (cv2.GaussianBlur(img, (0, 0), 8) * 0.3).astype(np.uint8)
+            img = (cv2.GaussianBlur(img, (0, 0), 9) * 0.5).astype(np.uint8)
             frames = [zoom(img, 1.04 + 0.05 * j / n) for j in range(n)]
         for j, f in enumerate(frames):
-            if si > 0 and kind != "end": f = glitch(f, 1 - j / 3)
+            if si in SECTION: f = glitch(f, 1 - j / 3)
             enc.stdin.write(np.ascontiguousarray(f).tobytes())
         nf += n
     enc.stdin.close(); enc.wait()
@@ -251,7 +278,7 @@ def b808(f, dur=0.9, glide=0.0):
 
 def score(dur, D):
     beat = D["beat"]; bar = beat * 4; sx = beat / 4
-    segs = D["segs"]; tease = segs[1]["t0"]; drop = segs[5]["t0"]; run = segs[9]["t0"]; we = segs[17]["t0"]; end = segs[-1]["t0"]
+    segs = D["segs"]; tease = segs[1]["t0"]; drop = segs[5]["t0"]; run = segs[9]["t0"]; we = segs[15]["t0"]; end = segs[-1]["t0"]
     bell, bass, drums, pad, fx = (S.Track(dur + 3) for _ in range(5))
     # D minor phonk riff (16 sixteenths per bar, None = rest)
     riff = [74, None, 74, 77, 74, None, 72, None, 74, None, 74, 77, 79, 77, 74, 72]
