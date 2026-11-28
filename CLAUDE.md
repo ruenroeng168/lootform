@@ -28,6 +28,6 @@
 
 เสียงพากย์ทุกคลิปใช้ **Gemini TTS ผ่าน `video-studio/engine/tts.py`** (หรือ `engine/build.py` ที่เรียกมันอยู่แล้ว) ค่าเริ่มต้น: `"engine": "gemini", "model": "gemini-3.8-flash-tts", "voice": "Puck"` ห้ามใช้เสียงของ Windows (SAPI / System.Speech / Narrator), espeak หรือ TTS ของเครื่องแทน
 - ใน style ใส่ "Read exactly… Do not add, improvise" กันพูดเกินบท และตรวจผลด้วย whisper (`engine/align.py`) ก่อนใช้
-- คำว่า "อุบลเด้อ" ให้เขียนเป็น "อุบล… เด้อ" + บอกใน style ให้ออกเสียงแบบอีสาน
+- พากย์เป็นภาษาไทยกลางปกติ ไม่ต้องใช้สำเนียงหรือภาษาอีสาน (ผู้ใช้สั่ง พ.ย. 2569) คำว่า "อุบลเด้อ" เขียนติดกันและอ่านแบบปกติ
 - คีย์: cloud session ใช้ network secret ของ environment (proxy ใส่ header `x-goog-api-key` ให้เอง ไม่ต้องมีคีย์ในเครื่อง); เครื่อง Windows ใช้ตัวแปร `GEMINI_API_KEY` ห้ามพิมพ์คีย์ลงแชต ห้าม commit คีย์
 - ถ้าเรียก Gemini ไม่ได้ ให้หยุดแล้วแจ้งผู้ใช้ ห้ามเปลี่ยนไปใช้เสียงอื่นเอง
